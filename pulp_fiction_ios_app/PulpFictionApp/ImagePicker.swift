@@ -3,8 +3,8 @@
 //
 
 import Foundation
-import SwiftUI
 import PhotosUI
+import SwiftUI
 
 struct ImagePicker: UIViewControllerRepresentable {
     typealias UIViewControllerType = PHPickerViewController
@@ -47,7 +47,7 @@ struct ImagePicker: UIViewControllerRepresentable {
         return picker
     }
 
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {
-        //code
+    func updateUIViewController(_: PHPickerViewController, context _: Context) {
+        // code
     }
 }

@@ -8,12 +8,13 @@
 
 import CoreImage
 import CoreImage.CIFilterBuiltins
-import SwiftUI
 import Logging
+import SwiftProtobuf
+import SwiftUI
 
 struct ContentView: View {
     @State private var blurAmount = 0.0
-    @State private var currentFilter: CIFilter = CIFilter.sepiaTone()
+    @State private var currentFilter: CIFilter = .sepiaTone()
     @State private var filterIntensity = 0.5
     @State private var foregroundColor = Color.blue
     @State private var image: Image?
@@ -22,8 +23,8 @@ struct ContentView: View {
     @State private var showingConfirmation = false
     @State private var showingFilterSheet = false
     @State private var showingImagePicker = false
-    let context: CIContext = CIContext()
-    private let logger: Logger = Logger(label: String(describing: ContentView.self))
+    let context: CIContext = .init()
+    private let logger: Logger = .init(label: String(describing: ContentView.self))
 
     var body: some View {
         NavigationView {
@@ -32,45 +33,45 @@ struct ContentView: View {
                 intensitySlider()
                 changeFilterButton()
             }
-                    .padding([.horizontal, .bottom])
-                    .navigationTitle("Instafilter")
-                    .onChange(of: inputImage) { _ in
-                        loadImage()
-                    }
-                    .sheet(isPresented: $showingImagePicker) {
-                        ImagePicker(image: $inputImage)
-                    }
-                    .confirmationDialog("Select a filter", isPresented: $showingFilterSheet, actions: filterSelector)
+            .padding([.horizontal, .bottom])
+            .navigationTitle("Instafilter")
+            .onChange(of: inputImage) { _ in
+                loadImage()
+            }
+            .sheet(isPresented: $showingImagePicker) {
+                ImagePicker(image: $inputImage)
+            }
+            .confirmationDialog("Select a filter", isPresented: $showingFilterSheet, actions: filterSelector)
         }
     }
 
     private func imageSelector() -> some View {
         ZStack {
             Rectangle()
-                    .fill(.secondary)
+                .fill(.secondary)
 
             Text("Tap to select a picture")
-                    .foregroundColor(.white)
-                    .font(.headline)
+                .foregroundColor(.white)
+                .font(.headline)
 
             image?
-                    .resizable()
-                    .scaledToFit()
+                .resizable()
+                .scaledToFit()
         }
-                .onTapGesture {
-                    showingImagePicker = true
-                }
+        .onTapGesture {
+            showingImagePicker = true
+        }
     }
 
     private func intensitySlider() -> some View {
         HStack {
             Text("Intensity")
             Slider(value: $filterIntensity)
-                    .onChange(of: filterIntensity) { _ in
-                        applyProcessing()
-                    }
+                .onChange(of: filterIntensity) { _ in
+                    applyProcessing()
+                }
         }
-                .padding(.vertical)
+        .padding(.vertical)
     }
 
     private func changeFilterButton() -> some View {
@@ -103,12 +104,10 @@ struct ContentView: View {
             }
         }
 
-        Button("Cancel", role: .cancel) {
-        }
+        Button("Cancel", role: .cancel) {}
     }
 
     func applyProcessing() {
-
         let inputKeys = currentFilter.inputKeys
 
         if inputKeys.contains(kCIInputIntensityKey) {
@@ -120,7 +119,6 @@ struct ContentView: View {
         if inputKeys.contains(kCIInputScaleKey) {
             currentFilter.setValue(filterIntensity * 10, forKey: kCIInputScaleKey)
         }
-
 
         guard let outputImage = currentFilter.outputImage else {
             return
@@ -143,20 +141,29 @@ struct ContentView: View {
     }
 
     func save() {
-        guard let processedImage = processedImage else {
+        guard let serializedImage = processedImage?.serializeImage() else {
+            logger.error("Error serializing image")
             return
         }
 
-        let imageId = Int64.random(in: Int64.min...Int64.max)
-        let imageWithCaption = ImageWithCaption(
-                imageId: imageId, uiImage: processedImage,
-                caption: "",
-                createdAt: Date.now
-        )
+        let imageId = Utils.generateRandomInt64()
+
+        let imageMetadata = ImageMetadata.with {
+            $0.imageID = imageId
+            $0.createdAt = Utils.getCurrentProtobufTimestamp()
+        }
+
+        let imageWithMetadata = ImageWithMetadata.with {
+            $0.imageMetadata = imageMetadata
+            $0.imageAsBase64Png = serializedImage
+        }
+        
+        logger.debug("Saving \(ImageWithMetadata.self) \(imageId)")
+
         do {
-            try Constants.imageDatabase.put(imageWithCaption: imageWithCaption)
+            try Constants.imageDatabase.put(imageWithMetadata: imageWithMetadata)
         } catch {
-            logger.error("Error saving image \(imageWithCaption) to database: \(error)")
+            logger.error("Error saving image \(imageMetadata) to database: \(error)")
         }
     }
 

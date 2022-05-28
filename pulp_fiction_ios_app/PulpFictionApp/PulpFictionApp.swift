@@ -6,11 +6,10 @@
 //
 //
 
-
 import SwiftUI
 
 @main
-struct PictureSaverApp: App {
+struct PulpFictionApp: App {
     var body: some Scene {
         WindowGroup {
             NavigationView {

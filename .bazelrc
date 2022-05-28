@@ -1,1 +1,1 @@
---strategy=SwiftCompile=worker // activate ncremental compilation for Swift apps
+build --verbose_failures

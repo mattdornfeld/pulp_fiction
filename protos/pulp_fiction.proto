@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package pulp_fiction.protos;
+
+import "google/protobuf/timestamp.proto";
+
+message GetFeedRequest {
+  message GetUserFeedRequest {
+    int64 user_id = 1;
+  }
+
+  message GetGlobalFeedRequest {
+  }
+
+  oneof get_feed_request {
+    GetUserFeedRequest get_user_feed_request = 1;
+    GetGlobalFeedRequest get_global_feed_request = 2;
+  }
+}
+
+message ImageWithMetadata {
+  message ImageMetadata {
+    message GpsCoordinates {
+      float x = 1;
+      float y = 2;
+    }
+
+    int64 image_id = 1;
+    google.protobuf.Timestamp created_at = 2;
+    GpsCoordinates gps_coordinates = 3;
+    string image_with_metadata_hash = 4;
+  }
+
+  bytes image_as_base64_png = 1;
+  string caption = 2;
+  ImageMetadata imageMetadata = 3;
+}
+
+message GetFeedResponse {
+  repeated ImageWithMetadata images_with_metadata = 1;
+}
+
+//service PulpFiction {
+//  rpc GetFeed (GetFeedRequest) returns (GetFeedResponse) {}
+//}

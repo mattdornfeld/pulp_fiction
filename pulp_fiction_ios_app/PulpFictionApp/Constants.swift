@@ -7,5 +7,5 @@ import Foundation
 struct Constants {
     static let appDirectoryURL: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
 
-    static let imageDatabase: ImageDatabase = ImageDatabase()
+    static let imageDatabase: ImageDatabase = .init()
 }
