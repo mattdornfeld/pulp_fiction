@@ -6,13 +6,12 @@
 //
 
 import Foundation
-import UIKit
 import Logging
+import UIKit
 
 struct UIImageCompanion {
     static let logger: Logger = .init(label: String(describing: UIImageCompanion.self))
 }
-
 
 extension UIImage {
     func serializeImage() -> Data? {

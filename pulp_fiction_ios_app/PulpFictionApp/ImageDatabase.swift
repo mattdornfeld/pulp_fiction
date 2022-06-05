@@ -4,7 +4,6 @@
 
 import Foundation
 import Logging
-import protos_pulp_fiction_proto
 import SQLite
 import UIKit
 
@@ -19,7 +18,6 @@ class ImageDatabase {
     private let db: Connection
     private let imagesTable: Table = .init(ImageDatabaseCompanion.tableName)
     private typealias ImageWithMetadataIterator = RowIterator
-    typealias ImageWithMetadata = PulpFiction_Protos_ImageWithMetadata
 
     init() {
         try! db = Connection(Utils.getAppDirectoryFilePath(fileName: "imageDatabase.sqlite3"))
@@ -51,7 +49,7 @@ class ImageDatabase {
             ImageDatabaseCompanion.imageWithMetadata <- serializedImage
         )
         try db.run(insert)
-        
+
         logger.debug("Inserted \(ImageWithMetadata.self) \(imageWithMetadata.imageMetadata.imageID)")
     }
 
