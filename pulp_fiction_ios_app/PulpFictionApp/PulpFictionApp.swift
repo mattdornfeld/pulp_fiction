@@ -6,6 +6,7 @@
 //
 //
 
+import ComposableArchitecture
 import SwiftUI
 
 @main
@@ -14,7 +15,7 @@ struct PulpFictionApp: App {
         WindowGroup {
             NavigationView {
                 VStack {
-                    NavigationLink("create", destination: ContentView())
+                    NavigationLink("create", destination: PostCreatorView())
                     Divider()
                     NavigationLink("feed", destination: ScrollingContentView())
                 }
@@ -22,3 +23,20 @@ struct PulpFictionApp: App {
         }
     }
 }
+
+// @main
+// struct PulpFictionApp2: App {
+//    var body: some Scene {
+//        WindowGroup {
+//            AppView(
+//              store: Store(
+//                initialState: AppState(),
+//                reducer: appReducer,
+//                environment: AppEnvironment(
+//                  mainQueue: .main
+//                )
+//              )
+//            )
+//        }
+//    }
+// }

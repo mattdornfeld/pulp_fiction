@@ -1,1 +1,2 @@
 build --verbose_failures
+build --strategy=SwiftCompile=worker

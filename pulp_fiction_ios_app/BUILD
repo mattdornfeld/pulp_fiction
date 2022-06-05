@@ -15,12 +15,14 @@ swift_library(
     deps = [
         "@swift_pkgs//swift-log:Logging",
         "@swift_pkgs//SQLite.swift:SQLite",
+        "@swift_pkgs//swift-composable-architecture:ComposableArchitecture",
         ":build_swift_protos"
     ],
 )
 
 ios_application(
     name = "build_app",
+    bundle_name = "pulp_fiction",
     bundle_id = "co.firstorderlabs.PulpFictionApp",
     families = [
         "iphone",

@@ -75,6 +75,9 @@ load("@cgrindel_rules_spm//spm:defs.bzl", "spm_pkg", "spm_repositories")
 
 spm_repositories(
     name = "swift_pkgs",
+    platforms = [
+        ".macOS(.v10_15)",
+    ],
     dependencies = [
         spm_pkg(
             "https://github.com/apple/swift-log.git",
@@ -86,11 +89,11 @@ spm_repositories(
             exact_version = "0.13.3",
             products = ["SQLite"],
         ),
-#        spm_pkg(
-#            "https://github.com/apple/swift-protobuf.git",
-#            exact_version = "1.6.0",
-#            products = ["SwiftProtobuf"],
-#        ),
+        spm_pkg(
+            "https://github.com/pointfreeco/swift-composable-architecture.git",
+            exact_version = "0.34.0",
+            products = ["ComposableArchitecture"],
+        ),
     ],
 )
 
