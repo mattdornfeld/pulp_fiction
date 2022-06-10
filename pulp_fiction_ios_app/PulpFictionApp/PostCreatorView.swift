@@ -36,9 +36,9 @@ enum ErrorCreatingPost: Error {
 
 struct PostCreatorEnvironment {
     let mainQueue: AnySchedulerOf<DispatchQueue>
-    let imagedatabase: ImageDatabase = Constants.imageDatabase
+    let localImageStore: LocalImageStore
 
-    let processImagePickedFromPhotoAlbum: (Result<ImagePicker.PhotoAlbumImage, ErrorPickingImageFromLibrary>) -> Effect<UIImage, ErrorPickingImageFromLibrary> = { result in
+    func processImagePickedFromPhotoAlbum(_ result: Result<ImagePicker.PhotoAlbumImage, ErrorPickingImageFromLibrary>) -> Effect<UIImage, ErrorPickingImageFromLibrary> {
         switch result {
         case let .success(photoAlbumImage):
 
@@ -53,17 +53,17 @@ struct PostCreatorEnvironment {
         }
     }
 
-    let createPost: (UIImage?) -> Effect<ImageMetadata, ErrorCreatingPost> = { uiImageMaybe in
+    func createPost(_ uiImageMaybe: UIImage?) -> Effect<ImageMetadata, ErrorCreatingPost> {
         guard let uiImage = uiImageMaybe else {
             return Effect(error: ErrorCreatingPost.imageNotSelected)
         }
 
         if let serializedImage = uiImage.serializeImage() {
-            let imageId = Utils.generateRandomInt64()
+            let imageId = PulpFictionUtils.generateRandomInt64()
 
             let imageMetadata = ImageMetadata.with {
                 $0.imageID = imageId
-                $0.createdAt = Utils.getCurrentProtobufTimestamp()
+                $0.createdAt = PulpFictionUtils.getCurrentProtobufTimestamp()
             }
 
             let imageWithMetadata = ImageWithMetadata.with {
@@ -71,13 +71,12 @@ struct PostCreatorEnvironment {
                 $0.imageAsBase64Png = serializedImage
             }
 
-            do {
-                try Constants.imageDatabase.put(imageWithMetadata: imageWithMetadata)
-            } catch {
+            switch localImageStore.put(imageWithMetadata) {
+            case .success:
+                return Effect(value: imageMetadata)
+            case .failure:
                 return Effect(error: ErrorCreatingPost.errorSavingPostToDatabase)
             }
-
-            return Effect(value: imageMetadata)
         } else {
             return Effect(error: ErrorCreatingPost.errorSerializingImage)
         }
@@ -138,7 +137,12 @@ struct PostCreatorReducer {
                 .catchToEffect(PostCreatorAction.createPostHandleErrors)
 
         case let .createPostHandleErrors(.success(imageMetadata)):
-            logger.info("Created post \(imageMetadata.imageID)")
+            logger.info(
+                "Created post",
+                metadata: [
+                    "imageId": "\(imageMetadata.imageID)",
+                ]
+            )
             return .none
 
         case let .createPostHandleErrors(.failure(error)):
@@ -146,7 +150,12 @@ struct PostCreatorReducer {
             case .imageNotSelected:
                 break
             default:
-                logger.error("Error creating post for reason \(error)")
+                logger.error(
+                    "Error creating post",
+                    metadata: [
+                        "cause": "\(error)",
+                    ]
+                )
             }
 
             return .none
@@ -218,12 +227,13 @@ struct PostCreatorView: View {
         self.store = store
     }
 
-    init() {
+    init(localImageStore: LocalImageStore) {
         self.init(store: Store(
             initialState: PostCreatorState(),
             reducer: PostCreatorReducer.reducer,
             environment: PostCreatorEnvironment(
-                mainQueue: .main
+                mainQueue: .main,
+                localImageStore: localImageStore
             )
         ))
     }
