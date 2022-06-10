@@ -9,5 +9,14 @@ build_protos:
 build_source:
 	${BAZEL} build :build_source --apple_platform_type=ios
 
+clean:
+	${BAZEL} clean
+
 format:
 	${BAZEL} build :format && ${BAZEL} run :format_update
+
+test_all:
+	${BAZEL} test ... --apple_platform_type=ios --test_output=all
+
+test_unit:
+	${BAZEL} test :test_unit --apple_platform_type=ios --test_output=all

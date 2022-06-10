@@ -12,31 +12,17 @@ import SwiftUI
 @main
 struct PulpFictionApp: App {
     var body: some Scene {
+        // TODO: Add error handling here so error message is displayed to user if connection to database fails
+        let localImageStore = LocalImageStore()!
+
         WindowGroup {
             NavigationView {
                 VStack {
-                    NavigationLink("create", destination: PostCreatorView())
+                    NavigationLink("create", destination: PostCreatorView(localImageStore: localImageStore))
                     Divider()
-                    NavigationLink("feed", destination: ScrollingContentView())
+                    NavigationLink("feed", destination: ScrollingContentView(localImageStore: localImageStore))
                 }
             }
         }
     }
 }
-
-// @main
-// struct PulpFictionApp2: App {
-//    var body: some Scene {
-//        WindowGroup {
-//            AppView(
-//              store: Store(
-//                initialState: AppState(),
-//                reducer: appReducer,
-//                environment: AppEnvironment(
-//                  mainQueue: .main
-//                )
-//              )
-//            )
-//        }
-//    }
-// }
