@@ -40,6 +40,6 @@ message GetFeedResponse {
   repeated ImageWithMetadata images_with_metadata = 1;
 }
 
-//service PulpFiction {
-//  rpc GetFeed (GetFeedRequest) returns (GetFeedResponse) {}
-//}
+service PulpFiction {
+  rpc GetFeed (GetFeedRequest) returns (GetFeedResponse) {}
+}
