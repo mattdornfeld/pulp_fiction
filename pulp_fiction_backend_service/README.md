@@ -1,0 +1,2 @@
+# Project Setup
+* Install Java
