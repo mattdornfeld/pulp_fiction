@@ -1,6 +1,9 @@
 syntax = "proto3";
 
-package pulp_fiction.protos;
+package co.firstorderlabs.protos.pulpfiction;
+
+option java_package = "co.firstorderlabs.protos.pulpfiction";
+option java_outer_classname = "PulpFictionProtos";
 
 import "google/protobuf/timestamp.proto";
 
@@ -37,7 +40,8 @@ message ImageWithMetadata {
 }
 
 message GetFeedResponse {
-  repeated ImageWithMetadata images_with_metadata = 1;
+  bool x = 1;
+  repeated ImageWithMetadata images_with_metadata = 2;
 }
 
 service PulpFiction {
