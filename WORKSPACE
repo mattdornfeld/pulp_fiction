@@ -135,13 +135,28 @@ load(
 maven_install(
     name = "maven",
     artifacts = [
+        "com.google.guava:guava:29.0-android",
+        "com.google.protobuf:protobuf-java:3.18.0",
         "com.google.protobuf:protobuf-kotlin:3.18.0",
-    ] + IO_GRPC_GRPC_KOTLIN_ARTIFACTS + IO_GRPC_GRPC_JAVA_ARTIFACTS,
+        "com.squareup:kotlinpoet:1.11.0",
+        "io.grpc:grpc-kotlin-stub:1.3.0",
+        "io.grpc:grpc-netty-shaded:1.47.0",
+        "io.grpc:grpc-protobuf:1.47.0",
+        "io.grpc:grpc-stub:1.47.0",
+        "org.jetbrains.kotlin:kotlin-test-junit5:1.6.0",
+        "org.jetbrains.kotlin:kotlin-test:1.6.0",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.6.0",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-debug:1.6.0",
+        "junit:junit:4.13-beta-3",
+#        "org.junit.jupiter:junit-jupiter-api:5.8.2",
+#        "org.junit.jupiter:junit-jupiter-engine:5.8.2",
+    ] + IO_GRPC_GRPC_JAVA_ARTIFACTS,
     generate_compat_repositories = True,
     repositories = [
-        "https://maven.google.com",
         "https://repo1.maven.org/maven2",
     ],
+    version_conflict_policy = "pinned",
 )
 
 load(
