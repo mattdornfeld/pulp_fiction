@@ -13,7 +13,7 @@ make build_app
 ```
 To execute the tests run
 ```
-make test
+make test_all
 ```
 ### Tulsi
 This project uses [Tulsi](https://tulsi.bazel.build/docs/gettingstarted.html) as a tool for generating XCode projects from the Bazel `BUILD` file. Follow the installation instruction in the link and open the Tulsi UI. Add the `BUILD` file in this directory as a Tulsi Bazel Package. Then click on the Configs tab. Click the + icon and select the `build_app` and `test_unit` labels. Click "Next" twice and select `bazel-out`, `external`, and `pulp_fiction_ios_app` as "Source Targets", click "Save", and choose a name for the config. Then highlight the config you just created and click "Generate". Choose this directory as the output directory and click "Generate" again. This will generate the `.xcodeproj` file and should automatically open the XCode IDE. In the future you can open the project by pointing XCode at the `.xcodeproj` file, but you will need to regenerate the file if you add new dependencies. The idea is that the `BUILD` file is the source of truth and the `.xcodeproj` file is created from the `BUILD` file. Once you have the project open in the IDE try building it and running it in a simulator.  
