@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package co.firstorderlabs.protos.pulpfiction;
+package pulp_fiction.protos;
 
 option java_package = "co.firstorderlabs.protos.pulpfiction";
 option java_outer_classname = "PulpFictionProtos";
