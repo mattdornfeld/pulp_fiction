@@ -1,7 +1,7 @@
 # Pulp Fiction IOS App
 This is the subproject for the Pulp Fiction IOS App.
 ## Project Setup
-### Configure Enviroonment
+### Configure Environment
 To work on the IOS app part of the codebase you'll need to install Swift and XCode. Install Xcode from the  App Store. Then install XCode command line tools by running
 ```
 xcode-select --install

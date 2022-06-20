@@ -40,12 +40,12 @@ class PulpFictionBackendServer(private val port: Int) {
 
     class PulpFictionBackendService : PulpFictionGrpcKt.PulpFictionCoroutineImplBase() {
         override suspend fun getFeed(request: PulpFictionProtos.GetFeedRequest): GetFeedResponse {
-            return GetFeedResponse.getDefaultInstance();
+            return GetFeedResponse.getDefaultInstance()
         }
     }
 }
 
-fun main(){
+fun main() {
     PulpFictionBackendServer()
         .start()
         .blockUntilShutdown()
