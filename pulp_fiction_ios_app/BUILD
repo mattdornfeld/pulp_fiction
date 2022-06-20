@@ -47,6 +47,7 @@ ios_unit_test(
         ":build_tests"
     ],
     minimum_os_version = "15.0",
+    visibility = ["//visibility:public"],
 )
 
 ios_application(

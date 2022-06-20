@@ -51,8 +51,6 @@ kt_jvm_library(
         "@maven//:org_jetbrains_kotlin_kotlin_test",
         "@maven//:org_jetbrains_kotlin_kotlin_test_junit5",
         "@maven//:junit_junit",
-#        "@maven//:org_junit_jupiter_junit_jupiter_engine",
-#        "@maven//:org_junit_jupiter_junit_jupiter_api",
         "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
         "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core_jvm",
     ],
@@ -63,7 +61,8 @@ kt_jvm_test(
     test_class = "co.firstorderlabs.pulpfiction.PulpFictionBackendServerTest",
     deps = [
         ":pulp_fiction_backend_service_tests_lib",
-    ]
+    ],
+    visibility = ["//visibility:public"],
 )
 
 
@@ -74,4 +73,5 @@ kt_jvm_binary(
     deps = [
         ":pulp_fiction_backend_service_lib",
     ],
+    visibility = ["//visibility:public"],
 )
