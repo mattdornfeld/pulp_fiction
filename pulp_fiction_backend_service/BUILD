@@ -2,19 +2,29 @@ load(
     "@com_github_grpc_grpc_kotlin//:kt_jvm_grpc.bzl",
     "kt_jvm_grpc_library",
     "kt_jvm_proto_library",
-    )
+)
 
 load(
     "@io_bazel_rules_kotlin//kotlin:jvm.bzl",
     "kt_jvm_binary",
     "kt_jvm_library",
     "kt_jvm_test",
-    )
+)
+
+load(
+    "@io_bazel_rules_kotlin//kotlin:lint.bzl",
+    "ktlint_fix",
+    "ktlint_test",
+)
 
 load(
     "@rules_java//java:defs.bzl",
     "java_proto_library"
     )
+
+MAIN_SRC_FILES = ["src/main/kotlin/**/*.kt"]
+TEST_SRC_FILES = ["src/test/kotlin/**/*.kt"]
+SRC_FILES = MAIN_SRC_FILES + TEST_SRC_FILES
 
 kt_jvm_proto_library(
     name = "build_kotlin_protos",
@@ -27,9 +37,14 @@ kt_jvm_grpc_library(
     deps = [":build_kotlin_protos"],
 )
 
+ktlint_fix(
+    name = "lint_and_fix",
+    srcs = glob(SRC_FILES),
+)
+
 kt_jvm_library(
     name = "pulp_fiction_backend_service_lib",
-    srcs = glob(["src/main/kotlin/**/*.kt"]),
+    srcs = glob(MAIN_SRC_FILES),
     deps = [
         ":build_kotlin_grpc",
         ":build_kotlin_protos",
@@ -45,7 +60,7 @@ kt_jvm_library(
 
 kt_jvm_library(
     name = "pulp_fiction_backend_service_tests_lib",
-    srcs = glob(["src/test/kotlin/**/*.kt"]),
+    srcs = glob(TEST_SRC_FILES),
     deps = [
         ":pulp_fiction_backend_service_lib",
         "@maven//:org_jetbrains_kotlin_kotlin_test",
@@ -65,11 +80,16 @@ kt_jvm_test(
     visibility = ["//visibility:public"],
 )
 
+ktlint_test(
+    name = "test_lint",
+    srcs = glob(SRC_FILES),
+    visibility = ["//visibility:public"],
+)
 
 kt_jvm_binary(
     name = "pulp_fiction_backend_service",
     main_class = "co.firstorderlabs.pulpfiction.PulpFictionBackendServerKt",
-    srcs = glob(["src/main/kotlin/**/*.kt"]),
+    srcs = glob(MAIN_SRC_FILES),
     deps = [
         ":pulp_fiction_backend_service_lib",
     ],
