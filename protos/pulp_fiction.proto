@@ -7,6 +7,17 @@ option java_outer_classname = "PulpFictionProtos";
 
 import "google/protobuf/timestamp.proto";
 
+enum PostState {
+  CREATING = 0;
+  CREATED = 1;
+  DELETED = 2;
+}
+
+enum PostType {
+  COMMENT = 0;
+  IMAGE = 1;
+}
+
 message GetFeedRequest {
   message GetUserFeedRequest {
     int64 user_id = 1;
