@@ -6,6 +6,9 @@ build_protos:
 build_jar:
 	${BAZEL} build :pulp_fiction_backend_service
 
+configure_dev:
+	chmod u+x sbin/configure.sh && sbin/configure.sh
+
 lint_and_fix:
 	${BAZEL} run :lint_and_fix
 

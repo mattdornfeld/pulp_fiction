@@ -48,14 +48,19 @@ kt_jvm_library(
     deps = [
         ":build_kotlin_grpc",
         ":build_kotlin_protos",
-        "@maven//:com_google_protobuf_protobuf_kotlin",
         "@maven//:com_google_protobuf_protobuf_java",
+        "@maven//:com_google_protobuf_protobuf_kotlin",
         "@maven//:io_grpc_grpc_kotlin_stub",
         "@maven//:io_grpc_grpc_netty_shaded",
         "@maven//:io_grpc_grpc_protobuf",
         "@maven//:io_grpc_grpc_stub",
+        "@maven//:org_flywaydb_flyway_core",
         "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
+        "@maven//:org_postgresql_postgresql",
+        "@maven//:me_liuwj_ktorm_ktorm_core",
+        "@maven//:me_liuwj_ktorm_ktorm_support_postgresql",
     ],
+    resources = glob(["src/main/resources/**/*"]),
 )
 
 kt_jvm_library(
@@ -63,21 +68,46 @@ kt_jvm_library(
     srcs = glob(TEST_SRC_FILES),
     deps = [
         ":pulp_fiction_backend_service_lib",
-        "@maven//:org_jetbrains_kotlin_kotlin_test",
+        "@maven//:io_github_serpro69_kotlin_faker",
         "@maven//:org_jetbrains_kotlin_kotlin_test_junit5",
-        "@maven//:junit_junit",
         "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
         "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core_jvm",
+        "@maven//:org_junit_jupiter_junit_jupiter",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_console",
+        "@maven//:org_testcontainers_junit_jupiter",
+        "@maven//:org_testcontainers_postgresql",
+        "@maven//:org_testcontainers_testcontainers",
     ],
 )
 
 kt_jvm_test(
-    name = "pulp_fiction_backend_service_tests",
-    test_class = "co.firstorderlabs.pulpfiction.PulpFictionBackendServerTest",
+    name = "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServerTest",
+    test_class = "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServerTest",
     deps = [
         ":pulp_fiction_backend_service_tests_lib",
+
     ],
     visibility = ["//visibility:public"],
+    main_class = "org.junit.platform.console.ConsoleLauncher",
+    args = [
+        "--select-package=co.firstorderlabs.pulpfiction.backendserver",
+    ],
+)
+
+kt_jvm_test(
+    name = "co.firstorderlabs.pulpfiction.backendserver.database.MigrateDatabaseTest",
+    test_class = "co.firstorderlabs.pulpfiction.backendserver.database.MigrateDatabaseTest",
+    deps = [
+        ":pulp_fiction_backend_service_tests_lib",
+
+    ],
+    visibility = ["//visibility:public"],
+    main_class = "org.junit.platform.console.ConsoleLauncher",
+    args = [
+        "--select-package=co.firstorderlabs.pulpfiction.backendserver.database",
+    ],
 )
 
 ktlint_test(

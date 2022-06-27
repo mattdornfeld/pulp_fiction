@@ -1,9 +1,9 @@
-package co.firstorderlabs.pulpfiction
+package co.firstorderlabs.pulpfiction.backendserver
 
 import co.firstorderlabs.protos.pulpfiction.PulpFictionGrpcKt
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedResponse
-import co.firstorderlabs.pulpfiction.configs.ServiceConfigs
+import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs
 import io.grpc.ServerBuilder
 
 class PulpFictionBackendServer(private val port: Int) {
