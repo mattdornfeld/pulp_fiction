@@ -59,21 +59,12 @@ struct PostCreatorEnvironment {
         }
 
         if let serializedImage = uiImage.serializeImage() {
-            let imageId = PulpFictionUtils.generateRandomInt64()
-
-            let imageMetadata = ImageMetadata.with {
-                $0.imageID = imageId
-                $0.createdAt = PulpFictionUtils.getCurrentProtobufTimestamp()
-            }
-
-            let imageWithMetadata = ImageWithMetadata.with {
-                $0.imageMetadata = imageMetadata
-                $0.imageAsBase64Png = serializedImage
-            }
+            let imageId = UUID().uuidString
+            let imageWithMetadata = ImageWithMetadata(imageId, serializedImage)
 
             switch localImageStore.put(imageWithMetadata) {
             case .success:
-                return Effect(value: imageMetadata)
+                return Effect(value: imageWithMetadata.imageMetadata)
             case .failure:
                 return Effect(error: ErrorCreatingPost.errorSavingPostToDatabase)
             }

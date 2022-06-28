@@ -22,7 +22,7 @@ extension RowIterator {
 
 struct LocalImageStoreCompanion {
     fileprivate static let tableName = "images"
-    fileprivate static let imageId: Expression<Int64> = .init("imageId")
+    fileprivate static let imageId: Expression<String> = .init("imageId")
     fileprivate static let imageWithMetadata: Expression<String> = .init("image")
     fileprivate static let imagesTable: Table = .init(tableName)
     private static let logger: Logger = .init(label: String(describing: LocalImageStoreCompanion.self))
@@ -123,7 +123,7 @@ public class LocalImageStore {
             .map { ($0, buildSerializedImageResult($0)) }
 
         let idsOfSerializationFailures = imageWithMetadataAndSerializedImageResults
-            .map { (imageWithMetadata: ImageWithMetadata, serializedImageResult: Swift.Result<String, Error>) -> Int64? in
+            .map { (imageWithMetadata: ImageWithMetadata, serializedImageResult: Swift.Result<String, Error>) -> String? in
                 switch serializedImageResult {
                 case .success:
                     return nil
@@ -142,7 +142,7 @@ public class LocalImageStore {
             Swift.Result.success(())
 
         let insertStatementsWithImageIds = imageWithMetadataAndSerializedImageResults
-            .map { (imageWithMetadata: ImageWithMetadata, serializedImageResult: Swift.Result<String, Error>) -> (Int64, [Setter])? in
+            .map { (imageWithMetadata: ImageWithMetadata, serializedImageResult: Swift.Result<String, Error>) -> (String, [Setter])? in
                 switch serializedImageResult {
                 case let .success(serializedImage):
                     return (imageWithMetadata.imageMetadata.imageID, buildInsertImageStatement(imageWithMetadata, serializedImage))
@@ -207,7 +207,7 @@ public class LocalImageStore {
                 )
             }
             .flatMap { serializedData in
-                Swift.Result { try ImageWithMetadata(serializedData: serializedData) }
+                Swift.Result { try ImageWithMetadata(imageId, serializedData) }
                     .mapError { error in GetImageWithMetadataError.errorDeserializingImageWithMetadata(error) }
                     .onFailure { _ in
                         logger.error(
@@ -221,7 +221,7 @@ public class LocalImageStore {
             }
     }
 
-    public func get(_ imageId: Int64) -> Swift.Result<ImageWithMetadata, GetImageWithMetadataError> {
+    public func get(_ imageId: String) -> Swift.Result<ImageWithMetadata, GetImageWithMetadataError> {
         return Swift.Result {
             try connection.pluck(LocalImageStoreCompanion.imagesTable.filter(LocalImageStoreCompanion.imageId == imageId))
         }
@@ -280,7 +280,7 @@ public class LocalImageStore {
         }
     }
 
-    public func batchGet(_ imageIds: [Int64]) -> Swift.Result<[ImageWithMetadata], BatchGetImageWithMetadataError> {
+    public func batchGet(_ imageIds: [String]) -> Swift.Result<[ImageWithMetadata], BatchGetImageWithMetadataError> {
         return batchGet(LocalImageStoreCompanion.imagesTable.filter(imageIds.contains(LocalImageStoreCompanion.imageId)))
     }
 

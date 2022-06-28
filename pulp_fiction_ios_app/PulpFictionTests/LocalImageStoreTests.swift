@@ -30,7 +30,7 @@ class LocalImageStoreTests: XCTestCase {
 
     func testGetAndPut() throws {
         let expectedImageWithMetadata = PulpFictionUtils.buildImageWithMetadata(
-            imageId: 1234,
+            imageId: "1234",
             createdAt: Google_Protobuf_Timestamp(timeIntervalSince1970: 0),
             serializedImage: Data()
         )
@@ -48,7 +48,7 @@ class LocalImageStoreTests: XCTestCase {
     }
 
     func testBatchGet() throws {
-        let expectedImageIds: [Int64] = [1234, 1235]
+        let expectedImageIds: [String] = ["1234", "1235"]
         let expectedImageWithMetadatas = expectedImageIds.map { PulpFictionUtils.buildImageWithMetadata(
             imageId: $0,
             createdAt: Google_Protobuf_Timestamp(timeIntervalSince1970: 0),

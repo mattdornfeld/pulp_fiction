@@ -5,6 +5,8 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedResponse
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs
 import io.grpc.ServerBuilder
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
 class PulpFictionBackendServer(private val port: Int) {
     constructor() : this(ServiceConfigs.SERVICE_PORT)
@@ -39,14 +41,14 @@ class PulpFictionBackendServer(private val port: Int) {
     }
 
     class PulpFictionBackendService : PulpFictionGrpcKt.PulpFictionCoroutineImplBase() {
-        override suspend fun getFeed(request: PulpFictionProtos.GetFeedRequest): GetFeedResponse {
-            return GetFeedResponse.getDefaultInstance()
+        override fun getFeed(requests: Flow<PulpFictionProtos.GetFeedRequest>): Flow<GetFeedResponse> = flow {
+            emit(GetFeedResponse.getDefaultInstance())
         }
     }
-}
 
-fun main() {
-    PulpFictionBackendServer()
-        .start()
-        .blockUntilShutdown()
+    fun main() {
+        PulpFictionBackendServer()
+            .start()
+            .blockUntilShutdown()
+    }
 }

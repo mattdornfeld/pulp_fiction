@@ -7,7 +7,7 @@ import SwiftUI
 
 struct ImageWithCaption: View {
     private static let logger = Logger(label: String(describing: ImageWithCaption.self))
-    let imageId: Int64
+    let imageId: String
     let image: Image
     let caption: String
     let createdAt: Date
@@ -19,7 +19,7 @@ struct ImageWithCaption: View {
         }
     }
 
-    init(imageId: Int64, uiImage: UIImage, caption: String, createdAt: Date) {
+    init(imageId: String, uiImage: UIImage, caption: String, createdAt: Date) {
         self.imageId = imageId
         self.uiImage = uiImage
         self.caption = caption
