@@ -2,59 +2,273 @@ syntax = "proto3";
 
 package pulp_fiction.protos;
 
+import "google/protobuf/timestamp.proto";
+
 option java_package = "co.firstorderlabs.protos.pulpfiction";
 option java_outer_classname = "PulpFictionProtos";
 
-import "google/protobuf/timestamp.proto";
+/*
+Models for the service are defined here
+*/
+message Post {
+  enum PostState {
+    CREATED = 0;
+    CREATING = 1;
+    DELETED = 2;
+  }
 
-enum PostState {
-  CREATING = 0;
-  CREATED = 1;
-  DELETED = 2;
+  enum PostType {
+    COMMENT = 0;
+    IMAGE = 1;
+    USER = 2;
+  }
+
+  message PostMetadata {
+    string post_id = 1;
+    google.protobuf.Timestamp created_at = 2;
+    User.UserMetadata post_creator_user_metadata = 3;
+    PostState postState = 4;
+    google.protobuf.Timestamp updated_at = 6;
+    PostType postType = 7;
+  }
+
+  message Comment {
+    string body = 1;
+    string parent_post_id = 2;
+  }
+
+  message ImagePost {
+    string image_url = 1;
+    string caption = 2;
+  }
+
+  message UserPost {
+    User.UserMetadata userMetadata = 1;
+  }
+
+  PostMetadata metadata = 1;
+  oneof post {
+    Comment comment = 2;
+    ImagePost imagePost = 3;
+    UserPost userPost = 4;
+  }
 }
 
-enum PostType {
-  COMMENT = 0;
-  IMAGE = 1;
+message User {
+  message UserMetadata {
+    string user_id = 1;
+    string display_name = 2;
+    string avatar_image_url = 3;
+    uint32 num_posts = 4;
+    uint32 num_comments = 5;
+  }
+
+  message SensitiveUserMetadata {
+    UserMetadata nonSensitiveUserMetadata = 1;
+    string email = 2;
+    string phone_number = 3;
+    string date_of_birth = 4;
+  }
+
+  oneof user_metadata {
+    UserMetadata nonSensitiveUserMetadata = 1;
+    SensitiveUserMetadata sensitiveUserMetadata = 2;
+  }
+}
+
+/*
+The service itself, request, and response objects are defined here
+*/
+
+message CreatePostRequest {
+  message CreateCommentRequest {
+    string body = 1;
+    string parent_post_id = 2;
+  }
+
+  message CreateImagePostRequest {
+    bytes image_as_png = 1;
+    string caption = 2;
+  }
+
+  LoginResponse.LoginSession loginSession = 1;
+  oneof create_post_request {
+    CreateCommentRequest createCommentRequest = 2;
+    CreateImagePostRequest create_image_post_request = 3;
+  }
+}
+
+message CreatePostResponse {
+  Post.PostMetadata postMetadata = 1;
+}
+
+message CreateUserRequest {
+  string display_name = 1;
+  string email = 2;
+  string phone_number = 3;
+  string date_of_birth = 4;
+  string password = 5;
+  bool opt_in_to_emails = 6;
+  bytes avatar_as_png = 7;
+}
+
+message GetUserResponse {
+  User userMetadata = 1;
 }
 
 message GetFeedRequest {
   message GetUserFeedRequest {
-    int64 user_id = 1;
+    string user_id = 1;
   }
 
   message GetGlobalFeedRequest {
   }
 
+  message GetFollowedFeedRequest {
+  }
+
+  LoginResponse.LoginSession loginSession = 1;
   oneof get_feed_request {
-    GetUserFeedRequest get_user_feed_request = 1;
-    GetGlobalFeedRequest get_global_feed_request = 2;
+    GetUserFeedRequest get_user_feed_request = 2;
+    GetGlobalFeedRequest get_global_feed_request = 3;
+    GetFollowedFeedRequest get_followed_feed_request = 4;
   }
-}
-
-message ImageWithMetadata {
-  message ImageMetadata {
-    message GpsCoordinates {
-      float x = 1;
-      float y = 2;
-    }
-
-    int64 image_id = 1;
-    google.protobuf.Timestamp created_at = 2;
-    GpsCoordinates gps_coordinates = 3;
-    string image_with_metadata_hash = 4;
-  }
-
-  bytes image_as_base64_png = 1;
-  string caption = 2;
-  ImageMetadata imageMetadata = 3;
 }
 
 message GetFeedResponse {
-  bool x = 1;
-  repeated ImageWithMetadata images_with_metadata = 2;
+  repeated Post posts = 1;
+}
+
+message GetPostRequest {
+  LoginResponse.LoginSession loginSession = 1;
+  string post_id = 2;
+}
+
+message GetPostResponse {
+  Post post = 1;
+}
+
+message CreateUserResponse {
+  LoginResponse.LoginSession loginSession = 1;
+  User.SensitiveUserMetadata sensitiveUserMetadata = 2;
+}
+
+message GetUserRequest {
+  LoginResponse.LoginSession loginSession = 1;
+  string user_id = 2;
+}
+
+message LoginRequest {
+  string user_id = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  message LoginSession {
+    string session_token = 1;
+    string user_id = 2;
+    google.protobuf.Timestamp started_at = 3;
+  }
+
+  LoginSession loginSession = 1;
+}
+
+message UpdateUserRequest {
+  message UpdateUserInfo {
+    string new_display_name = 1;
+    string new_date_of_birth = 2;
+  }
+
+  message UpdatePassword {
+    string old_password = 1;
+    string new_password = 2;
+  }
+
+  message UpdateEmail {
+    string new_email = 1;
+  }
+
+  message UpdatePhoneNumber {
+    string new_phone_number = 1;
+  }
+
+  message ResetPassword {
+  }
+
+  LoginResponse.LoginSession loginSession = 1;
+  oneof update_user_request {
+    UpdateUserInfo updateUserInfo = 2;
+    UpdatePassword updatePassword = 3;
+    UpdateEmail updateEmail = 4;
+    UpdatePhoneNumber updatePhoneNumber = 5;
+    ResetPassword resetPassword = 6;
+  }
+}
+
+message UpdateUserResponse {
+  User.SensitiveUserMetadata sensitiveUserMetadata = 1;
+}
+
+message UpdatePostRequest {
+  message CommentOnPost {
+    string body = 1;
+  }
+
+  message LikePost {
+  }
+
+  message DislikePost {
+  }
+
+  message DeletePost {
+  }
+
+  message UpdateImagePost {
+    string new_caption = 1;
+  }
+
+  message UpdateComment {
+    string new_body = 1;
+  }
+
+  message ReportPost {
+    enum Reason {
+      SPAM = 0;
+      PROMOTES_VIOLENCE = 1;
+      ENDANGERS_CHILDREN = 2;
+      FALSE_INFORMATION = 3;
+      SELF_HARM = 4;
+      SCAM_OR_FRAUD = 5;
+      ILLEGAL_ACTIVITY = 6;
+    }
+    Reason reason = 1;
+    string description = 2;
+  }
+
+  LoginResponse.LoginSession loginSession = 1;
+  string post_id = 2;
+  oneof update_post_request {
+    CommentOnPost commentOnPost = 3;
+    LikePost upvotePost = 4;
+    DislikePost likePost = 5;
+    DeletePost dislikePost = 6;
+    UpdateImagePost updateImagePost = 7;
+    UpdateComment updateComment = 8;
+    ReportPost reportPost = 9;
+  }
+}
+
+message UpdatePostResponse {
+  Post post = 1;
 }
 
 service PulpFiction {
-  rpc GetFeed (GetFeedRequest) returns (GetFeedResponse) {}
+  rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {}
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+  rpc GetFeed (stream GetFeedRequest) returns (stream GetFeedResponse) {}
+  rpc GetPost (GetPostRequest) returns (GetPostResponse) {}
+  rpc GetUser (GetUserRequest) returns (GetUserResponse) {}
+  rpc Login (LoginRequest) returns (LoginResponse) {}
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+  rpc UpdatePost(UpdatePostRequest) returns (UpdatePostResponse) {}
 }
