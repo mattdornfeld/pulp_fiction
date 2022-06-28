@@ -1,7 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver.database.models
 
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.PostState
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.PostType
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
 import me.liuwj.ktorm.database.Database
 import me.liuwj.ktorm.entity.Entity
 import me.liuwj.ktorm.entity.sequenceOf

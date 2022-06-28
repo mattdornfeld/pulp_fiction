@@ -27,21 +27,13 @@ public enum PulpFictionUtils {
 
     public static func buildImageWithMetadata(serializedImage: Data) -> ImageWithMetadata {
         return buildImageWithMetadata(
-            imageId: generateRandomInt64(),
+            imageId: UUID().uuidString,
             createdAt: getCurrentProtobufTimestamp(),
             serializedImage: serializedImage
         )
     }
 
-    public static func buildImageWithMetadata(imageId: Int64, createdAt: Google_Protobuf_Timestamp, serializedImage: Data) -> ImageWithMetadata {
-        let imageMetadata = ImageMetadata.with {
-            $0.imageID = imageId
-            $0.createdAt = createdAt
-        }
-
-        return ImageWithMetadata.with {
-            $0.imageMetadata = imageMetadata
-            $0.imageAsBase64Png = serializedImage
-        }
+    public static func buildImageWithMetadata(imageId: String, createdAt: Google_Protobuf_Timestamp, serializedImage: Data) -> ImageWithMetadata {
+        return ImageWithMetadata(imageId, serializedImage, createdAt)
     }
 }
