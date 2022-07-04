@@ -48,6 +48,9 @@ kt_jvm_library(
     deps = [
         ":build_kotlin_grpc",
         ":build_kotlin_protos",
+        "@maven//:com_google_flogger_flogger",
+        "@maven//:com_google_flogger_flogger_slf4j_backend",
+        "@maven//:io_arrow_kt_arrow_core_jvm",
         "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:com_google_protobuf_protobuf_kotlin",
         "@maven//:io_grpc_grpc_kotlin_stub",
@@ -57,8 +60,8 @@ kt_jvm_library(
         "@maven//:org_flywaydb_flyway_core",
         "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
         "@maven//:org_postgresql_postgresql",
-        "@maven//:me_liuwj_ktorm_ktorm_core",
-        "@maven//:me_liuwj_ktorm_ktorm_support_postgresql",
+        "@maven//:org_ktorm_ktorm_core",
+        "@maven//:org_ktorm_ktorm_support_postgresql",
     ],
     resources = glob(["src/main/resources/**/*"]),
 )
@@ -83,11 +86,10 @@ kt_jvm_library(
 )
 
 kt_jvm_test(
-    name = "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServerTest",
-    test_class = "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServerTest",
+    name = "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServiceTest",
+    test_class = "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServiceTest",
     deps = [
         ":pulp_fiction_backend_service_tests_lib",
-
     ],
     visibility = ["//visibility:public"],
     main_class = "org.junit.platform.console.ConsoleLauncher",
@@ -101,7 +103,6 @@ kt_jvm_test(
     test_class = "co.firstorderlabs.pulpfiction.backendserver.database.MigrateDatabaseTest",
     deps = [
         ":pulp_fiction_backend_service_tests_lib",
-
     ],
     visibility = ["//visibility:public"],
     main_class = "org.junit.platform.console.ConsoleLauncher",
