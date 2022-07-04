@@ -9,17 +9,15 @@ import kotlin.random.Random
 object TestDatabaseModelGenerator {
     private val faker = Faker()
 
-    inline fun <reified T : Enum<T>> generateRandomEnumValue(): T {
+    private inline fun <reified T : Enum<T>> generateRandomEnumValue(): T {
         val unrecognizedName = "UNRECOGNIZED"
         val enumValues2 = enumValues<T>().filter { !it.name.equals(unrecognizedName) }
         return enumValues2[Random.nextInt(enumValues2.size)]
     }
 
-    fun generateRandomInstant(): Instant {
-        return generateRandomInstant(Instant.EPOCH, Instant.now())
-    }
+    private fun generateRandomInstant(): Instant = generateRandomInstant(Instant.EPOCH, Instant.now())
 
-    fun generateRandomInstant(start: Instant, end: Instant): Instant {
+    private fun generateRandomInstant(start: Instant, end: Instant): Instant {
         val startSeconds = start.epochSecond
         val endSeconds = end.epochSecond
         val random = ThreadLocalRandom
@@ -29,25 +27,51 @@ object TestDatabaseModelGenerator {
         return Instant.ofEpochSecond(random)
     }
 
-    fun Post.Companion.generateRandom(): Post {
-        return Post {
-            post_id = UUID.randomUUID()
-            post_state = generateRandomEnumValue()
-            created_at = generateRandomInstant()
-            post_creator_id = UUID.randomUUID()
-            post_type = generateRandomEnumValue()
-            post_version = Random.nextInt()
-        }
+    fun Post.Companion.generateRandom(): Post = Post {
+        this.postId = UUID.randomUUID()
+        this.postState = generateRandomEnumValue()
+        this.createdAt = Instant.EPOCH
+        this.postCreatorId = UUID.randomUUID()
+        this.postType = generateRandomEnumValue()
     }
 
-    fun User.Companion.generateRandom(): User {
-        return User {
-            user_id = UUID.randomUUID()
-            display_name = faker.funnyName.name()
-            email = faker.internet.email()
-            phone_number = faker.phoneNumber.phoneNumber()
-            date_of_birth = faker.person.birthDate(30)
-            avatar_image_url = faker.internet.domain()
-        }
+    fun User.Companion.generateRandom(): User = generateRandom(UUID.randomUUID())
+
+    fun User.Companion.generateRandom(userId: UUID): User = User {
+        this.userId = userId
+        this.createdAt = Instant.now()
+        this.displayName = faker.funnyName.name()
+        this.email = faker.internet.email()
+        this.phoneNumber = faker.phoneNumber.phoneNumber()
+        this.dateOfBirth = faker.person.birthDate(30)
+        this.avatarImageUrl = faker.internet.domain()
+        this.hashedPassword = faker.unique.toString()
+    }
+
+    fun CommentDatum.Companion.generateRandom(postId: UUID, parentPostId: UUID): CommentDatum = CommentDatum {
+        this.postId = postId
+        this.createdAt = Instant.EPOCH
+        this.body = faker.worldOfWarcraft.quotes()
+        this.parentPostId = parentPostId
+    }
+
+    fun ImagePostDatum.Companion.generateRandom(postId: UUID): ImagePostDatum = ImagePostDatum {
+        this.postId = postId
+        this.createdAt = Instant.EPOCH
+        this.imageUrl = faker.internet.domain()
+        this.caption = faker.worldOfWarcraft.quotes()
+    }
+
+    fun LoginSession.Companion.generateRandom(userId: UUID): LoginSession = LoginSession {
+        this.userId = userId
+        createdAt = generateRandomInstant()
+        deviceId = faker.unique.toString()
+        sessionToken = UUID.randomUUID()
+    }
+
+    fun Follower.Companion.generateRandom(userId: UUID, followerId: UUID): Follower = Follower {
+        this.userId = userId
+        this.followerId = followerId
+        this.createdAt = Instant.now()
     }
 }

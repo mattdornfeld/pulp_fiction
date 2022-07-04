@@ -1,4 +1,4 @@
-workspace(name = "pulp_fiction")
+Git workspace(name = "pulp_fiction")
 
 load(
     ":repositories.bzl",
@@ -143,25 +143,31 @@ load(
     "IO_GRPC_GRPC_JAVA_ARTIFACTS"
     )
 
+ARROW_VERSION = "1.1.2"
+FLOGGER_VERSION = '0.7.4'
 GRPC_VERSION = "1.47.0"
 JUNIT_VERSION = "5.8.2"
 KOTLIN_VERSION = "1.6.0"
-KTORM_VERSION = "3.1.0"
+KTORM_VERSION = "3.5.0"
 PROTOBUF_VERSION = "3.18.0"
 TEST_CONTAINERS_VERSION = "1.17.2"
 
 maven_install(
     name = "maven",
     artifacts = [
+        "com.google.flogger:flogger:" + FLOGGER_VERSION,
+        "com.google.flogger:flogger-slf4j-backend:" + FLOGGER_VERSION,
         "com.google.protobuf:protobuf-java:" + PROTOBUF_VERSION,
         "com.google.protobuf:protobuf-kotlin:" + PROTOBUF_VERSION,
         "com.squareup:kotlinpoet:1.11.0",
+        "io.arrow-kt:arrow-core-jvm:" + ARROW_VERSION,
+        "io.arrow-kt:arrow-fx-coroutines-jvm:" + ARROW_VERSION,
+        "io.arrow-kt:arrow-fx-stm-jvm:" + ARROW_VERSION,
+        "io.arrow-kt:arrow-optics:" + ARROW_VERSION,
         "io.grpc:grpc-kotlin-stub:1.3.0",
         "io.grpc:grpc-netty-shaded:" + GRPC_VERSION,
         "io.grpc:grpc-protobuf:" + GRPC_VERSION,
         "io.grpc:grpc-stub:" + GRPC_VERSION,
-        "me.liuwj.ktorm:ktorm-core:" + KTORM_VERSION,
-        "me.liuwj.ktorm:ktorm-support-postgresql:" + KTORM_VERSION,
         "org.flywaydb:flyway-core:8.5.13",
         "org.jetbrains.kotlin:kotlin-test-junit5:" + KOTLIN_VERSION,
         "org.jetbrains.kotlin:kotlin-test:" + KOTLIN_VERSION,
@@ -172,6 +178,8 @@ maven_install(
         "org.junit.jupiter:junit-jupiter-engine:" + JUNIT_VERSION,
         "org.junit.jupiter:junit-jupiter:" + JUNIT_VERSION,
         "org.junit.platform:junit-platform-console:1.8.2",
+        "org.ktorm:ktorm-core:" + KTORM_VERSION,
+        "org.ktorm:ktorm-support-postgresql:" + KTORM_VERSION,
         "org.postgresql:postgresql:42.2.24",
         "org.testcontainers:junit-jupiter:" + TEST_CONTAINERS_VERSION,
         "org.testcontainers:postgresql:" + TEST_CONTAINERS_VERSION,

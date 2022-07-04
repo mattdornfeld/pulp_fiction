@@ -12,6 +12,7 @@ data class MigrateDatabase(val url: String, val user: String, val password: Stri
         .configure()
         .dataSource(url, user, password)
         .locations(MIGRATION_SCRIPTS_DIR)
+        .mixed(true)
 
     fun migrateDatabase(): MigrateDatabase {
         fluentConfiguration

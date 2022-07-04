@@ -26,7 +26,7 @@ message Post {
   message PostMetadata {
     string post_id = 1;
     google.protobuf.Timestamp created_at = 2;
-    User.UserMetadata post_creator_user_metadata = 3;
+    string post_creator_id = 3;
     PostState postState = 4;
     google.protobuf.Timestamp updated_at = 6;
     PostType postType = 7;
@@ -59,8 +59,7 @@ message User {
     string user_id = 1;
     string display_name = 2;
     string avatar_image_url = 3;
-    uint32 num_posts = 4;
-    uint32 num_comments = 5;
+    google.protobuf.Timestamp created_at = 4;
   }
 
   message SensitiveUserMetadata {
@@ -149,8 +148,7 @@ message GetPostResponse {
 }
 
 message CreateUserResponse {
-  LoginResponse.LoginSession loginSession = 1;
-  User.SensitiveUserMetadata sensitiveUserMetadata = 2;
+  User.UserMetadata userMetadata = 1;
 }
 
 message GetUserRequest {
@@ -161,13 +159,15 @@ message GetUserRequest {
 message LoginRequest {
   string user_id = 1;
   string password = 2;
+  string device_id = 3;
 }
 
 message LoginResponse {
   message LoginSession {
     string session_token = 1;
     string user_id = 2;
-    google.protobuf.Timestamp started_at = 3;
+    google.protobuf.Timestamp created_at = 3;
+    string device_id = 4;
   }
 
   LoginSession loginSession = 1;

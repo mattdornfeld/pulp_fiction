@@ -1,19 +1,28 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
-import co.firstorderlabs.protos.pulpfiction.PulpFictionGrpcKt
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedResponse
+import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs
 import io.grpc.ServerBuilder
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import org.ktorm.database.Database
+import org.ktorm.support.postgresql.PostgreSqlDialect
 
 class PulpFictionBackendServer(private val port: Int) {
     constructor() : this(ServiceConfigs.SERVICE_PORT)
 
+    companion object {
+        fun createDatabaseConnection(): Database {
+            return Database.connect(
+                url = DatabaseConfigs.URL,
+                user = DatabaseConfigs.USER,
+                password = DatabaseConfigs.PASSWORD,
+                dialect = PostgreSqlDialect(),
+            )
+        }
+    }
+
     private val server = ServerBuilder
         .forPort(port)
-        .addService(PulpFictionBackendService())
+        .addService(PulpFictionBackendService(createDatabaseConnection()))
         .build()
 
     fun start(): PulpFictionBackendServer {
@@ -38,12 +47,6 @@ class PulpFictionBackendServer(private val port: Int) {
     fun blockUntilShutdown(): PulpFictionBackendServer {
         server.awaitTermination()
         return this
-    }
-
-    class PulpFictionBackendService : PulpFictionGrpcKt.PulpFictionCoroutineImplBase() {
-        override fun getFeed(requests: Flow<PulpFictionProtos.GetFeedRequest>): Flow<GetFeedResponse> = flow {
-            emit(GetFeedResponse.getDefaultInstance())
-        }
     }
 
     fun main() {
