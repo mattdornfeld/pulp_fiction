@@ -1,4 +1,4 @@
-Git workspace(name = "pulp_fiction")
+workspace(name = "pulp_fiction")
 
 load(
     ":repositories.bzl",
