@@ -7,7 +7,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
-import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getPostType
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
@@ -48,7 +48,7 @@ interface Post : Entity<Post> {
         suspend fun generateFromRequest(
             postId: UUID,
             request: PulpFictionProtos.CreatePostRequest
-        ): Either<RequestParsingError, Post> = either {
+        ): Either<PulpFictionError, Post> = either {
             Post {
                 this.postId = postId
                 this.createdAt = Instant.now()

@@ -13,7 +13,7 @@ import java.util.UUID
 object ImagePostData : Table<ImagePostDatum>("image_post_data") {
     val postId = uuid("post_id").bindTo { it.postId }
     val createdAt = timestamp("created_at").primaryKey().bindTo { it.createdAt }
-    val imageUrl = varchar("image_url").bindTo { it.imageUrl }
+    val imageS3Key = varchar("image_s3_key").bindTo { it.imageS3Key }
     val caption = varchar("caption").bindTo { it.caption }
 }
 
@@ -21,7 +21,7 @@ interface ImagePostDatum : Entity<ImagePostDatum> {
     companion object : Entity.Factory<ImagePostDatum>()
     var postId: UUID
     var createdAt: Instant
-    var imageUrl: String
+    var imageS3Key: String
     var caption: String
 }
 

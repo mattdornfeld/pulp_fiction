@@ -10,10 +10,10 @@ import co.firstorderlabs.protos.pulpfiction.loginResponse
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
 import org.ktorm.database.Database
+import software.amazon.awssdk.services.s3.S3Client
 
-data class PulpFictionBackendService(val database: Database) : PulpFictionGrpcKt.PulpFictionCoroutineImplBase() {
-    private val databaseMessenger = DatabaseMessenger(database)
-
+data class PulpFictionBackendService(val database: Database, val s3Client: S3Client) : PulpFictionGrpcKt.PulpFictionCoroutineImplBase() {
+    private val databaseMessenger = DatabaseMessenger(database, s3Client)
     override suspend fun createPost(request: PulpFictionProtos.CreatePostRequest): PulpFictionProtos.CreatePostResponse {
         val postMetadata = effect<PulpFictionError, PostMetadata> {
             databaseMessenger.checkLoginSessionValid(request.loginSession).bind()

@@ -11,11 +11,10 @@ import java.time.Instant
 import java.util.UUID
 
 object CommentData : Table<CommentDatum>("comment_data") {
-    val postId = uuid("post_id").bindTo { it.postId }
+    val postId = uuid("post_id").primaryKey().bindTo { it.postId }
     val createdAt = timestamp("created_at").primaryKey().bindTo { it.createdAt }
     val body = varchar("body").bindTo { it.body }
     val parentPostId = uuid("parent_post_id").bindTo { it.parentPostId }
-    val parentCreatedAt = timestamp("parent_created_at").primaryKey().bindTo { it.parentCreatedAt }
 }
 
 interface CommentDatum : Entity<CommentDatum> {
