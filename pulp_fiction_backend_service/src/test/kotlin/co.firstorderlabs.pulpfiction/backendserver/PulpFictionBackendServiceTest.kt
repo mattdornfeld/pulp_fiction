@@ -9,10 +9,11 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
-import co.firstorderlabs.pulpfiction.backendserver.testutils.DatabaseConnection
+import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
+import com.adobe.testing.s3mock.testcontainers.S3MockContainer
 import io.grpc.Status
 import io.grpc.StatusException
 import kotlinx.coroutines.runBlocking
@@ -22,20 +23,25 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.ktorm.dsl.deleteAll
 import org.ktorm.entity.Tuple2
+import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
 internal class PulpFictionBackendServiceTest {
-    companion object : DatabaseConnection() {
+    companion object : TestContainerDependencies() {
         @Container
-        override val postgreSQLContainer = createPostgreSQLContainer()
+        override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
+
+        @Container
+        override val s3MockContainer: S3MockContainer = createS3MockContainer()
 
         @BeforeAll
         @JvmStatic
         override fun migrateDatabase() = super.migrateDatabase()
 
-        private val pulpFictionBackendService by lazy { PulpFictionBackendService(database) }
+        private val pulpFictionBackendService by lazy { PulpFictionBackendService(database, s3Client) }
+        private val s3Messenger by lazy { S3Messenger(s3Client) }
     }
 
     @AfterEach

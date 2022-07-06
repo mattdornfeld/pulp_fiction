@@ -58,7 +58,7 @@ object TestDatabaseModelGenerator {
     fun ImagePostDatum.Companion.generateRandom(postId: UUID): ImagePostDatum = ImagePostDatum {
         this.postId = postId
         this.createdAt = Instant.EPOCH
-        this.imageUrl = faker.internet.domain()
+        this.imageS3Key = faker.internet.domain()
         this.caption = faker.worldOfWarcraft.quotes()
     }
 

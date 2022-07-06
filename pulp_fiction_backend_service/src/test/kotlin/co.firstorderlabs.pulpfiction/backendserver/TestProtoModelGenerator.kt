@@ -37,7 +37,7 @@ object TestProtoModelGenerator {
         this.dateOfBirth = faker.person.birthDate(30).toYearMonthDay()
         this.password = faker.unique.toString()
         this.optInToEmails = random.nextBoolean()
-        this.avatarAsPng = random.nextByteString(100)
+        this.avatarJpg = random.nextByteString(100)
     }
 
     fun generateRandomLoginRequest(userId: String, password: String): PulpFictionProtos.LoginRequest = loginRequest {
@@ -53,7 +53,7 @@ object TestProtoModelGenerator {
 
     fun generateRandomCreateImagePostRequest(): CreateImagePostRequest = createImagePostRequest {
         this.caption = faker.lovecraft.unique.toString()
-        this.imageAsPng = random.nextByteString(100)
+        this.imageJpg = random.nextByteString(100)
     }
 
     fun LoginSession.generateRandomCreatePostRequest(): CreatePostRequest = createPostRequest {

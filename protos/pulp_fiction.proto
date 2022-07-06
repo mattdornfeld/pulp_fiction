@@ -86,7 +86,7 @@ message CreatePostRequest {
   }
 
   message CreateImagePostRequest {
-    bytes image_as_png = 1;
+    bytes imageJpg = 1;
     string caption = 2;
   }
 
@@ -108,7 +108,7 @@ message CreateUserRequest {
   string date_of_birth = 4;
   string password = 5;
   bool opt_in_to_emails = 6;
-  bytes avatar_as_png = 7;
+  bytes avatarJpg = 7;
 }
 
 message GetUserResponse {

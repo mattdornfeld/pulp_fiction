@@ -7,11 +7,9 @@ import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
-import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import com.google.protobuf.Timestamp
-import org.ktorm.database.Database
 import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -46,16 +44,17 @@ suspend fun <A> Effect<PulpFictionError, A>.getResultAndHandleErrors(): A {
     ) { it }
 }
 
-suspend fun <A> Database.transactionToEffect(
-    func: (org.ktorm.database.Transaction) -> A,
-): Effect<PulpFictionError, A> {
-    val database = this
-    return effect {
-        try {
-            database.useTransaction { func(it) }
-        } catch (cause: Throwable) {
-            shift(DatabaseError(cause))
-        }
+/**
+ * Runs an effectful computation in a try/catch and transforms any caught errors to the type specified by errorSupplier
+ */
+suspend fun <R : Throwable, A> effectWithError(
+    errorSupplier: (Throwable) -> R,
+    f: suspend arrow.core.continuations.EffectScope<R>.() -> A
+): Effect<R, A> = effect {
+    try {
+        f(this)
+    } catch (cause: Throwable) {
+        shift(errorSupplier(cause))
     }
 }
 
@@ -63,3 +62,6 @@ fun LocalDate.toYearMonthDay(): String = DateTimeFormatter.ISO_LOCAL_DATE.format
 
 fun String.toUUID(): Either<RequestParsingError, UUID> =
     Either.catch { UUID.fromString(this) }.mapLeft { RequestParsingError(it) }
+
+fun <A> A.whenThen(condition: (a: A) -> Boolean, operation: (a: A) -> A): A =
+    if (condition(this)) operation(this) else this

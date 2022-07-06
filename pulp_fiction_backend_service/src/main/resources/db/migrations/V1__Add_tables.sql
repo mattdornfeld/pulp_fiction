@@ -47,15 +47,15 @@ CREATE TABLE posts
     post_creator_id UUID       NOT NULL REFERENCES users (user_id),
     post_type       POST_TYPE  NOT NULL,
     PRIMARY KEY (post_id, created_at),
-    FOREIGN KEY (post_id) REFERENCES post_ids(post_id)
+    FOREIGN KEY (post_id) REFERENCES post_ids (post_id)
 );
 
 CREATE TABLE comment_data
 (
-    post_id           UUID      NOT NULL,
-    created_at        TIMESTAMP NOT NULL,
-    body              VARCHAR   NOT NULL,
-    parent_post_id    UUID      NOT NULL,
+    post_id        UUID      NOT NULL,
+    created_at     TIMESTAMP NOT NULL,
+    body           VARCHAR   NOT NULL,
+    parent_post_id UUID      NOT NULL,
     PRIMARY KEY (post_id, created_at),
     FOREIGN KEY (post_id, created_at) REFERENCES posts (post_id, created_at),
     FOREIGN KEY (parent_post_id) REFERENCES post_ids (post_id)
@@ -63,10 +63,10 @@ CREATE TABLE comment_data
 
 CREATE TABLE image_post_data
 (
-    post_id    UUID      NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    image_url  VARCHAR   NOT NULL,
-    caption    VARCHAR   NOT NULL,
+    post_id      UUID      NOT NULL,
+    created_at   TIMESTAMP NOT NULL,
+    image_s3_key VARCHAR   NOT NULL,
+    caption      VARCHAR   NOT NULL,
     PRIMARY KEY (post_id, created_at),
     FOREIGN KEY (post_id, created_at) REFERENCES posts (post_id, created_at)
 );

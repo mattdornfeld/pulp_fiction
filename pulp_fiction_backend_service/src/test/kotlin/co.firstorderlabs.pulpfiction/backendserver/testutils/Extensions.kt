@@ -20,3 +20,5 @@ fun Instant.isWithinLast(millis: Long): Boolean {
 }
 
 fun Timestamp.isWithinLast(millis: Long): Boolean = this.toInstant().isWithinLast(millis)
+
+fun ByteArray.toByteString(): ByteString = ByteString.copyFrom(this)
