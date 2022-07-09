@@ -1,4 +1,4 @@
-package co.firstorderlabs.pulpfiction.backendserver.database.models
+package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity

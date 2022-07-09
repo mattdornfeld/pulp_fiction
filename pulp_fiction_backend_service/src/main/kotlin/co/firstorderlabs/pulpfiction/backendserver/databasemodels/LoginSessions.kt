@@ -1,4 +1,4 @@
-package co.firstorderlabs.pulpfiction.backendserver.database.models
+package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
 import arrow.core.continuations.either

@@ -107,7 +107,7 @@ kt_jvm_test(
 )
 
 kt_jvm_test(
-    name = "co.firstorderlabs.pulpfiction.backendserver.database.MigrateDatabaseTest",
+    name = "co.firstorderlabs.pulpfiction.backendserver.MigrateDatabaseTest",
     test_class = "co.firstorderlabs.pulpfiction.backendserver.database.MigrateDatabaseTest",
     deps = [
         ":pulp_fiction_backend_service_tests_lib",

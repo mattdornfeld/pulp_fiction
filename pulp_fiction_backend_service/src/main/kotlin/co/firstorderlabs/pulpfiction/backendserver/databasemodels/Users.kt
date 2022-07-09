@@ -1,4 +1,4 @@
-package co.firstorderlabs.pulpfiction.backendserver.database.models
+package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
 import arrow.core.Option
@@ -11,6 +11,8 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.sensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.userMetadata
 import co.firstorderlabs.protos.pulpfiction.user
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key.Companion.JPG
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
@@ -29,31 +31,28 @@ import java.util.UUID
 object Users : Table<User>("users") {
     val userId = uuid("user_id").primaryKey().bindTo { it.userId }
     val createdAt = timestamp("created_at").bindTo { it.createdAt }
-    val displayName = varchar("display_name").bindTo { it.displayName }
+    val currentDisplayName = varchar("current_display_name").bindTo { it.currentDisplayName }
     val email = varchar("email").bindTo { it.email }
     val phoneNumber = varchar("phone_number").bindTo { it.phoneNumber }
     val dateOfBirth = date("date_of_birth").bindTo { it.dateOfBirth }
-    val avatarImageUrl = varchar("avatar_image_url").bindTo { it.avatarImageUrl }
     val hashedPassword = varchar("hashed_password").bindTo { it.hashedPassword }
 }
 
-interface User : Entity<User> {
+interface User : Entity<User>, ReferencesS3Key {
     var userId: UUID
     var createdAt: Instant
-    var displayName: String
+    var currentDisplayName: String
     var phoneNumber: String
     var hashedPassword: String
     var email: String?
     var dateOfBirth: LocalDate?
-    var avatarImageUrl: String?
 
     fun toNonSensitiveUserMetadataProto(): UserMetadata {
         val user = this
         return userMetadata {
             this.userId = user.userId.toString()
             this.createdAt = user.createdAt.toTimestamp()
-            this.displayName = user.displayName
-            if (user.avatarImageUrl != null) this.avatarImageUrl = user.avatarImageUrl!!
+            this.displayName = user.currentDisplayName
         }
     }
 
@@ -75,7 +74,17 @@ interface User : Entity<User> {
         }
     }
 
+    override fun toS3Key(): String = "$USER_AVATAR_IMAGES_KEY_BASE/${userId}_$createdAt.$JPG"
+
     companion object : Entity.Factory<User>() {
+        enum class TagKey {
+            userId,
+            postType,
+            fileType,
+        }
+
+        const val USER_AVATAR_IMAGES_KEY_BASE = "user_avatar_images"
+
         fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
             if (dateOfBirth == null) {
                 return Either.Right(none())
@@ -98,7 +107,7 @@ interface User : Entity<User> {
                 User {
                     this.userId = UUID.randomUUID()
                     this.createdAt = Instant.now()
-                    this.displayName = request.displayName
+                    this.currentDisplayName = request.displayName
                     this.phoneNumber = request.phoneNumber
                     this.hashedPassword = ""
                     this.email = request.email
