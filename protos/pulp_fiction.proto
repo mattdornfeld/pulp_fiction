@@ -90,10 +90,17 @@ message CreatePostRequest {
     string caption = 2;
   }
 
+  message CreateUserPostRequest {
+    string userId = 1;
+    string display_name = 2;
+    bytes avatarJpg = 3;
+  }
+
   LoginResponse.LoginSession loginSession = 1;
   oneof create_post_request {
     CreateCommentRequest createCommentRequest = 2;
     CreateImagePostRequest create_image_post_request = 3;
+    CreateUserPostRequest create_user_post_request = 4;
   }
 }
 

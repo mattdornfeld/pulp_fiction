@@ -1,26 +1,29 @@
-package co.firstorderlabs.pulpfiction.backendserver.database
+package co.firstorderlabs.pulpfiction.backendserver
 
-import co.firstorderlabs.pulpfiction.backendserver.database.models.CommentData
-import co.firstorderlabs.pulpfiction.backendserver.database.models.CommentDatum
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Follower
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Followers
-import co.firstorderlabs.pulpfiction.backendserver.database.models.ImagePostData
-import co.firstorderlabs.pulpfiction.backendserver.database.models.ImagePostDatum
-import co.firstorderlabs.pulpfiction.backendserver.database.models.LoginSession
-import co.firstorderlabs.pulpfiction.backendserver.database.models.LoginSessions
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Post
-import co.firstorderlabs.pulpfiction.backendserver.database.models.PostId
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Posts
-import co.firstorderlabs.pulpfiction.backendserver.database.models.TestDatabaseModelGenerator.generateRandom
-import co.firstorderlabs.pulpfiction.backendserver.database.models.User
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Users
-import co.firstorderlabs.pulpfiction.backendserver.database.models.comment_data
-import co.firstorderlabs.pulpfiction.backendserver.database.models.followers
-import co.firstorderlabs.pulpfiction.backendserver.database.models.image_post_data
-import co.firstorderlabs.pulpfiction.backendserver.database.models.loginSessions
-import co.firstorderlabs.pulpfiction.backendserver.database.models.postIds
-import co.firstorderlabs.pulpfiction.backendserver.database.models.posts
-import co.firstorderlabs.pulpfiction.backendserver.database.models.users
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Follower
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostId
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.TestDatabaseModelGenerator.generateRandom
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postIds
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
 import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
 import com.adobe.testing.s3mock.testcontainers.S3MockContainer
 import org.junit.jupiter.api.AfterEach
@@ -104,7 +107,7 @@ internal class MigrateDatabaseTest {
             database.postIds.add(commentPostId)
             database.posts.add(parentPost)
             database.posts.add(commentPost)
-            database.comment_data.add(commmentDatum)
+            database.commentData.add(commmentDatum)
         }
 
         val commentData = database.from(CommentData).select().map { CommentData.createEntity(it) }
@@ -115,16 +118,14 @@ internal class MigrateDatabaseTest {
     @Test
     fun testWriteToImagePostDataTable() {
         val post = Post.generateRandom()
-        val postId = PostId {
-            this.postId = post.postId
-        }
+        val postId = post.toPostId()
         val user = User.generateRandom(post.postCreatorId)
         val imagePostDatum = ImagePostDatum.generateRandom(post.postId)
         database.useTransaction {
             database.users.add(user)
             database.postIds.add(postId)
             database.posts.add(post)
-            database.image_post_data.add(imagePostDatum)
+            database.imagePostData.add(imagePostDatum)
         }
 
         val imagePostData = database.from(ImagePostData).select().map { ImagePostData.createEntity(it) }
@@ -160,9 +161,25 @@ internal class MigrateDatabaseTest {
             database.users.add(user)
             database.loginSessions.add(loginSession)
         }
-
         val loginSessions = database.from(LoginSessions).select().map { LoginSessions.createEntity(it) }
         Assertions.assertEquals(1, loginSessions.size)
         Assertions.assertEquals(loginSession, loginSessions[0])
+    }
+
+    @Test
+    fun testWriteToUserPostDataTable() {
+        val post = Post.generateRandom()
+        val user = User.generateRandom(post.postCreatorId)
+        val postId = post.toPostId()
+        val userPostDatum = UserPostDatum.generateRandom(post.postId, user.userId)
+        database.useTransaction {
+            database.users.add(user)
+            database.postIds.add(postId)
+            database.posts.add(post)
+            database.userPostData.add(userPostDatum)
+        }
+        val userPostData = database.from(UserPostData).select().map { UserPostData.createEntity(it) }
+
+        Assertions.assertEquals(userPostDatum, userPostData.first())
     }
 }

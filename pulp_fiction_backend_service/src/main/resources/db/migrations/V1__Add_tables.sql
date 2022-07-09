@@ -3,14 +3,13 @@ CREATE TYPE POST_TYPE AS ENUM ('IMAGE', 'COMMENT', 'USER');
 
 CREATE TABLE users
 (
-    user_id          UUID PRIMARY KEY,
-    created_at       TIMESTAMP NOT NULL,
-    display_name     VARCHAR   NOT NULL,
-    email            VARCHAR   NOT NULL,
-    phone_number     VARCHAR   NOT NULL,
-    date_of_birth    DATE      NOT NULL,
-    hashed_password  VARCHAR   NOT NULL,
-    avatar_image_url VARCHAR
+    user_id              UUID PRIMARY KEY,
+    created_at           TIMESTAMP NOT NULL,
+    current_display_name VARCHAR   NOT NULL UNIQUE,
+    email                VARCHAR   NOT NULL,
+    phone_number         VARCHAR   NOT NULL,
+    date_of_birth        DATE      NOT NULL,
+    hashed_password      VARCHAR   NOT NULL
 );
 
 CREATE TABLE login_sessions
@@ -67,6 +66,17 @@ CREATE TABLE image_post_data
     created_at   TIMESTAMP NOT NULL,
     image_s3_key VARCHAR   NOT NULL,
     caption      VARCHAR   NOT NULL,
+    PRIMARY KEY (post_id, created_at),
+    FOREIGN KEY (post_id, created_at) REFERENCES posts (post_id, created_at)
+);
+
+CREATE TABLE user_post_data
+(
+    post_id             UUID      NOT NULL,
+    created_at          TIMESTAMP NOT NULL,
+    user_id             UUID      NOT NULL REFERENCES users (user_id),
+    display_name        VARCHAR   NOT NULL,
+    avatar_image_s3_key VARCHAR   NOT NULL,
     PRIMARY KEY (post_id, created_at),
     FOREIGN KEY (post_id, created_at) REFERENCES posts (post_id, created_at)
 );

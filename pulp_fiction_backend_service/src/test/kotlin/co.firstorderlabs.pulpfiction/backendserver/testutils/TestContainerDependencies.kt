@@ -1,16 +1,17 @@
 package co.firstorderlabs.pulpfiction.backendserver.testutils
 
+import co.firstorderlabs.pulpfiction.backendserver.MigrateDatabase
 import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs
 import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs.CONTENT_DATA_S3_BUCKET_NAME
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.POSTGRES_IMAGE
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.S3_MOCK_IMAGE_TAG
-import co.firstorderlabs.pulpfiction.backendserver.database.MigrateDatabase
-import co.firstorderlabs.pulpfiction.backendserver.database.models.CommentData
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Followers
-import co.firstorderlabs.pulpfiction.backendserver.database.models.ImagePostData
-import co.firstorderlabs.pulpfiction.backendserver.database.models.LoginSessions
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Posts
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Users
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
 import com.adobe.testing.s3mock.testcontainers.S3MockContainer
 import org.ktorm.database.Database
 import org.ktorm.support.postgresql.PostgreSqlDialect
@@ -43,7 +44,7 @@ abstract class TestContainerDependencies {
             .build()
     }
 
-    protected val tables = listOf(CommentData, ImagePostData, Posts, Followers, LoginSessions, Users)
+    protected val tables = listOf(CommentData, ImagePostData, UserPostData, Posts, Followers, LoginSessions, Users)
 
     open fun migrateDatabase() {
         MigrateDatabase(postgreSQLContainer.jdbcUrl, postgreSQLContainer.username, postgreSQLContainer.password)

@@ -6,24 +6,26 @@ import arrow.core.getOrElse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
-import co.firstorderlabs.pulpfiction.backendserver.S3Messenger.Companion.toS3Key
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
-import co.firstorderlabs.pulpfiction.backendserver.database.models.CommentDatum
-import co.firstorderlabs.pulpfiction.backendserver.database.models.ImagePostDatum
-import co.firstorderlabs.pulpfiction.backendserver.database.models.LoginSession
-import co.firstorderlabs.pulpfiction.backendserver.database.models.LoginSessions
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Post
-import co.firstorderlabs.pulpfiction.backendserver.database.models.PostId
-import co.firstorderlabs.pulpfiction.backendserver.database.models.User
-import co.firstorderlabs.pulpfiction.backendserver.database.models.comment_data
-import co.firstorderlabs.pulpfiction.backendserver.database.models.image_post_data
-import co.firstorderlabs.pulpfiction.backendserver.database.models.loginSessions
-import co.firstorderlabs.pulpfiction.backendserver.database.models.postIds
-import co.firstorderlabs.pulpfiction.backendserver.database.models.posts
-import co.firstorderlabs.pulpfiction.backendserver.database.models.users
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostId
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postIds
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
@@ -47,7 +49,7 @@ import org.ktorm.support.postgresql.PostgreSqlDialect
 import software.amazon.awssdk.services.s3.S3Client
 import java.time.Instant
 
-data class DatabaseMessenger(val database: Database, val s3Client: S3Client) {
+class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     private val s3Messenger = S3Messenger(s3Client)
 
@@ -107,28 +109,24 @@ data class DatabaseMessenger(val database: Database, val s3Client: S3Client) {
         loginSession
     }
 
-    private suspend fun createImagePost(post: Post, request: CreateImagePostRequest): Effect<PulpFictionError, Unit> =
-        effect {
-            s3Messenger.uploadImageFromImagePost(post, request.imageJpg).bind()
-            val imagePostDatum = ImagePostDatum {
-                this.createdAt = post.createdAt
-                this.postId = post.postId
-                this.caption = request.caption
-                this.imageS3Key = post.toS3Key()
-            }
-            database.image_post_data.add(imagePostDatum)
-        }
-
     private suspend fun createComment(post: Post, request: CreateCommentRequest): Effect<PulpFictionError, Unit> =
         effect {
-            val commentDatum = CommentDatum {
-                this.createdAt = post.createdAt
-                this.postId = post.postId
-                this.body = request.body
-                this.parentPostId = request.parentPostId.toUUID().bind()
-            }
-            database.comment_data.add(commentDatum)
+            val commentDatum = CommentDatum.createFromRequest(post, request).bind()
+            database.commentData.add(commentDatum)
         }
+
+    private suspend fun createImagePost(post: Post, request: CreateImagePostRequest): Effect<PulpFictionError, Unit> =
+        effect {
+            val imagePostDatum = ImagePostDatum.createFromRequest(post, request)
+            s3Messenger.putAndTagObject(imagePostDatum, request.imageJpg).bind()
+            database.imagePostData.add(imagePostDatum)
+        }
+
+    private suspend fun createUserPost(post: Post, request: CreateUserPostRequest): Effect<PulpFictionError, Unit> = effect {
+        val userPostDatum = UserPostDatum.createFromRequest(post, request)
+        s3Messenger.putAndTagObject(userPostDatum, request.avatarJpg).bind()
+        database.userPostData.add(userPostDatum)
+    }
 
     private suspend fun createPostData(
         post: Post,
@@ -137,6 +135,7 @@ data class DatabaseMessenger(val database: Database, val s3Client: S3Client) {
         when (post.postType) {
             PulpFictionProtos.Post.PostType.COMMENT -> createComment(post, request.createCommentRequest)
             PulpFictionProtos.Post.PostType.IMAGE -> createImagePost(post, request.createImagePostRequest)
+            PulpFictionProtos.Post.PostType.USER -> createUserPost(post, request.createUserPostRequest)
             else -> RequestParsingError("CreatePost is not implemented for ${post.postType}")
         }
     }

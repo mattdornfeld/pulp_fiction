@@ -1,4 +1,4 @@
-package co.firstorderlabs.pulpfiction.backendserver.database.models
+package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
 import arrow.core.continuations.either
@@ -43,6 +43,8 @@ interface Post : Entity<Post> {
         this.postType = this@Post.postType
         this.postCreatorId = this@Post.postCreatorId.toString()
     }
+
+    fun toPostId(): PostId = PostId { this.postId = this@Post.postId }
 
     companion object : Entity.Factory<Post>() {
         suspend fun generateFromRequest(

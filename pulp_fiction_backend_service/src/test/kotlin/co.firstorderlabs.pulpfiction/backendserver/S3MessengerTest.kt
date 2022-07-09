@@ -2,14 +2,14 @@ package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
-import co.firstorderlabs.pulpfiction.backendserver.S3Messenger.Companion.IMAGE_POSTS_KEY_BASE
-import co.firstorderlabs.pulpfiction.backendserver.S3Messenger.Companion.JPG
-import co.firstorderlabs.pulpfiction.backendserver.S3Messenger.Companion.toS3Key
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs.CONTENT_DATA_S3_BUCKET_NAME
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Post
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum.Companion.IMAGE_POSTS_KEY_BASE
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key.Companion.JPG
 import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
 import co.firstorderlabs.pulpfiction.backendserver.testutils.toByteString
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
@@ -30,15 +30,15 @@ import software.amazon.awssdk.services.s3.model.Tag
 import java.time.Instant
 import java.util.UUID
 
-suspend fun S3Messenger.downloadImageFromImagePost(
-    post: Post,
+suspend fun S3Messenger.downloadImage(
+    post: ReferencesS3Key,
 ): Effect<PulpFictionError, ByteString> = effectWithError({ S3DownloadError(it) }) {
     val getObjectRequest = GetObjectRequest.builder().bucket(CONTENT_DATA_S3_BUCKET_NAME).key(post.toS3Key()).build()
     s3Client.getObjectAsBytes(getObjectRequest).asByteArray().toByteString()
 }
 
-suspend fun S3Messenger.getTagsForImageFromImagePost(
-    post: Post
+suspend fun S3Messenger.getTagsForImageFromImage(
+    post: ReferencesS3Key
 ): Effect<PulpFictionError, List<Tag>> = effectWithError({ S3DownloadError(it) }) {
     val getObjectTaggingRequest =
         GetObjectTaggingRequest.builder().bucket(CONTENT_DATA_S3_BUCKET_NAME).key(post.toS3Key()).build()
@@ -64,16 +64,15 @@ class S3MessengerTest {
     @Test
     fun testToS3Key() {
         val zeroUUID = UUID(0, 0)
-        val post = Post {
+        val post = ImagePostDatum {
             this.postId = zeroUUID
             this.createdAt = Instant.EPOCH
-            this.postCreatorId = zeroUUID
-            this.postType = PulpFictionProtos.Post.PostType.IMAGE
+            this.imageS3Key = toS3Key()
         }
 
         Assertions.assertEquals(
             "$IMAGE_POSTS_KEY_BASE/${zeroUUID}_${Instant.EPOCH}.$JPG",
-            post.toS3Key()
+            post.imageS3Key
         )
     }
 
@@ -87,19 +86,20 @@ class S3MessengerTest {
         runBlocking {
             effect<PulpFictionError, Unit> {
                 val post = Post.generateFromRequest(UUID.randomUUID(), createPostRequest).bind()
-                s3Messenger.uploadImageFromImagePost(post, createPostRequest.createImagePostRequest.imageJpg).bind()
+                val imagePostDatum = ImagePostDatum.createFromRequest(post, createPostRequest.createImagePostRequest)
+                s3Messenger.putAndTagObject(imagePostDatum, createPostRequest.createImagePostRequest.imageJpg)
+                    .bind()
 
-                val imageJpg = s3Messenger.downloadImageFromImagePost(post).bind()
+                val imageJpg = s3Messenger.downloadImage(imagePostDatum).bind()
                 Assertions.assertEquals(createPostRequest.createImagePostRequest.imageJpg, imageJpg)
 
-                val imageTags = s3Messenger.getTagsForImageFromImagePost(post).bind().toMap()
+                val imageTags = s3Messenger.getTagsForImageFromImage(imagePostDatum).bind().toMap()
                 Assertions.assertEquals(
                     mapOf(
-                        S3Messenger.Companion.TagKey.postId.name to post.postId.toString(),
-                        S3Messenger.Companion.TagKey.createdAt.name to post.createdAt.toString(),
-                        S3Messenger.Companion.TagKey.postType.name to post.postType.name,
-                        S3Messenger.Companion.TagKey.postCreatorId.name to post.postCreatorId.toString(),
-                        S3Messenger.Companion.TagKey.fileType.name to JPG,
+                        ImagePostDatum.Companion.TagKey.postId.name to post.postId.toString(),
+                        ImagePostDatum.Companion.TagKey.createdAt.name to post.createdAt.toString(),
+                        ImagePostDatum.Companion.TagKey.postType.name to post.postType.name,
+                        ImagePostDatum.Companion.TagKey.fileType.name to JPG,
                     ),
                     imageTags
                 )
