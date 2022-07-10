@@ -3,6 +3,9 @@ package co.firstorderlabs.pulpfiction.backendserver.databasemodels.types
 import software.amazon.awssdk.services.s3.model.Tag
 import software.amazon.awssdk.services.s3.model.Tagging
 
+/**
+ * All data model Entity objects that reference a s3 key implement this interface
+ */
 interface ReferencesS3Key {
     companion object {
         const val JPG = "jpg"

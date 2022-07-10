@@ -5,17 +5,19 @@ import arrow.core.Option
 import arrow.core.Some
 import arrow.core.continuations.either
 import arrow.core.none
+import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
+import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.SensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.sensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.userMetadata
+import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.user
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key.Companion.JPG
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
+import com.google.protobuf.ByteString
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
 import org.ktorm.entity.sequenceOf
@@ -38,7 +40,7 @@ object Users : Table<User>("users") {
     val hashedPassword = varchar("hashed_password").bindTo { it.hashedPassword }
 }
 
-interface User : Entity<User>, ReferencesS3Key {
+interface User : Entity<User> {
     var userId: UUID
     var createdAt: Instant
     var currentDisplayName: String
@@ -74,18 +76,19 @@ interface User : Entity<User>, ReferencesS3Key {
         }
     }
 
-    override fun toS3Key(): String = "$USER_AVATAR_IMAGES_KEY_BASE/${userId}_$createdAt.$JPG"
+    fun toCreatePostRequest(avatarJpg: ByteString): PulpFictionProtos.CreatePostRequest = createPostRequest {
+        this.loginSession = loginSession {
+            this.userId = this@User.userId.toString()
+        }
+        this.createUserPostRequest = createUserPostRequest {
+            this.userId = this@User.userId.toString()
+            this.displayName = this@User.currentDisplayName
+            this.avatarJpg = avatarJpg
+        }
+    }
 
     companion object : Entity.Factory<User>() {
-        enum class TagKey {
-            userId,
-            postType,
-            fileType,
-        }
-
-        const val USER_AVATAR_IMAGES_KEY_BASE = "user_avatar_images"
-
-        fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
+        private fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
             if (dateOfBirth == null) {
                 return Either.Right(none())
             }
@@ -99,7 +102,7 @@ interface User : Entity<User>, ReferencesS3Key {
             }
         }
 
-        suspend fun generateFromRequest(
+        suspend fun fromRequest(
             request: PulpFictionProtos.CreateUserRequest
         ): Either<RequestParsingError, User> {
             val dateOfBirth = getDateOfBirth(request.dateOfBirth)

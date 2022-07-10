@@ -24,6 +24,8 @@ fun PulpFictionProtos.CreatePostRequest.getPostType(): Either<RequestParsingErro
         Either.Right(PostType.COMMENT)
     } else if (this.hasCreateImagePostRequest()) {
         Either.Right(PostType.IMAGE)
+    } else if (this.hasCreateUserPostRequest()) {
+        Either.Right(PostType.USER)
     } else {
         Either.Left(RequestParsingError("$this contains unsupported PostType"))
     }
@@ -38,6 +40,13 @@ fun Instant.toTimestamp(): Timestamp {
 }
 
 suspend fun <A> Effect<PulpFictionError, A>.getResultAndHandleErrors(): A {
+    return this.fold({ error: PulpFictionError ->
+        throw error.toStatusException()
+    }
+    ) { it }
+}
+
+fun <R : PulpFictionError, A> Either<R, A>.getResultAndHandleErrors(): A {
     return this.fold({ error: PulpFictionError ->
         throw error.toStatusException()
     }
