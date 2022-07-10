@@ -1,7 +1,7 @@
 workspace(name = "pulp_fiction")
 
 load(
-    ":repositories.bzl",
+    "//bazel:repositories.bzl",
     "pulp_fiction_dependencies",
     )
 pulp_fiction_dependencies()
@@ -18,6 +18,7 @@ load(
 )
 swift_rules_extra_dependencies()
 
+# The build breaks if the rules_proto http_archive is put into repositories.bzl so it's included here
 load(
     "@bazel_tools//tools/build_defs/repo:http.bzl",
     "http_archive"
@@ -157,9 +158,6 @@ TEST_CONTAINERS_VERSION = "1.17.2"
 maven_install(
     name = "maven",
     artifacts = [
-        "com.adobe.testing:s3mock-docker:" + S3_MOCK_VERSION,
-        "com.adobe.testing:s3mock-junit5:" + S3_MOCK_VERSION,
-        "com.adobe.testing:s3mock-testcontainers:" + S3_MOCK_VERSION,
         "com.amazonaws:aws-java-sdk-core:" + AWS_SDK_VERSION,
         "com.amazonaws:aws-java-sdk-s3:" + AWS_SDK_VERSION,
         "com.google.guava:guava:31.1-jre",
@@ -190,15 +188,15 @@ maven_install(
         "org.testcontainers:junit-jupiter:" + TEST_CONTAINERS_VERSION,
         "org.testcontainers:postgresql:" + TEST_CONTAINERS_VERSION,
         "org.testcontainers:testcontainers:" + TEST_CONTAINERS_VERSION,
+        "org.testcontainers:localstack:" + TEST_CONTAINERS_VERSION,
         "software.amazon.awssdk:apache-client:2.17.224",
         "software.amazon.awssdk:core:2.17.224",
         "software.amazon.awssdk:s3:2.17.224",
-#        "com.google.flogger:flogger-slf4j-backend:" + FLOGGER_VERSION,
-#        "com.google.flogger:flogger:" + FLOGGER_VERSION,
+        "com.google.flogger:flogger-slf4j-backend:" + FLOGGER_VERSION,
+        "com.google.flogger:flogger:" + FLOGGER_VERSION,
     ] + IO_GRPC_GRPC_JAVA_ARTIFACTS,
     generate_compat_repositories = True,
     repositories = [
-#        "https://oss.sonatype.org/content/repositories/snapshots/",
         "https://repo1.maven.org/maven2",
     ],
     version_conflict_policy = "pinned",

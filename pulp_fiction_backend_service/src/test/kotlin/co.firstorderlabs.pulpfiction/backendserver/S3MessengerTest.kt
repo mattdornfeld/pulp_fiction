@@ -19,11 +19,11 @@ import co.firstorderlabs.pulpfiction.backendserver.testutils.toByteString
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.S3DownloadError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
-import com.adobe.testing.s3mock.testcontainers.S3MockContainer
 import com.google.protobuf.ByteString
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.containers.localstack.LocalStackContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
@@ -64,7 +64,7 @@ class S3MessengerTest {
         override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
 
         @Container
-        override val s3MockContainer: S3MockContainer = createS3MockContainer()
+        override val localStackContainer: LocalStackContainer = createLockStackContainer()
 
         private val s3Messenger by lazy {
             S3Messenger(s3Client)
@@ -86,7 +86,7 @@ class S3MessengerTest {
         )
     }
 
-    suspend fun uploadObjectAndAssertCorrect(
+    private suspend fun uploadObjectAndAssertCorrect(
         referencesS3Key: ReferencesS3Key,
         objectAsByteString: ByteString,
         expectedTags: Map<String, String>

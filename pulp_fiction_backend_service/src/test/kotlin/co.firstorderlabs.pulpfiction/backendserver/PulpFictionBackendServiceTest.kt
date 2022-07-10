@@ -21,7 +21,6 @@ import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
-import com.adobe.testing.s3mock.testcontainers.S3MockContainer
 import io.grpc.Status
 import io.grpc.StatusException
 import kotlinx.coroutines.runBlocking
@@ -32,6 +31,7 @@ import org.ktorm.dsl.deleteAll
 import org.ktorm.entity.Tuple2
 import org.ktorm.entity.tupleOf
 import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.containers.localstack.LocalStackContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
@@ -44,7 +44,7 @@ internal class PulpFictionBackendServiceTest {
         override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
 
         @Container
-        override val s3MockContainer: S3MockContainer = createS3MockContainer()
+        override val localStackContainer: LocalStackContainer = createLockStackContainer()
 
         @BeforeAll
         @JvmStatic

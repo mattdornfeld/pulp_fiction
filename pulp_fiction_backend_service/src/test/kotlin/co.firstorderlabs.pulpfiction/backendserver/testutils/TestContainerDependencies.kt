@@ -2,9 +2,8 @@ package co.firstorderlabs.pulpfiction.backendserver.testutils
 
 import co.firstorderlabs.pulpfiction.backendserver.MigrateDatabase
 import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs
-import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs.CONTENT_DATA_S3_BUCKET_NAME
+import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.LOCAL_STACK_IMAGE
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.POSTGRES_IMAGE
-import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.S3_MOCK_IMAGE_TAG
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
@@ -12,19 +11,20 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
-import com.adobe.testing.s3mock.testcontainers.S3MockContainer
 import org.ktorm.database.Database
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.containers.localstack.LocalStackContainer
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.http.apache.ApacheHttpClient
+import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
-import java.net.URI
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest
 
 abstract class TestContainerDependencies {
     protected abstract val postgreSQLContainer: PostgreSQLContainer<Nothing>
-    protected abstract val s3MockContainer: S3MockContainer
+    protected abstract val localStackContainer: LocalStackContainer
 
     protected val database by lazy {
         Database.connect(
@@ -35,13 +35,17 @@ abstract class TestContainerDependencies {
         )
     }
 
-    protected val s3Client by lazy {
-        S3Client.builder()
-            .region(S3Configs.S3_BUCKET_REGION)
-            .endpointOverride(URI(s3MockContainer.httpEndpoint))
+    protected val s3Client: S3Client by lazy {
+        val s3Client = S3Client.builder()
+            .region(Region.of(localStackContainer.region))
+            .endpointOverride(localStackContainer.getEndpointOverride(LocalStackContainer.Service.S3))
             .httpClientBuilder(ApacheHttpClient.builder())
             .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test")))
             .build()
+
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(S3Configs.CONTENT_DATA_S3_BUCKET_NAME).build())
+
+        s3Client
     }
 
     protected val tables = listOf(CommentData, ImagePostData, UserPostData, Posts, Followers, LoginSessions, Users)
@@ -54,6 +58,6 @@ abstract class TestContainerDependencies {
     protected fun createPostgreSQLContainer(): PostgreSQLContainer<Nothing> =
         PostgreSQLContainer<Nothing>(POSTGRES_IMAGE)
 
-    protected fun createS3MockContainer() = S3MockContainer(S3_MOCK_IMAGE_TAG)
-        .withInitialBuckets(CONTENT_DATA_S3_BUCKET_NAME)
+    protected fun createLockStackContainer(): LocalStackContainer = LocalStackContainer(LOCAL_STACK_IMAGE)
+        .withServices(LocalStackContainer.Service.S3)
 }

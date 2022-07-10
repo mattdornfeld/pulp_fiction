@@ -25,7 +25,6 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
 import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
-import com.adobe.testing.s3mock.testcontainers.S3MockContainer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
@@ -36,6 +35,7 @@ import org.ktorm.dsl.map
 import org.ktorm.dsl.select
 import org.ktorm.entity.add
 import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.containers.localstack.LocalStackContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.time.Instant
@@ -47,7 +47,7 @@ internal class MigrateDatabaseTest {
         override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
 
         @Container
-        override val s3MockContainer: S3MockContainer = createS3MockContainer()
+        override val localStackContainer: LocalStackContainer = createLockStackContainer()
 
         @BeforeAll
         @JvmStatic

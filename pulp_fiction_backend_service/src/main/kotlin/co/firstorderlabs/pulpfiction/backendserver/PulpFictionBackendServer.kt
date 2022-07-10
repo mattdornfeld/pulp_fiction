@@ -16,7 +16,7 @@ class PulpFictionBackendServer(private val port: Int) {
         .addService(createPulpFictionBackendService())
         .build()
 
-    fun start(): PulpFictionBackendServer {
+    private fun start(): PulpFictionBackendServer {
         server.start()
         println("Server started, listening on $port")
         Runtime.getRuntime().addShutdownHook(
@@ -35,7 +35,7 @@ class PulpFictionBackendServer(private val port: Int) {
         return this
     }
 
-    fun blockUntilShutdown(): PulpFictionBackendServer {
+    private fun blockUntilShutdown(): PulpFictionBackendServer {
         server.awaitTermination()
         return this
     }
