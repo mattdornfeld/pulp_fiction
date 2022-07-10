@@ -4,21 +4,23 @@ import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateUserPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs.CONTENT_DATA_S3_BUCKET_NAME
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum.Companion.IMAGE_POSTS_KEY_BASE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key.Companion.JPG
 import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
+import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
+import co.firstorderlabs.pulpfiction.backendserver.testutils.runBlockingEffect
 import co.firstorderlabs.pulpfiction.backendserver.testutils.toByteString
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.S3DownloadError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
-import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
 import com.adobe.testing.s3mock.testcontainers.S3MockContainer
 import com.google.protobuf.ByteString
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.PostgreSQLContainer
@@ -30,20 +32,28 @@ import software.amazon.awssdk.services.s3.model.Tag
 import java.time.Instant
 import java.util.UUID
 
-suspend fun S3Messenger.downloadImage(
-    post: ReferencesS3Key,
+suspend fun S3Messenger.getObject(
+    s3Key: String,
 ): Effect<PulpFictionError, ByteString> = effectWithError({ S3DownloadError(it) }) {
-    val getObjectRequest = GetObjectRequest.builder().bucket(CONTENT_DATA_S3_BUCKET_NAME).key(post.toS3Key()).build()
+    val getObjectRequest = GetObjectRequest.builder().bucket(CONTENT_DATA_S3_BUCKET_NAME).key(s3Key).build()
     s3Client.getObjectAsBytes(getObjectRequest).asByteArray().toByteString()
 }
 
-suspend fun S3Messenger.getTagsForImageFromImage(
-    post: ReferencesS3Key
+suspend fun S3Messenger.getObjectTags(
+    s3Key: String
 ): Effect<PulpFictionError, List<Tag>> = effectWithError({ S3DownloadError(it) }) {
     val getObjectTaggingRequest =
-        GetObjectTaggingRequest.builder().bucket(CONTENT_DATA_S3_BUCKET_NAME).key(post.toS3Key()).build()
+        GetObjectTaggingRequest.builder().bucket(CONTENT_DATA_S3_BUCKET_NAME).key(s3Key).build()
     s3Client.getObjectTagging(getObjectTaggingRequest).tagSet()
 }
+
+suspend fun S3Messenger.getObject(
+    post: ReferencesS3Key,
+): Effect<PulpFictionError, ByteString> = getObject(post.toS3Key())
+
+suspend fun S3Messenger.getObjectTags(
+    post: ReferencesS3Key
+): Effect<PulpFictionError, List<Tag>> = getObjectTags(post.toS3Key())
 
 fun List<Tag>.toMap(): Map<String, String> = this.associate { it.key() to it.value() }
 
@@ -76,6 +86,27 @@ class S3MessengerTest {
         )
     }
 
+    suspend fun uploadObjectAndAssertCorrect(
+        referencesS3Key: ReferencesS3Key,
+        objectAsByteString: ByteString,
+        expectedTags: Map<String, String>
+    ): Effect<PulpFictionError, Unit> = effect {
+        s3Messenger
+            .putAndTagObject(referencesS3Key, objectAsByteString)
+            .bind()
+
+        s3Messenger
+            .getObject(referencesS3Key)
+            .bind()
+            .assertEquals(objectAsByteString) { it }
+
+        s3Messenger
+            .getObjectTags(referencesS3Key)
+            .bind()
+            .toMap()
+            .assertEquals(expectedTags) { it }
+    }
+
     @Test
     fun testUploadImageFromImagePost() {
         val createPostRequest = TestProtoModelGenerator
@@ -83,27 +114,43 @@ class S3MessengerTest {
             .generateRandomCreatePostRequest()
             .withRandomCreateImagePostRequest()
 
-        runBlocking {
-            effect<PulpFictionError, Unit> {
-                val post = Post.generateFromRequest(UUID.randomUUID(), createPostRequest).bind()
-                val imagePostDatum = ImagePostDatum.createFromRequest(post, createPostRequest.createImagePostRequest)
-                s3Messenger.putAndTagObject(imagePostDatum, createPostRequest.createImagePostRequest.imageJpg)
-                    .bind()
-
-                val imageJpg = s3Messenger.downloadImage(imagePostDatum).bind()
-                Assertions.assertEquals(createPostRequest.createImagePostRequest.imageJpg, imageJpg)
-
-                val imageTags = s3Messenger.getTagsForImageFromImage(imagePostDatum).bind().toMap()
-                Assertions.assertEquals(
-                    mapOf(
-                        ImagePostDatum.Companion.TagKey.postId.name to post.postId.toString(),
-                        ImagePostDatum.Companion.TagKey.createdAt.name to post.createdAt.toString(),
-                        ImagePostDatum.Companion.TagKey.postType.name to post.postType.name,
-                        ImagePostDatum.Companion.TagKey.fileType.name to JPG,
-                    ),
-                    imageTags
+        runBlockingEffect {
+            val post = Post.fromRequest(UUID.randomUUID(), createPostRequest).bind()
+            val imagePostDatum = ImagePostDatum.fromRequest(post, createPostRequest.createImagePostRequest)
+            uploadObjectAndAssertCorrect(
+                imagePostDatum,
+                createPostRequest.createImagePostRequest.imageJpg,
+                mapOf(
+                    ImagePostDatum.Companion.TagKey.postId.name to post.postId.toString(),
+                    ImagePostDatum.Companion.TagKey.createdAt.name to post.createdAt.toString(),
+                    ImagePostDatum.Companion.TagKey.postType.name to post.postType.name,
+                    ImagePostDatum.Companion.TagKey.fileType.name to JPG,
                 )
-            }.getResultAndHandleErrors()
+            ).bind()
+        }
+    }
+
+    @Test
+    fun testUploadAvatarFromUserPost() {
+        val createPostRequest = TestProtoModelGenerator
+            .generateRandomLoginSession()
+            .generateRandomCreatePostRequest()
+            .withRandomCreateUserPostRequest()
+
+        runBlockingEffect {
+            val post = Post.fromRequest(UUID.randomUUID(), createPostRequest).bind()
+            val userPostDatum = UserPostDatum.fromRequest(post, createPostRequest.createUserPostRequest)
+            uploadObjectAndAssertCorrect(
+                userPostDatum,
+                createPostRequest.createUserPostRequest.avatarJpg,
+                mapOf(
+                    UserPostDatum.Companion.TagKey.postId.name to post.postId.toString(),
+                    UserPostDatum.Companion.TagKey.createdAt.name to post.createdAt.toString(),
+                    UserPostDatum.Companion.TagKey.postType.name to post.postType.name,
+                    UserPostDatum.Companion.TagKey.fileType.name to JPG,
+                    UserPostDatum.Companion.TagKey.userId.name to createPostRequest.loginSession.userId.toString()
+                )
+            ).bind()
         }
     }
 }

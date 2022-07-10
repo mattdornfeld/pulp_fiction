@@ -4,26 +4,34 @@ import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.getOrElse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateUserPostRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
+import co.firstorderlabs.protos.pulpfiction.post
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostId
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postIds
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
@@ -32,6 +40,7 @@ import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
+import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
 import org.ktorm.dsl.and
@@ -44,10 +53,12 @@ import org.ktorm.dsl.map
 import org.ktorm.dsl.orderBy
 import org.ktorm.dsl.select
 import org.ktorm.dsl.where
+import org.ktorm.entity.Entity
 import org.ktorm.entity.add
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import software.amazon.awssdk.services.s3.S3Client
 import java.time.Instant
+import java.util.UUID
 
 class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
@@ -102,62 +113,141 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         }
 
     suspend fun createLoginSession(request: LoginRequest): Effect<PulpFictionError, LoginSession> = effect {
-        val loginSession = LoginSession.generateFromRequest(request).bind()
+        val loginSession = LoginSession.fromRequest(request).bind()
         database.transactionToEffect {
             database.loginSessions.add(loginSession)
         }.bind()
         loginSession
     }
 
-    private suspend fun createComment(post: Post, request: CreateCommentRequest): Effect<PulpFictionError, Unit> =
+    private suspend fun createComment(
+        post: Post,
+        request: CreateCommentRequest
+    ): Effect<PulpFictionError, PulpFictionProtos.Post> =
         effect {
-            val commentDatum = CommentDatum.createFromRequest(post, request).bind()
+            val commentDatum = CommentDatum.fromRequest(post, request).bind()
             database.commentData.add(commentDatum)
+            post {
+                this.metadata = post.toProto()
+                this.comment = commentDatum.toProto()
+            }
         }
 
-    private suspend fun createImagePost(post: Post, request: CreateImagePostRequest): Effect<PulpFictionError, Unit> =
+    private suspend fun createImagePost(
+        post: Post,
+        request: CreateImagePostRequest
+    ): Effect<PulpFictionError, PulpFictionProtos.Post> =
         effect {
-            val imagePostDatum = ImagePostDatum.createFromRequest(post, request)
+            val imagePostDatum = ImagePostDatum.fromRequest(post, request)
             s3Messenger.putAndTagObject(imagePostDatum, request.imageJpg).bind()
             database.imagePostData.add(imagePostDatum)
+            post {
+                this.metadata = post.toProto()
+                this.imagePost = imagePostDatum.toProto()
+            }
         }
 
-    private suspend fun createUserPost(post: Post, request: CreateUserPostRequest): Effect<PulpFictionError, Unit> = effect {
-        val userPostDatum = UserPostDatum.createFromRequest(post, request)
-        s3Messenger.putAndTagObject(userPostDatum, request.avatarJpg).bind()
-        database.userPostData.add(userPostDatum)
-    }
+    private suspend fun createUserPost(
+        post: Post,
+        request: CreateUserPostRequest
+    ): Effect<PulpFictionError, PulpFictionProtos.Post> =
+        effect {
+            val userPostDatum = UserPostDatum.fromRequest(post, request)
+            s3Messenger.putAndTagObject(userPostDatum, request.avatarJpg).bind()
+            database.userPostData.add(userPostDatum)
+            post {
+                this.metadata = post.toProto()
+                this.userPost = userPostDatum.toProto()
+            }
+        }
 
     private suspend fun createPostData(
         post: Post,
-        request: PulpFictionProtos.CreatePostRequest
-    ): Effect<PulpFictionError, Unit> = effect {
+        request: CreatePostRequest
+    ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
         when (post.postType) {
-            PulpFictionProtos.Post.PostType.COMMENT -> createComment(post, request.createCommentRequest)
-            PulpFictionProtos.Post.PostType.IMAGE -> createImagePost(post, request.createImagePostRequest)
-            PulpFictionProtos.Post.PostType.USER -> createUserPost(post, request.createUserPostRequest)
-            else -> RequestParsingError("CreatePost is not implemented for ${post.postType}")
+            PulpFictionProtos.Post.PostType.COMMENT -> createComment(post, request.createCommentRequest).bind()
+            PulpFictionProtos.Post.PostType.IMAGE -> createImagePost(post, request.createImagePostRequest).bind()
+            PulpFictionProtos.Post.PostType.USER -> createUserPost(post, request.createUserPostRequest).bind()
+            else -> shift(RequestParsingError("CreatePost is not implemented for ${post.postType}"))
         }
     }
 
     fun createPost(
-        request: PulpFictionProtos.CreatePostRequest
-    ): Effect<PulpFictionError, PostMetadata> = effect {
+        request: CreatePostRequest
+    ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
         val postId = PostId.generate()
-        val post = Post.generateFromRequest(postId.postId, request).bind()
+        val post = Post.fromRequest(postId.postId, request).bind()
         database.transactionToEffect {
             database.postIds.add(postId)
             database.posts.add(post)
-            createPostData(post, request).bind()
+            createPostData(post, request).getResultAndHandleErrors()
         }.bind()
-        post.toPostMetadata()
     }
 
     fun createUser(
         request: PulpFictionProtos.CreateUserRequest
-    ): Effect<PulpFictionError, PulpFictionProtos.User.UserMetadata> = effect {
-        val user = User.generateFromRequest(request).bind()
-        database.users.add(user)
-        user.toNonSensitiveUserMetadataProto()
+    ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
+        val user = User.fromRequest(request).bind()
+
+        database.transactionToEffect {
+            database.users.add(user)
+            createPost(user.toCreatePostRequest(request.avatarJpg))
+                .getResultAndHandleErrors()
+        }.bind()
+    }
+
+    private suspend fun <A> getPostData(
+        postId: UUID,
+        table: PostData<A>
+    ): Effect<PulpFictionError, A> where A : PostDatum, A : Entity<A> = database.transactionToEffect {
+        database
+            .from(table)
+            .select()
+            .where(table.postId eq postId)
+            .orderBy(table.createdAt.desc())
+            .limit(1)
+            .map { table.createEntity(it) }
+            .first()
+    }
+
+    suspend fun getPost(
+        request: GetPostRequest
+    ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
+        val postId = request.postId.toUUID().bind()
+        val post = database.transactionToEffect {
+            database.from(Posts)
+                .select()
+                .where(Posts.postId eq postId)
+                .orderBy(Posts.createdAt.desc())
+                .limit(1)
+                .map { Posts.createEntity(it) }
+                .first()
+        }.bind()
+
+        post {
+            this.metadata = post.toProto()
+
+            when (post.postType) {
+                PulpFictionProtos.Post.PostType.COMMENT -> {
+                    this.comment = getPostData(postId, CommentData)
+                        .bind()
+                        .toProto()
+                }
+                PulpFictionProtos.Post.PostType.IMAGE -> {
+                    this.imagePost = getPostData(postId, ImagePostData)
+                        .bind()
+                        .toProto()
+                }
+                PulpFictionProtos.Post.PostType.USER -> {
+                    this.userPost = getPostData(postId, UserPostData)
+                        .bind()
+                        .toProto()
+                }
+                else -> {
+                    shift(RequestParsingError("GetPost is not implemented for PostType ${post.postType}"))
+                }
+            }
+        }
     }
 }

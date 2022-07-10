@@ -36,7 +36,7 @@ interface Post : Entity<Post> {
     var postCreatorId: UUID
     var postType: PostType
 
-    fun toPostMetadata(): PostMetadata = postMetadata {
+    fun toProto(): PostMetadata = postMetadata {
         this.postId = this@Post.postId.toString()
         this.createdAt = this@Post.createdAt.toTimestamp()
         this.postState = this@Post.postState
@@ -47,15 +47,16 @@ interface Post : Entity<Post> {
     fun toPostId(): PostId = PostId { this.postId = this@Post.postId }
 
     companion object : Entity.Factory<Post>() {
-        suspend fun generateFromRequest(
+        suspend fun fromRequest(
             postId: UUID,
             request: PulpFictionProtos.CreatePostRequest
         ): Either<PulpFictionError, Post> = either {
+            val postCreatorId = request.loginSession.userId.toUUID().bind()
             Post {
                 this.postId = postId
                 this.createdAt = Instant.now()
                 this.postState = PostState.CREATED
-                this.postCreatorId = request.loginSession.userId.toUUID().bind()
+                this.postCreatorId = postCreatorId
                 this.postType = request.getPostType().bind()
             }
         }
