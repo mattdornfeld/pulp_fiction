@@ -1,4 +1,4 @@
-gsyntax = "proto3";
+syntax = "proto3";
 
 package pulp_fiction.protos;
 
