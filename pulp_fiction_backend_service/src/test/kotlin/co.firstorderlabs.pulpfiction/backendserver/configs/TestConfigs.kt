@@ -1,6 +1,8 @@
 package co.firstorderlabs.pulpfiction.backendserver.configs
 
+import org.testcontainers.utility.DockerImageName
+
 object TestConfigs {
-    const val POSTGRES_IMAGE: String = "postgres:12.9"
-    const val S3_MOCK_IMAGE_TAG: String = "latest"
+    val POSTGRES_IMAGE: DockerImageName = DockerImageName.parse("postgres:12.9")
+    val LOCAL_STACK_IMAGE: DockerImageName = DockerImageName.parse("localstack/localstack:0.11.2")
 }
