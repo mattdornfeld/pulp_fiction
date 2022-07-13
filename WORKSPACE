@@ -171,6 +171,7 @@ maven_install(
         "io.grpc:grpc-netty-shaded:" + GRPC_VERSION,
         "io.grpc:grpc-protobuf:" + GRPC_VERSION,
         "io.grpc:grpc-stub:" + GRPC_VERSION,
+        "io.prometheus:simpleclient:0.16.0",
         "org.flywaydb:flyway-core:8.5.13",
         "org.jetbrains.kotlin:kotlin-test-junit5:" + KOTLIN_VERSION,
         "org.jetbrains.kotlin:kotlin-test:" + KOTLIN_VERSION,
