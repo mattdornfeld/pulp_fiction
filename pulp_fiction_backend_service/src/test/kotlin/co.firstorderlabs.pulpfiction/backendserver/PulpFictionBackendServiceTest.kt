@@ -14,6 +14,8 @@ import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.gener
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionMetric
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
@@ -59,6 +61,11 @@ internal class PulpFictionBackendServiceTest {
         tables.forEach { database.deleteAll(it) }
     }
 
+    @AfterEach
+    fun clearMetricsRegistry() {
+        PulpFictionMetric.clearRegistry()
+    }
+
     private suspend fun createUser(): Tuple2<PulpFictionProtos.Post, CreateUserRequest> {
         val createUserRequest = TestProtoModelGenerator.generateRandomCreateUserRequest()
         return Tuple2(pulpFictionBackendService.createUser(createUserRequest).userPost, createUserRequest)
@@ -71,6 +78,18 @@ internal class PulpFictionBackendServiceTest {
         val loginRequest =
             TestProtoModelGenerator.generateRandomLoginRequest(userMetadata.userId, createUserRequest.password)
         return Tuple2(pulpFictionBackendService.login(loginRequest).loginSession, loginRequest)
+    }
+
+    private fun PulpFictionBackendService.EndpointName.assertMetricsCorrectForEndpoint(expectedNumEndpointCalls: Double) {
+        EndpointMetrics
+            .endpointRequestTotal
+            .withLabels(this)
+            .assertEquals(expectedNumEndpointCalls) { it.get() }
+
+        EndpointMetrics
+            .endpointRequestDurationSeconds
+            .withLabels(this)
+            .assertEquals(expectedNumEndpointCalls) { it.get().count }
     }
 
     @Test
@@ -107,6 +126,11 @@ internal class PulpFictionBackendServiceTest {
                     createUserRequest.avatarJpg
                 ) { it }
 
+            PulpFictionBackendService
+                .EndpointName
+                .createUser
+                .assertMetricsCorrectForEndpoint(1.0)
+
             // TODO (matt): Check user is retrievable after getUser endpoint implemented
         }
     }
@@ -122,6 +146,11 @@ internal class PulpFictionBackendServiceTest {
                 .assertTrue { it.sessionToken.toUUID().isRight() }
                 .assertTrue { it.createdAt.isWithinLast(100) }
                 .assertEquals(loginRequest.deviceId) { it.deviceId }
+
+            PulpFictionBackendService
+                .EndpointName
+                .login
+                .assertMetricsCorrectForEndpoint(1.0)
         }
     }
 
@@ -182,6 +211,11 @@ internal class PulpFictionBackendServiceTest {
                 "The imageJpg uploaded to s3 should equal the imageJpg in the create post request",
                 createPostRequest.createImagePostRequest.imageJpg
             ) { it }
+
+        PulpFictionBackendService
+            .EndpointName
+            .createPost
+            .assertMetricsCorrectForEndpoint(1.0)
     }
 
     @Test
@@ -209,5 +243,10 @@ internal class PulpFictionBackendServiceTest {
         post
             .assertEquals(postMetadata) { it.metadata }
             .assertEquals(createCommentRequest.createCommentRequest.body) { it.comment.body }
+
+        PulpFictionBackendService
+            .EndpointName
+            .createPost
+            .assertMetricsCorrectForEndpoint(2.0)
     }
 }

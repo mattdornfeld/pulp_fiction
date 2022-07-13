@@ -61,6 +61,7 @@ kt_jvm_library(
         "@maven//:io_grpc_grpc_netty_shaded",
         "@maven//:io_grpc_grpc_protobuf",
         "@maven//:io_grpc_grpc_stub",
+        "@maven//:io_prometheus_simpleclient",
         "@maven//:org_flywaydb_flyway_core",
         "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
         "@maven//:org_ktorm_ktorm_core",

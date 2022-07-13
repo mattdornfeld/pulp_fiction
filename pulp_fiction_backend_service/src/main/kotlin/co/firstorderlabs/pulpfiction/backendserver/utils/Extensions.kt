@@ -7,6 +7,7 @@ import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.StringLabelValue
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import com.google.protobuf.Timestamp
@@ -74,3 +75,7 @@ fun String.toUUID(): Either<RequestParsingError, UUID> =
 
 fun <A> A.whenThen(condition: (a: A) -> Boolean, operation: (a: A) -> A): A =
     if (condition(this)) operation(this) else this
+
+fun <A> A.some(): Option<A> = Some(this)
+
+fun Throwable.toLabelValue(): StringLabelValue = StringLabelValue(this.toString())
