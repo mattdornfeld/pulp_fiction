@@ -43,9 +43,11 @@ import org.ktorm.dsl.orderBy
 import org.ktorm.dsl.select
 import org.ktorm.dsl.where
 import org.ktorm.entity.add
+import org.ktorm.entity.find
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import software.amazon.awssdk.services.s3.S3Client
 import java.time.Instant
+import java.util.*
 
 data class DatabaseMessenger(val database: Database, val s3Client: S3Client) {
 
@@ -160,5 +162,12 @@ data class DatabaseMessenger(val database: Database, val s3Client: S3Client) {
         val user = User.generateFromRequest(request).bind()
         database.users.add(user)
         user.toNonSensitiveUserMetadataProto()
+    }
+
+    fun getUserDuringLogin(
+        request: LoginRequest
+    ): Effect<PulpFictionError, User?> = effect {
+        val uuid = UUID.fromString(request.userId)
+        database.users.find { it.userId eq uuid }
     }
 }

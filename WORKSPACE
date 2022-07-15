@@ -165,6 +165,7 @@ maven_install(
         "com.google.guava:guava:31.1-jre",
         "com.google.protobuf:protobuf-java:" + PROTOBUF_VERSION,
         "com.google.protobuf:protobuf-kotlin:" + PROTOBUF_VERSION,
+        "com.password4j:password4j:1.6.0",
         "com.squareup:kotlinpoet:1.11.0",
         "io.arrow-kt:arrow-core-jvm:" + ARROW_VERSION,
         "io.arrow-kt:arrow-fx-coroutines-jvm:" + ARROW_VERSION,

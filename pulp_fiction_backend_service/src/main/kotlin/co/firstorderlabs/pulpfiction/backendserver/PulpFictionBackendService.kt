@@ -7,8 +7,11 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.createPostResponse
 import co.firstorderlabs.protos.pulpfiction.createUserResponse
 import co.firstorderlabs.protos.pulpfiction.loginResponse
+import co.firstorderlabs.pulpfiction.backendserver.types.IncorrectPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
+import com.password4j.Password
 import org.ktorm.database.Database
 import software.amazon.awssdk.services.s3.S3Client
 
@@ -36,6 +39,13 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     }
 
     override suspend fun login(request: PulpFictionProtos.LoginRequest): PulpFictionProtos.LoginResponse {
+        val userLoginCandidate = databaseMessenger.getUserDuringLogin(request).getResultAndHandleErrors()
+
+        val hashedPass = userLoginCandidate?.hashedPassword ?: throw UserNotFoundError(
+            "User $request.userId not found")
+        val authenticated = Password.check(request.password, hashedPass).withBcrypt()
+        if( !authenticated ) { throw IncorrectPasswordError() }
+
         val loginSession = databaseMessenger.createLoginSession(request).getResultAndHandleErrors()
 
         return loginResponse {
