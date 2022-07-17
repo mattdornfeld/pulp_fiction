@@ -43,7 +43,7 @@ kt_jvm_grpc_library(
 )
 
 ktlint_fix(
-    name = "lint_and_fix",
+    name = "format",
     srcs = glob(SRC_FILES),
 )
 

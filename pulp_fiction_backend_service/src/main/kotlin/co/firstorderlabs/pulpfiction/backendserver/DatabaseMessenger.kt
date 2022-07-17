@@ -34,13 +34,16 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.CreatePostDataMetrics.logCreatePostDataMetrics
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.logS3Metrics
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
-import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
 import org.ktorm.dsl.and
@@ -65,13 +68,27 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     private val s3Messenger = S3Messenger(s3Client)
 
     companion object {
+        private suspend fun <A> effectWithDatabaseError(
+            block: suspend arrow.core.continuations.EffectScope<PulpFictionError>.() -> A
+        ): Effect<PulpFictionError, A> = effectWithError({ DatabaseError(it) }) { block(this) }
+
+        /**
+         * Runs a database transaction as an effectful computation,
+         * catching any errors and transforming them to DatabaseError
+         */
+        private suspend fun <A> Database.transactionToEffectCatchErrors(
+            block: suspend (org.ktorm.database.Transaction) -> A,
+        ): Effect<PulpFictionError, A> = effectWithDatabaseError {
+            this@transactionToEffectCatchErrors.useTransaction { block(it) }
+        }
+
         /**
          * Runs a database transaction as an effectful computation
          */
         private suspend fun <A> Database.transactionToEffect(
-            func: suspend (org.ktorm.database.Transaction) -> A,
-        ): Effect<PulpFictionError, A> = effectWithError({ DatabaseError(it) }) {
-            this@transactionToEffect.useTransaction { func(it) }
+            block: suspend (org.ktorm.database.Transaction) -> A,
+        ): Effect<PulpFictionError, A> = effect {
+            this@transactionToEffect.useTransaction { block(it) }
         }
 
         fun createDatabaseConnection(): Database = Database.connect(
@@ -87,7 +104,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val userId = loginSessionProto.userId.toUUID().bind()
             // TODO (matt): Implement hashing for sessionToken
             val sessionToken = loginSessionProto.sessionToken.toUUID().bind()
-            val loginSessionMaybe = database.transactionToEffect {
+            val loginSessionMaybe = database.transactionToEffectCatchErrors {
                 database
                     .from(LoginSessions)
                     .select(LoginSessions.sessionToken, LoginSessions.createdAt)
@@ -114,7 +131,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     suspend fun createLoginSession(request: LoginRequest): Effect<PulpFictionError, LoginSession> = effect {
         val loginSession = LoginSession.fromRequest(request).bind()
-        database.transactionToEffect {
+        database.transactionToEffectCatchErrors {
             database.loginSessions.add(loginSession)
         }.bind()
         loginSession
@@ -139,7 +156,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionError, PulpFictionProtos.Post> =
         effect {
             val imagePostDatum = ImagePostDatum.fromRequest(post, request)
-            s3Messenger.putAndTagObject(imagePostDatum, request.imageJpg).bind()
+
+            s3Messenger
+                .putAndTagObject(imagePostDatum, request.imageJpg)
+                .logS3Metrics(EndpointMetrics.EndpointName.createPost, S3Metrics.S3Operation.uploadImagePost)
+                .bind()
+
             database.imagePostData.add(imagePostDatum)
             post {
                 this.metadata = post.toProto()
@@ -153,7 +175,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionError, PulpFictionProtos.Post> =
         effect {
             val userPostDatum = UserPostDatum.fromRequest(post, request)
-            s3Messenger.putAndTagObject(userPostDatum, request.avatarJpg).bind()
+
+            s3Messenger
+                .putAndTagObject(userPostDatum, request.avatarJpg)
+                .logS3Metrics(EndpointMetrics.EndpointName.createPost, S3Metrics.S3Operation.uploadUserAvatar)
+                .bind()
+
             database.userPostData.add(userPostDatum)
             post {
                 this.metadata = post.toProto()
@@ -178,11 +205,18 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
         val postId = PostId.generate()
         val post = Post.fromRequest(postId.postId, request).bind()
+
         database.transactionToEffect {
-            database.postIds.add(postId)
-            database.posts.add(post)
-            createPostData(post, request).getResultAndHandleErrors()
-        }.bind()
+            effectWithDatabaseError {
+                database.postIds.add(postId)
+                database.posts.add(post)
+            }.bind()
+
+            createPostData(post, request)
+                .bind()
+        }
+            .logCreatePostDataMetrics(post.postType)
+            .bind()
     }
 
     fun createUser(
@@ -191,16 +225,15 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         val user = User.fromRequest(request).bind()
 
         database.transactionToEffect {
-            database.users.add(user)
-            createPost(user.toCreatePostRequest(request.avatarJpg))
-                .getResultAndHandleErrors()
+            effectWithDatabaseError { database.users.add(user) }.bind()
+            createPost(user.toCreatePostRequest(request.avatarJpg)).bind()
         }.bind()
     }
 
     private suspend fun <A> getPostData(
         postId: UUID,
         table: PostData<A>
-    ): Effect<PulpFictionError, A> where A : PostDatum, A : Entity<A> = database.transactionToEffect {
+    ): Effect<PulpFictionError, A> where A : PostDatum, A : Entity<A> = database.transactionToEffectCatchErrors {
         database
             .from(table)
             .select()
@@ -215,7 +248,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         request: GetPostRequest
     ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
         val postId = request.postId.toUUID().bind()
-        val post = database.transactionToEffect {
+        val post = database.transactionToEffectCatchErrors {
             database.from(Posts)
                 .select()
                 .where(Posts.postId eq postId)
