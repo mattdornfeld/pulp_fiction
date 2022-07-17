@@ -8,14 +8,28 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
 import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.buildGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionMetric
-import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionSummary
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.CreatePostDataMetrics.createPostDataDurationSeconds
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.CreatePostDataMetrics.createPostDataTotal
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.CreatePostDataMetrics.toLabelValue
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.databaseQueryDurationSeconds
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.databaseRequestTotal
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.EndpointName
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.endpointRequestDurationSeconds
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.endpointRequestTotal
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.s3RequestDurationSeconds
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.s3RequestTotal
 import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
@@ -31,13 +45,14 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.ktorm.dsl.deleteAll
 import org.ktorm.entity.Tuple2
+import org.ktorm.entity.Tuple3
 import org.ktorm.entity.tupleOf
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.localstack.LocalStackContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
-private typealias RequestAndResponseSuppliers = List<Pair<com.google.protobuf.GeneratedMessageV3, suspend (com.google.protobuf.GeneratedMessageV3) -> com.google.protobuf.GeneratedMessageV3>>
+private typealias RequestAndResponseSuppliers = List<Tuple3<EndpointName, com.google.protobuf.GeneratedMessageV3, suspend (com.google.protobuf.GeneratedMessageV3) -> com.google.protobuf.GeneratedMessageV3>>
 
 @Testcontainers
 internal class PulpFictionBackendServiceTest {
@@ -80,16 +95,84 @@ internal class PulpFictionBackendServiceTest {
         return Tuple2(pulpFictionBackendService.login(loginRequest).loginSession, loginRequest)
     }
 
-    private fun PulpFictionBackendService.EndpointName.assertMetricsCorrectForEndpoint(expectedNumEndpointCalls: Double) {
-        EndpointMetrics
-            .endpointRequestTotal
-            .withLabels(this)
-            .assertEquals(expectedNumEndpointCalls) { it.get() }
+    private fun assertMetricsCorrect(
+        countMetric: PulpFictionCounter,
+        durationMetric: PulpFictionSummary,
+        expectedCount: Double,
+        maxDurationSeconds: Double = 0.5
+    ) {
+        countMetric
+            .assertEquals(expectedCount) { it.get() }
 
-        EndpointMetrics
-            .endpointRequestDurationSeconds
-            .withLabels(this)
-            .assertEquals(expectedNumEndpointCalls) { it.get().count }
+        durationMetric
+            .assertEquals(expectedCount) { it.get().count }
+
+        durationMetric
+            .assertEquals(
+                "${durationMetric.name} count for ${countMetric.labelNames.toList()} = ${countMetric.labelValuesMaybe.map { it.toList() }} should equal $expectedCount",
+                expectedCount
+            ) { it.get().count }
+
+        durationMetric
+            .assertTrue(
+                "The quantiles for ${durationMetric.name} for ${durationMetric.labelNames.toList()} = ${durationMetric.labelValuesMaybe.map { it.toList() }} should be between 0 and $maxDurationSeconds but was ${durationMetric.get().quantiles}"
+            ) { summary ->
+                summary.get().quantiles.values.map { it > 0 && it < maxDurationSeconds }.stream()
+                    .allMatch { it == true }
+            }
+    }
+
+    private fun EndpointName.assertEndpointMetricsCorrect(expectedCount: Double, maxDurationSeconds: Double = 0.5) {
+        assertMetricsCorrect(
+            endpointRequestTotal.withLabels(this),
+            endpointRequestDurationSeconds.withLabels(this),
+            expectedCount,
+            maxDurationSeconds
+        )
+    }
+
+    private fun List<Tuple2<EndpointName, Double>>.assertEndpointMetricsCorrect() =
+        this.forEach { it.first.assertEndpointMetricsCorrect(it.second) }
+
+    private fun Tuple2<EndpointName, DatabaseMetrics.DatabaseOperation>.assertDatabaseMetricsCorrect(
+        expectedCount: Double,
+        maxDurationSeconds: Double = 0.5
+    ) {
+        assertMetricsCorrect(
+            databaseRequestTotal.withLabels(this.first, this.second),
+            databaseQueryDurationSeconds.withLabels(this.first, this.second),
+            expectedCount,
+            maxDurationSeconds
+        )
+    }
+
+    private fun List<Tuple3<EndpointName, DatabaseMetrics.DatabaseOperation, Double>>.assertDatabaseMetricsCorrect() =
+        this.forEach {
+            tupleOf(it.first, it.second).assertDatabaseMetricsCorrect(it.third)
+        }
+
+    private fun Tuple2<EndpointName, S3Metrics.S3Operation>.assertS3MetricsCorrect(
+        expectedCount: Double,
+        maxDurationSeconds: Double = 0.5
+    ) {
+        assertMetricsCorrect(
+            s3RequestTotal.withLabels(this.first, this.second),
+            s3RequestDurationSeconds.withLabels(this.first, this.second),
+            expectedCount,
+            maxDurationSeconds
+        )
+    }
+
+    private fun PostType.assertCreatePostDataMetricsCorrect(
+        expectedCount: Double,
+        maxDurationSeconds: Double = 0.5
+    ) {
+        assertMetricsCorrect(
+            createPostDataTotal.withLabels(this.toLabelValue()),
+            createPostDataDurationSeconds.withLabels(this.toLabelValue()),
+            expectedCount,
+            maxDurationSeconds
+        )
     }
 
     @Test
@@ -126,12 +209,23 @@ internal class PulpFictionBackendServiceTest {
                     createUserRequest.avatarJpg
                 ) { it }
 
-            PulpFictionBackendService
-                .EndpointName
-                .createUser
-                .assertMetricsCorrectForEndpoint(1.0)
-
             // TODO (matt): Check user is retrievable after getUser endpoint implemented
+
+            EndpointName.createUser
+                .assertEndpointMetricsCorrect(1.0)
+
+            listOf(
+                tupleOf(EndpointName.createUser, DatabaseMetrics.DatabaseOperation.createUser, 1.0),
+                tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.login, 1.0),
+                tupleOf(EndpointName.getPost, DatabaseMetrics.DatabaseOperation.getPost, 1.0),
+            ).assertDatabaseMetricsCorrect()
+
+            tupleOf(
+                EndpointName.createPost, S3Metrics.S3Operation.uploadUserAvatar
+            ).assertS3MetricsCorrect(1.0)
+
+            PostType.USER
+                .assertCreatePostDataMetricsCorrect(1.0)
         }
     }
 
@@ -147,10 +241,14 @@ internal class PulpFictionBackendServiceTest {
                 .assertTrue { it.createdAt.isWithinLast(100) }
                 .assertEquals(loginRequest.deviceId) { it.deviceId }
 
-            PulpFictionBackendService
-                .EndpointName
+            EndpointName
                 .login
-                .assertMetricsCorrectForEndpoint(1.0)
+                .assertEndpointMetricsCorrect(1.0)
+
+            listOf(
+                tupleOf(EndpointName.createUser, DatabaseMetrics.DatabaseOperation.createUser, 1.0),
+                tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.login, 1.0),
+            ).assertDatabaseMetricsCorrect()
         }
     }
 
@@ -161,13 +259,20 @@ internal class PulpFictionBackendServiceTest {
 
             val requestAndResponseSuppliers: RequestAndResponseSuppliers =
                 listOf(
-                    tupleOf(loginSession.generateRandomCreatePostRequest()) { pulpFictionBackendService.createPost(it as CreatePostRequest) },
-                    tupleOf(loginSession.generateRandomGetPostRequest()) { pulpFictionBackendService.getPost(it as GetPostRequest) }
+                    tupleOf(
+                        EndpointName.createPost,
+                        loginSession.generateRandomCreatePostRequest()
+                    ) { pulpFictionBackendService.createPost(it as CreatePostRequest) },
+                    tupleOf(
+                        EndpointName.getPost,
+                        loginSession.generateRandomGetPostRequest()
+                    ) { pulpFictionBackendService.getPost(it as GetPostRequest) }
                 )
 
             requestAndResponseSuppliers.forEach { requestAndResponseSupplier ->
-                val request = requestAndResponseSupplier.first
-                val responseSupplier = requestAndResponseSupplier.second
+                val endpointName = requestAndResponseSupplier.first
+                val request = requestAndResponseSupplier.second
+                val responseSupplier = requestAndResponseSupplier.third
 
                 Either.catch { responseSupplier(request) }
                     .assertTrue { it.isLeft() }
@@ -177,6 +282,9 @@ internal class PulpFictionBackendServiceTest {
                             .assertTrue { it.cause is LoginSessionInvalidError }
                             .assertEquals(Status.UNAUTHENTICATED.code) { (it as StatusException).status.code }
                     }
+
+                tupleOf(endpointName, DatabaseMetrics.DatabaseOperation.checkLoginSessionValid)
+                    .assertDatabaseMetricsCorrect(1.0)
             }
         }
     }
@@ -212,10 +320,23 @@ internal class PulpFictionBackendServiceTest {
                 createPostRequest.createImagePostRequest.imageJpg
             ) { it }
 
-        PulpFictionBackendService
-            .EndpointName
-            .createPost
-            .assertMetricsCorrectForEndpoint(1.0)
+        listOf(
+            tupleOf(EndpointName.createPost, 1.0),
+            tupleOf(EndpointName.getPost, 1.0)
+        )
+            .assertEndpointMetricsCorrect()
+
+        listOf(
+            tupleOf(EndpointName.createPost, DatabaseMetrics.DatabaseOperation.createPost, 1.0),
+            tupleOf(EndpointName.getPost, DatabaseMetrics.DatabaseOperation.getPost, 1.0),
+        ).assertDatabaseMetricsCorrect()
+
+        tupleOf(
+            EndpointName.createPost, S3Metrics.S3Operation.uploadImagePost
+        ).assertS3MetricsCorrect(1.0)
+
+        PostType.IMAGE
+            .assertCreatePostDataMetricsCorrect(1.0)
     }
 
     @Test
@@ -244,9 +365,18 @@ internal class PulpFictionBackendServiceTest {
             .assertEquals(postMetadata) { it.metadata }
             .assertEquals(createCommentRequest.createCommentRequest.body) { it.comment.body }
 
-        PulpFictionBackendService
-            .EndpointName
-            .createPost
-            .assertMetricsCorrectForEndpoint(2.0)
+        listOf(
+            tupleOf(EndpointName.createPost, 2.0),
+            tupleOf(EndpointName.getPost, 1.0)
+        )
+            .assertEndpointMetricsCorrect()
+
+        listOf(
+            tupleOf(EndpointName.createPost, DatabaseMetrics.DatabaseOperation.createPost, 2.0),
+            tupleOf(EndpointName.getPost, DatabaseMetrics.DatabaseOperation.getPost, 1.0),
+        ).assertDatabaseMetricsCorrect()
+
+        PostType.COMMENT
+            .assertCreatePostDataMetricsCorrect(1.0)
     }
 }

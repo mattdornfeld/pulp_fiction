@@ -6,9 +6,10 @@ import io.prometheus.client.Collector
 import java.util.concurrent.ThreadLocalRandom
 
 enum class LabelName {
-    endpointName,
     cause,
     databaseOperation,
+    endpointName,
+    postType,
     s3Operation,
 }
 
@@ -23,11 +24,11 @@ class StringLabelValue(private val value: String) : LabelValue {
 }
 
 abstract class PulpFictionMetric<A : Collector, B : PulpFictionMetric<A, B>>(
-    protected val name: String,
+    val name: String,
     protected val help: String,
-    protected val labelNames: LabelNames,
+    val labelNames: LabelNames,
     protected val sampleRate: Double,
-    private val labelValuesMaybe: Option<LabelValues>,
+    val labelValuesMaybe: Option<LabelValues>,
 ) {
     companion object {
         private val metricsRegistry: MutableMap<String, PulpFictionMetric<*, *>> = mutableMapOf()
