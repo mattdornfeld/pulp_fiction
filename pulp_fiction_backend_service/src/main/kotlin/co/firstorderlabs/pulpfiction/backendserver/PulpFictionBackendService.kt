@@ -1,6 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.continuations.effect
+import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.failedLogin
 import co.firstorderlabs.protos.pulpfiction.PulpFictionGrpcKt
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
@@ -41,13 +42,20 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     override suspend fun login(request: PulpFictionProtos.LoginRequest): PulpFictionProtos.LoginResponse {
         val userLoginCandidate = databaseMessenger.getUserDuringLogin(request).getResultAndHandleErrors()
 
-        val hashedPass = userLoginCandidate?.hashedPassword ?: throw UserNotFoundError(
-            "User $request.userId not found")
+        val hashedPass = userLoginCandidate?.hashedPassword ?:
+            return loginResponse { this.failedLogin = failedLogin{
+                    this.usernameCorrect = false
+                }
+            }
         val authenticated = Password.check(request.password, hashedPass).withBcrypt()
-        if( !authenticated ) { throw IncorrectPasswordError() }
+
+        val failedLogin = failedLogin { this.usernameCorrect = true }
+        if( !authenticated ) { return loginResponse {
+                this.failedLogin = failedLogin
+            }
+        }
 
         val loginSession = databaseMessenger.createLoginSession(request).getResultAndHandleErrors()
-
         return loginResponse {
             this.loginSession = loginSession.toLoginSessionProto()
         }

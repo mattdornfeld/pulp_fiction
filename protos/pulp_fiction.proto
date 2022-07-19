@@ -170,7 +170,14 @@ message LoginResponse {
     string device_id = 4;
   }
 
-  LoginSession loginSession = 1;
+  message FailedLogin {
+    bool username_correct = 1;
+  }
+
+  oneof login_response {
+    LoginSession loginSession = 1;
+    FailedLogin failedLogin = 2;
+  }
 }
 
 message UpdateUserRequest {
