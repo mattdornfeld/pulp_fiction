@@ -8,9 +8,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.createPostResponse
 import co.firstorderlabs.protos.pulpfiction.createUserResponse
 import co.firstorderlabs.protos.pulpfiction.loginResponse
-import co.firstorderlabs.pulpfiction.backendserver.types.IncorrectPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
-import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
 import com.password4j.Password
 import org.ktorm.database.Database
