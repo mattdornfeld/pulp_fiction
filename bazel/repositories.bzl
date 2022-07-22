@@ -29,6 +29,14 @@ def pulp_fiction_dependencies():
 
     http_archive(
         name = "build_bazel_rules_apple",
+        patch_args = ["-p1"],
+        patches = ["@rules_applecross//third_party:rules_apple.patch"],
+        sha256 = "12865e5944f09d16364aa78050366aca9dc35a32a018fa35f5950238b08bf744",
+        url = "https://github.com/bazelbuild/rules_apple/releases/download/0.34.2/rules_apple.0.34.2.tar.gz",
+    )
+
+    http_archive(
+        name = "build_bazel_rules_apple",
         sha256 = "12865e5944f09d16364aa78050366aca9dc35a32a018fa35f5950238b08bf744",
         url = "https://github.com/bazelbuild/rules_apple/releases/download/0.34.2/rules_apple.0.34.2.tar.gz",
     )
@@ -45,4 +53,10 @@ def pulp_fiction_dependencies():
         sha256 = "cd1a77b7b02e8e008439ca76fd34f5b07aecb8c752961f9640dea15e9e5ba1ca",
         strip_prefix = "rules_jvm_external-4.2",
         url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.2.zip",
+    )
+
+    http_archive(
+        name = "io_bazel_rules_docker",
+        sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
+        urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
     )
