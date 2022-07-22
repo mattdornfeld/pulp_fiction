@@ -7,6 +7,16 @@ load(
 pulp_fiction_dependencies()
 
 load(
+    "@io_bazel_rules_docker//repositories:repositories.bzl",
+    container_repositories = "repositories",
+)
+container_repositories()
+
+load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
+
+container_deps()
+
+load(
     "@build_bazel_rules_swift//swift:repositories.bzl",
     "swift_rules_dependencies",
     )
@@ -209,3 +219,14 @@ load(
     )
 compat_repositories()
 
+load(
+    "//bazel:pull_containers.bzl",
+    "pull_containers",
+    )
+pull_containers()
+
+load(
+    "//bazel:download_files.bzl",
+    "download_files",
+    )
+download_files()
