@@ -23,5 +23,7 @@ To execute the tests run
 ```
 make test_all
 ```
+# CircleCI
+Automated continuous integrated is accomplished using CircleCI. The CircleCI project UI can be found [here](https://app.circleci.com/pipelines/github/firstorderlabs/pulp_fiction). CircleCI jobs are triggered on Pull Request and push to master.  
 # Contributing
 This project use Gitlab as a remote repository. This project uses [GitHub Flow](https://docs.github.com/en/get-started/quickstart/github-flow) as a branching strategy. To make a contribution make sure your master branch is up to date, create a feature branch from master, make the necessary changes, run any formatting and linting tools for the subproject, make sure all tests pass, push to a remote feature branch and open a PR to master. Give the PR a descriptive title and in the PR message add a #Changelog and #Testing section to give a short bullet point description of the changes it contains and how it's been tested. Once it passes review you may merge your branch to master. Make sure to only "Squash Merge" PRs and delete your remote feature branch after merge as this helps to keep the commit history of master clean and the repo more easily understandable.
