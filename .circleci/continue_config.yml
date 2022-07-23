@@ -1,0 +1,79 @@
+version: 2.1
+
+parameters:
+  should_build_java_ci_image:
+    type: boolean
+    default: false
+
+  should_apply_terraform_changes:
+    type: boolean
+    default: false
+
+jobs:
+  build_java_ci_image:
+    working_directory: /app
+    docker:
+      - image: kernald/bazel:5.1.1
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build CI Image
+          command: |
+            bazel build \
+            --action_env=DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
+            --action_env=DOCKER_HOST=${DOCKER_HOST} \
+            --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
+            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
+            --action_env=NO_PROXY=${NO_PROXY} \
+            //docker_images/java_ci_image:build_image
+
+  test_and_plan_terraform_changes:
+    working_directory: /app
+    docker:
+      - image: kernald/bazel:5.1.1
+    steps:
+      - checkout
+      - run:
+          name: Test and Plan Terraform Changes
+          command: |
+            bazel run //terraform:root_module init
+            bazel test //terraform:all
+            bazel run //terraform:root_module plan
+
+  apply_terraform_changes:
+    working_directory: /app
+    docker:
+      - image: kernald/bazel:5.1.1
+    steps:
+      - checkout
+      - run:
+          name: Apply Terraform Changes
+          command: |
+            bazel run //terraform:root_module init
+            bazel run //terraform:root_module apply -- -auto-approve
+
+workflows:
+  build_java_ci_image:
+    when: << pipeline.parameters.should_build_java_ci_image >>
+    jobs:
+      - build_java_ci_image
+
+  test_and_plan_terraform_changes:
+    when: << pipeline.parameters.should_apply_terraform_changes >>
+    jobs:
+      - test_and_plan_terraform_changes:
+          filters:
+            branches:
+              ignore:
+                - master
+
+  apply_terraform_changes:
+    when: << pipeline.parameters.should_apply_terraform_changes >>
+    jobs:
+      - apply_terraform_changes:
+          filters:
+            branches:
+              only:
+                - master
