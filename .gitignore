@@ -1,9 +1,10 @@
-.DS_Store
-*.xcodeproj
-*.tulsiproj
 *.idea
 *.ijwb
+*.tulsiproj
+*.xcodeproj
+.DS_Store
 bazel-bin
 bazel-out
 bazel-pulp-fiction
 bazel-testlogs
+terraform/.terraform/
