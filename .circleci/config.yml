@@ -9,6 +9,6 @@ workflows:
       - path-filtering/filter:
           name: check-updated-files
           mapping: |
-            docker_images/java_ci_image/BUILD build_java_ci_image true
+            docker_images/java_ci_image/BUILD should_build_java_ci_image true
           base-revision: master
           config-path: .circleci/build_java_ci_image.yml

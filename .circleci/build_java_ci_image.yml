@@ -1,4 +1,10 @@
-version: 2
+version: 2.1
+
+parameters:
+  should_build_java_ci_image:
+    type: boolean
+    default: false
+
 jobs:
   build_java_ci_image:
     working_directory: /app
@@ -18,3 +24,9 @@ jobs:
             --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
             --action_env=NO_PROXY=${NO_PROXY} \
             //docker_images/java_ci_image:build_image
+
+workflows:
+  build_java_ci_image:
+    when: << pipeline.parameters.should_build_java_ci_image >>
+    jobs:
+      - build_java_ci_image
