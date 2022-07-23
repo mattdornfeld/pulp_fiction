@@ -60,3 +60,11 @@ def pulp_fiction_dependencies():
         sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
         urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
     )
+
+    http_archive(
+        name = "rules_terraform",
+        sha256 = "d330452b845773dec31cb4105bd5ef416f7f32e745a9b67cb14ca203be8a0ccb",
+        urls = ["https://github.com/jdreaver/rules_terraform/tarball/e460befbb3d3204e132085020e6b565a224b838e"],
+        type = "tar.gz",
+        strip_prefix = "jdreaver-rules_terraform-e460bef"
+    )

@@ -230,3 +230,55 @@ load(
     "download_files",
     )
 download_files()
+
+load(
+    "@rules_terraform//:deps.bzl",
+    "rules_terraform_repositories",
+    )
+rules_terraform_repositories()
+
+load(
+    "@rules_terraform//:defs.bzl",
+    "download_terraform_versions",
+    "download_terraform_provider_versions",
+    )
+
+download_terraform_versions({
+    # These are SHAs of the SHA265SUM file for a given version. They can be
+    # found with:
+    # curl https://releases.hashicorp.com/terraform/${version}/terraform_${version}_SHA256SUMS | sha256sum
+    "1.2.5": "92995a096b55c013a2f2c388b5bb5eb30d805fa0710cf9d501696a271a819fba",
+})
+
+# Provider SHAs are from the SHA265SUM file for a given version. They can be
+# found with:
+# curl https://releases.hashicorp.com/terraform-provider-${name}/${version}/terraform-provider-${name}_${version}_SHA256SUMS | sha256sum
+download_terraform_provider_versions(
+    "aws",
+    "registry.terraform.io/hashicorp/aws",
+    {
+        "4.23.0": "727bf2a345fcd5bebc9bde3f6f71d0c2ac46c207bc0236098b591042cb8a0790",
+    },
+)
+
+download_terraform_provider_versions(
+    "local",
+    "registry.terraform.io/hashicorp/local",
+    {
+        "2.1.0": "dae594d82be6be5ee83f8d081cc8a05af45ac1bbf7fdb8bea16ab4c1d6032043",
+    },
+)
+
+load(
+    "@io_bazel_rules_go//go:deps.bzl",
+    "go_register_toolchains",
+    "go_rules_dependencies",
+    )
+go_rules_dependencies()
+
+load(
+    "@bazel_gazelle//:deps.bzl",
+    "gazelle_dependencies",
+    "go_repository",
+    )
+gazelle_dependencies()
