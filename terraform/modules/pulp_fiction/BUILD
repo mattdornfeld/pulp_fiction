@@ -2,8 +2,6 @@ load(
     "@rules_terraform//:defs.bzl",
     "terraform_format_test",
     "terraform_module",
-    "terraform_root_module",
-    "terraform_validate_test",
 )
 
 load(
@@ -18,21 +16,6 @@ terraform_module(
     providers = [
         TERRAFORM_AWS_PROVIDER,
     ],
-    deps = [
-        "//terraform/modules/pulp_fiction:module"
-    ]
-)
-
-terraform_root_module(
-    name = "root_module",
-    module = ":module",
-    terraform = TERRAFORM,
-    visibility = ["//visibility:public"],
-)
-
-terraform_validate_test(
-    name = "validate",
-    root_module = ":root_module",
     visibility = ["//visibility:public"],
 )
 
@@ -40,5 +23,4 @@ terraform_format_test(
     name = "format",
     module = ":module",
     terraform = TERRAFORM,
-    visibility = ["//visibility:public"],
 )

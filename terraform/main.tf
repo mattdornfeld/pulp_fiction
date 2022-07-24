@@ -1,9 +1,15 @@
-# local provider
-resource "local_file" "hello" {
-  content  = "Hello, world!"
-  filename = "/tmp/rules_terraform/hello.txt"
+provider "aws" {
+  region = "us-east-1"
 }
 
-#module "time" {
-#  source = "../time_module"
-#}
+terraform {
+  backend "s3" {
+    bucket = "pulp-fiction-terraform-state"
+    key    = "terraform-state"
+    region = "us-east-1"
+  }
+}
+
+module "pulp_fiction" {
+  source = "./modules/pulp_fiction"
+}
