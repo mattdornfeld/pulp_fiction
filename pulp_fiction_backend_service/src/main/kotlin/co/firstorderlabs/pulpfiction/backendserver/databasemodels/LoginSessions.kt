@@ -1,4 +1,4 @@
-package co.firstorderlabs.pulpfiction.backendserver.database.models
+package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
 import arrow.core.continuations.either
@@ -34,7 +34,7 @@ interface LoginSession : Entity<LoginSession> {
     var deviceId: String
     var sessionToken: UUID
 
-    fun toLoginSessionProto(): PulpFictionProtos.LoginResponse.LoginSession {
+    fun toProto(): PulpFictionProtos.LoginResponse.LoginSession {
         val loginSession = this
         return loginSession {
             this.userId = loginSession.userId.toString()
@@ -45,7 +45,7 @@ interface LoginSession : Entity<LoginSession> {
     }
 
     companion object : Entity.Factory<LoginSession>() {
-        suspend fun generateFromRequest(request: LoginRequest): Either<RequestParsingError, LoginSession> = either {
+        suspend fun fromRequest(request: LoginRequest): Either<RequestParsingError, LoginSession> = either {
             LoginSession {
                 userId = request.userId.toUUID().bind()
                 createdAt = Instant.now()

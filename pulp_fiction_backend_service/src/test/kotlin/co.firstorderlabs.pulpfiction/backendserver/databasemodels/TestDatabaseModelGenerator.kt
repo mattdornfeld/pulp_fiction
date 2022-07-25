@@ -1,4 +1,4 @@
-package co.firstorderlabs.pulpfiction.backendserver.database.models
+package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import io.github.serpro69.kfaker.Faker
 import java.time.Instant
@@ -40,11 +40,10 @@ object TestDatabaseModelGenerator {
     fun User.Companion.generateRandom(userId: UUID): User = User {
         this.userId = userId
         this.createdAt = Instant.now()
-        this.displayName = faker.funnyName.name()
+        this.currentDisplayName = faker.funnyName.name()
         this.email = faker.internet.email()
         this.phoneNumber = faker.phoneNumber.phoneNumber()
         this.dateOfBirth = faker.person.birthDate(30)
-        this.avatarImageUrl = faker.internet.domain()
         this.hashedPassword = faker.unique.toString()
     }
 
@@ -60,6 +59,14 @@ object TestDatabaseModelGenerator {
         this.createdAt = Instant.EPOCH
         this.imageS3Key = faker.internet.domain()
         this.caption = faker.worldOfWarcraft.quotes()
+    }
+
+    fun UserPostDatum.Companion.generateRandom(postId: UUID, userId: UUID): UserPostDatum = UserPostDatum {
+        this.postId = postId
+        this.createdAt = Instant.EPOCH
+        this.userId = userId
+        this.displayName = displayName
+        this.avatarImageS3Key = faker.internet.domain()
     }
 
     fun LoginSession.Companion.generateRandom(userId: UUID): LoginSession = LoginSession {

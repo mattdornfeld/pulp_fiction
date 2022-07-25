@@ -1,14 +1,15 @@
-package co.firstorderlabs.pulpfiction.backendserver.database.models
+package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
 import arrow.core.continuations.either
+import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PostKt.postMetadata
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
-import co.firstorderlabs.pulpfiction.backendserver.utils.getPostType
+import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
@@ -36,7 +37,7 @@ interface Post : Entity<Post> {
     var postCreatorId: UUID
     var postType: PostType
 
-    fun toPostMetadata(): PostMetadata = postMetadata {
+    fun toProto(): PostMetadata = postMetadata {
         this.postId = this@Post.postId.toString()
         this.createdAt = this@Post.createdAt.toTimestamp()
         this.postState = this@Post.postState
@@ -44,16 +45,39 @@ interface Post : Entity<Post> {
         this.postCreatorId = this@Post.postCreatorId.toString()
     }
 
+    fun toPostId(): PostId = PostId { this.postId = this@Post.postId }
+
     companion object : Entity.Factory<Post>() {
-        suspend fun generateFromRequest(
+        private fun CreatePostRequest.getPostType(): Either<RequestParsingError, PostType> {
+            return if (this.hasCreateCommentRequest()) {
+                Either.Right(PostType.COMMENT)
+            } else if (this.hasCreateImagePostRequest()) {
+                Either.Right(PostType.IMAGE)
+            } else if (this.hasCreateUserPostRequest()) {
+                Either.Right(PostType.USER)
+            } else {
+                Either.Left(
+                    RequestParsingError("${this.removeLoginSession()} contains unsupported PostType")
+                )
+            }
+        }
+
+        private fun CreatePostRequest.removeLoginSession(): CreatePostRequest =
+            this
+                .toBuilder()
+                .setLoginSession(loginSession {})
+                .build()
+
+        suspend fun fromRequest(
             postId: UUID,
-            request: PulpFictionProtos.CreatePostRequest
+            request: CreatePostRequest
         ): Either<PulpFictionError, Post> = either {
+            val postCreatorId = request.loginSession.userId.toUUID().bind()
             Post {
                 this.postId = postId
                 this.createdAt = Instant.now()
                 this.postState = PostState.CREATED
-                this.postCreatorId = request.loginSession.userId.toUUID().bind()
+                this.postCreatorId = postCreatorId
                 this.postType = request.getPostType().bind()
             }
         }

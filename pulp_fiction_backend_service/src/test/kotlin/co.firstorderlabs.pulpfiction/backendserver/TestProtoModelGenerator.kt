@@ -2,15 +2,19 @@ package co.firstorderlabs.pulpfiction.backendserver
 
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createCommentRequest
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createImagePostRequest
+import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.createUserRequest
+import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.protos.pulpfiction.loginRequest
 import co.firstorderlabs.pulpfiction.backendserver.testutils.nextByteString
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
@@ -56,6 +60,12 @@ object TestProtoModelGenerator {
         this.imageJpg = random.nextByteString(100)
     }
 
+    fun generateRandomCreateUserPostRequest(loginSession: LoginSession): CreateUserPostRequest = createUserPostRequest {
+        this.userId = loginSession.userId.toString()
+        this.displayName = faker.name.firstName()
+        this.avatarJpg = random.nextByteString(100)
+    }
+
     fun LoginSession.generateRandomCreatePostRequest(): CreatePostRequest = createPostRequest {
         this.loginSession = this@generateRandomCreatePostRequest
         this.createImagePostRequest = generateRandomCreateImagePostRequest()
@@ -72,4 +82,21 @@ object TestProtoModelGenerator {
         builder.createCommentRequest = generateRandomCreateCommentRequest(parentPostId)
         return builder.build()
     }
+
+    fun CreatePostRequest.withRandomCreateUserPostRequest(): CreatePostRequest {
+        val builder = this.toBuilder()
+        builder.createUserPostRequest = generateRandomCreateUserPostRequest(this.loginSession)
+        return builder.build()
+    }
+
+    fun LoginSession.buildGetPostRequest(postId: String): PulpFictionProtos.GetPostRequest = getPostRequest {
+        this.loginSession = this@buildGetPostRequest
+        this.postId = postId
+    }
+
+    fun LoginSession.buildGetPostRequest(postMetadata: PostMetadata): PulpFictionProtos.GetPostRequest =
+        buildGetPostRequest(postMetadata.postId)
+
+    fun LoginSession.generateRandomGetPostRequest(): PulpFictionProtos.GetPostRequest =
+        buildGetPostRequest(UUID.randomUUID().toString())
 }

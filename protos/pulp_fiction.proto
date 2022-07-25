@@ -28,7 +28,6 @@ message Post {
     google.protobuf.Timestamp created_at = 2;
     string post_creator_id = 3;
     PostState postState = 4;
-    google.protobuf.Timestamp updated_at = 6;
     PostType postType = 7;
   }
 
@@ -90,10 +89,17 @@ message CreatePostRequest {
     string caption = 2;
   }
 
+  message CreateUserPostRequest {
+    string userId = 1;
+    string display_name = 2;
+    bytes avatarJpg = 3;
+  }
+
   LoginResponse.LoginSession loginSession = 1;
   oneof create_post_request {
     CreateCommentRequest createCommentRequest = 2;
     CreateImagePostRequest create_image_post_request = 3;
+    CreateUserPostRequest create_user_post_request = 4;
   }
 }
 
@@ -148,7 +154,7 @@ message GetPostResponse {
 }
 
 message CreateUserResponse {
-  User.UserMetadata userMetadata = 1;
+  Post userPost = 1;
 }
 
 message GetUserRequest {

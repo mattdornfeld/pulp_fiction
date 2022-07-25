@@ -9,8 +9,8 @@ build_jar:
 configure_dev:
 	chmod u+x sbin/configure.sh && sbin/configure.sh
 
-lint_and_fix:
-	${BAZEL} run :lint_and_fix
+format:
+	${BAZEL} run :format
 
 run_locally:
 	${BAZEL} run :pulp_fiction_backend_service

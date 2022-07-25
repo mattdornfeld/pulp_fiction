@@ -20,7 +20,12 @@ load(
 load(
     "@rules_java//java:defs.bzl",
     "java_proto_library"
-    )
+)
+
+load(
+    "//bazel:junit5_test.bzl",
+    "junit5_tests",
+)
 
 MAIN_SRC_FILES = ["src/main/kotlin/**/*.kt"]
 TEST_SRC_FILES = ["src/test/kotlin/**/*.kt"]
@@ -38,7 +43,7 @@ kt_jvm_grpc_library(
 )
 
 ktlint_fix(
-    name = "lint_and_fix",
+    name = "format",
     srcs = glob(SRC_FILES),
 )
 
@@ -57,6 +62,7 @@ kt_jvm_library(
         "@maven//:io_grpc_grpc_netty_shaded",
         "@maven//:io_grpc_grpc_protobuf",
         "@maven//:io_grpc_grpc_stub",
+        "@maven//:io_prometheus_simpleclient",
         "@maven//:org_flywaydb_flyway_core",
         "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
         "@maven//:org_ktorm_ktorm_core",
@@ -68,6 +74,10 @@ kt_jvm_library(
         "@maven//:software_amazon_awssdk_http_client_spi",
         "@maven//:software_amazon_awssdk_regions",
         "@maven//:software_amazon_awssdk_s3",
+#        "@maven//:com_google_flogger_flogger_slf4j_backend",
+#        "@maven//:com_google_flogger_flogger",
+#        "@maven//:org_slf4j_slf4j_api",
+#        "@maven//:org_slf4j_slf4j_simple",
     ],
     resources = glob(["src/main/resources/**/*"]),
 )
@@ -77,8 +87,7 @@ kt_jvm_library(
     srcs = glob(TEST_SRC_FILES),
     deps = [
         ":pulp_fiction_backend_service_lib",
-        "@maven//:com_adobe_testing_s3mock_junit5",
-        "@maven//:com_adobe_testing_s3mock_testcontainers",
+        "@maven//:com_amazonaws_aws_java_sdk_s3",
         "@maven//:io_arrow_kt_arrow_fx_coroutines_jvm",
         "@maven//:io_github_serpro69_kotlin_faker",
         "@maven//:org_jetbrains_kotlin_kotlin_test_junit5",
@@ -86,50 +95,19 @@ kt_jvm_library(
         "@maven//:org_junit_jupiter_junit_jupiter_api",
         "@maven//:org_junit_jupiter_junit_jupiter_engine",
         "@maven//:org_junit_platform_junit_platform_console",
-        "@maven//:org_slf4j_slf4j_api",
-        "@maven//:org_slf4j_slf4j_simple",
         "@maven//:org_testcontainers_junit_jupiter",
         "@maven//:org_testcontainers_postgresql",
         "@maven//:org_testcontainers_testcontainers",
+        "@maven//:org_testcontainers_localstack",
     ],
 )
 
-kt_jvm_test(
-    name = "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServiceTest",
-    test_class = "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServiceTest",
-    deps = [
-        ":pulp_fiction_backend_service_tests_lib",
-    ],
-    visibility = ["//visibility:public"],
-    main_class = "org.junit.platform.console.ConsoleLauncher",
-    args = [
-        "--select-package=co.firstorderlabs.pulpfiction.backendserver",
-    ],
-)
-
-kt_jvm_test(
-    name = "co.firstorderlabs.pulpfiction.backendserver.database.MigrateDatabaseTest",
-    test_class = "co.firstorderlabs.pulpfiction.backendserver.database.MigrateDatabaseTest",
-    deps = [
-        ":pulp_fiction_backend_service_tests_lib",
-    ],
-    visibility = ["//visibility:public"],
-    main_class = "org.junit.platform.console.ConsoleLauncher",
-    args = [
-        "--select-package=co.firstorderlabs.pulpfiction.backendserver.database",
-    ],
-)
-
-kt_jvm_test(
-    name = "co.firstorderlabs.pulpfiction.backendserver.S3MessengerTest",
-    test_class = "co.firstorderlabs.pulpfiction.backendserver.S3MessengerTest",
-    deps = [
-        ":pulp_fiction_backend_service_tests_lib",
-    ],
-    visibility = ["//visibility:public"],
-    main_class = "org.junit.platform.console.ConsoleLauncher",
-    args = [
-        "--select-package=co.firstorderlabs.pulpfiction.backendserver",
+junit5_tests(
+    deps = [":pulp_fiction_backend_service_tests_lib"],
+    test_classes=[
+        "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServiceTest",
+        "co.firstorderlabs.pulpfiction.backendserver.MigrateDatabaseTest",
+        "co.firstorderlabs.pulpfiction.backendserver.S3MessengerTest",
     ],
 )
 

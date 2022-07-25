@@ -1,20 +1,27 @@
-package co.firstorderlabs.pulpfiction.backendserver.database.models
+package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.continuations.either
 import arrow.core.none
+import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
+import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.SensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.sensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.userMetadata
+import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.user
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
+<<<<<<< HEAD:pulp_fiction_backend_service/src/main/kotlin/co/firstorderlabs/pulpfiction/backendserver/database/models/Users.kt
 import com.password4j.Password
+=======
+import com.google.protobuf.ByteString
+>>>>>>> a1a50c4fc0974081cdc575b50a17f38312515708:pulp_fiction_backend_service/src/main/kotlin/co/firstorderlabs/pulpfiction/backendserver/databasemodels/Users.kt
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
 import org.ktorm.entity.sequenceOf
@@ -30,31 +37,28 @@ import java.util.UUID
 object Users : Table<User>("users") {
     val userId = uuid("user_id").primaryKey().bindTo { it.userId }
     val createdAt = timestamp("created_at").bindTo { it.createdAt }
-    val displayName = varchar("display_name").bindTo { it.displayName }
+    val currentDisplayName = varchar("current_display_name").bindTo { it.currentDisplayName }
     val email = varchar("email").bindTo { it.email }
     val phoneNumber = varchar("phone_number").bindTo { it.phoneNumber }
     val dateOfBirth = date("date_of_birth").bindTo { it.dateOfBirth }
-    val avatarImageUrl = varchar("avatar_image_url").bindTo { it.avatarImageUrl }
     val hashedPassword = varchar("hashed_password").bindTo { it.hashedPassword }
 }
 
 interface User : Entity<User> {
     var userId: UUID
     var createdAt: Instant
-    var displayName: String
+    var currentDisplayName: String
     var phoneNumber: String
     var hashedPassword: String
     var email: String?
     var dateOfBirth: LocalDate?
-    var avatarImageUrl: String?
 
     fun toNonSensitiveUserMetadataProto(): UserMetadata {
         val user = this
         return userMetadata {
             this.userId = user.userId.toString()
             this.createdAt = user.createdAt.toTimestamp()
-            this.displayName = user.displayName
-            if (user.avatarImageUrl != null) this.avatarImageUrl = user.avatarImageUrl!!
+            this.displayName = user.currentDisplayName
         }
     }
 
@@ -76,8 +80,19 @@ interface User : Entity<User> {
         }
     }
 
+    fun toCreatePostRequest(avatarJpg: ByteString): PulpFictionProtos.CreatePostRequest = createPostRequest {
+        this.loginSession = loginSession {
+            this.userId = this@User.userId.toString()
+        }
+        this.createUserPostRequest = createUserPostRequest {
+            this.userId = this@User.userId.toString()
+            this.displayName = this@User.currentDisplayName
+            this.avatarJpg = avatarJpg
+        }
+    }
+
     companion object : Entity.Factory<User>() {
-        fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
+        private fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
             if (dateOfBirth == null) {
                 return Either.Right(none())
             }
@@ -91,7 +106,7 @@ interface User : Entity<User> {
             }
         }
 
-        suspend fun generateFromRequest(
+        suspend fun fromRequest(
             request: PulpFictionProtos.CreateUserRequest
         ): Either<RequestParsingError, User> {
             val dateOfBirth = getDateOfBirth(request.dateOfBirth)
@@ -99,7 +114,7 @@ interface User : Entity<User> {
                 User {
                     this.userId = UUID.randomUUID()
                     this.createdAt = Instant.now()
-                    this.displayName = request.displayName
+                    this.currentDisplayName = request.displayName
                     this.phoneNumber = request.phoneNumber
                     this.hashedPassword = Password.hash(request.password).withBcrypt().result
                     this.email = request.email

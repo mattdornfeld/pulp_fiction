@@ -1,6 +1,6 @@
-package co.firstorderlabs.pulpfiction.backendserver.database.models
+package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
-import co.firstorderlabs.pulpfiction.backendserver.database.models.Posts.bindTo
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts.bindTo
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
 import org.ktorm.entity.sequenceOf
