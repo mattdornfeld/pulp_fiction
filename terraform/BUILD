@@ -19,7 +19,8 @@ terraform_module(
         TERRAFORM_AWS_PROVIDER,
     ],
     deps = [
-        "//terraform/modules/pulp_fiction:module"
+        "//terraform/modules/pulp_fiction:module",
+        "//terraform/modules/pulp_fiction_ecr_repository:module",
     ]
 )
 
