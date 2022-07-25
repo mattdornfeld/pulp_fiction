@@ -34,6 +34,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
+import co.firstorderlabs.pulpfiction.backendserver.testutils.assertFalse
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
@@ -276,8 +277,8 @@ internal class PulpFictionBackendServiceTest {
             val tuple2 = createUserAndFailLogin()
             val wrongUserResponse = tuple2.first
             val wrongPasswordResponse = tuple2.second
-            Assertions.assertFalse(wrongUserResponse.failedLogin.usernameCorrect)
-            Assertions.assertTrue(wrongPasswordResponse.failedLogin.usernameCorrect)
+            wrongUserResponse.failedLogin.assertFalse{ it.usernameCorrect }
+            wrongPasswordResponse.failedLogin.assertTrue{ it.usernameCorrect}
 
         }
     }

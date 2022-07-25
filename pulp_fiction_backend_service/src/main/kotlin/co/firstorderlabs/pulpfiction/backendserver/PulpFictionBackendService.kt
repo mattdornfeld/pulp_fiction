@@ -85,8 +85,6 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             }
         }
 
-        val loginSession = databaseMessenger.createLoginSession(request).getResultAndHandleErrors()
-
         val endpointName = EndpointName.login
         return effect<PulpFictionError, LoginResponse> {
             val loginSession = databaseMessenger
