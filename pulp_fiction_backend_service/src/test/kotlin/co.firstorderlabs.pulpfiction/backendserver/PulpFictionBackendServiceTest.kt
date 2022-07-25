@@ -192,7 +192,6 @@ internal class PulpFictionBackendServiceTest {
             maxDurationSeconds
         )
     }
->>>>>>> a1a50c4fc0974081cdc575b50a17f38312515708
 
     @Test
     fun testCreateUser() {

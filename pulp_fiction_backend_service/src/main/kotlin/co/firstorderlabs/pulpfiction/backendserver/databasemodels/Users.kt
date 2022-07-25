@@ -17,11 +17,8 @@ import co.firstorderlabs.protos.pulpfiction.user
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
-<<<<<<< HEAD:pulp_fiction_backend_service/src/main/kotlin/co/firstorderlabs/pulpfiction/backendserver/database/models/Users.kt
 import com.password4j.Password
-=======
 import com.google.protobuf.ByteString
->>>>>>> a1a50c4fc0974081cdc575b50a17f38312515708:pulp_fiction_backend_service/src/main/kotlin/co/firstorderlabs/pulpfiction/backendserver/databasemodels/Users.kt
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
 import org.ktorm.entity.sequenceOf
