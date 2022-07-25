@@ -3,6 +3,7 @@ package co.firstorderlabs.pulpfiction.backendserver
 import arrow.core.Either
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
@@ -63,6 +64,24 @@ internal class PulpFictionBackendServiceTest {
         return Tuple2(pulpFictionBackendService.login(loginRequest).loginSession, loginRequest)
     }
 
+     private suspend fun createUserAndFailLogin(): Tuple2<LoginResponse, LoginResponse> {
+         val tuple2 = createUser()
+         val userMetadata = tuple2.first
+         val createUserRequest = tuple2.second
+
+         val incorrectUser = "fail_${userMetadata.userId}"
+         val incorrectPassword = "fail_${createUserRequest.password}"
+
+         val loginRequestWrongUser =
+             TestProtoModelGenerator.generateRandomLoginRequest(incorrectUser,
+                     createUserRequest.password)
+         val loginRequestWrongPass =
+             TestProtoModelGenerator.generateRandomLoginRequest(userMetadata.userId, incorrectPassword)
+
+         return Tuple2(pulpFictionBackendService.login(loginRequestWrongUser),
+             pulpFictionBackendService.login(loginRequestWrongPass))
+     }
+
     @Test
     fun testCreateUser() {
         runBlocking {
@@ -83,6 +102,18 @@ internal class PulpFictionBackendServiceTest {
             Assertions.assertTrue(loginSession.sessionToken.toUUID().isRight())
             Assertions.assertTrue(loginSession.createdAt.isWithinLast(100))
             Assertions.assertEquals(loginRequest.deviceId, loginSession.deviceId)
+        }
+    }
+
+    @Test
+    fun testFailedLogin() {
+        runBlocking {
+            val tuple2 = createUserAndFailLogin()
+            val wrongUserResponse = tuple2.first
+            val wrongPasswordResponse = tuple2.second
+            Assertions.assertFalse(wrongUserResponse.failedLogin.usernameCorrect)
+            Assertions.assertTrue(wrongPasswordResponse.failedLogin.usernameCorrect)
+
         }
     }
 
