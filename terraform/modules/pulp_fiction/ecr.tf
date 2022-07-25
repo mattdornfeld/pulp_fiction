@@ -1,17 +1,9 @@
-resource "aws_ecr_repository" "pulp_fiction_backend_service" {
-  name                 = "pulp_fiction_backend_service"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+module "pulp_fiction_ecr_repository_bazel_ci" {
+  source = "../pulp_fiction_ecr_repository"
+  name   = "pulp_fiction/bazel_ci"
 }
 
-resource "aws_ecr_repository" "pulp_fiction_java_ci" {
-  name                 = "pulp_fiction_java_ci"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+module "pulp_fiction_ecr_repository_backend_service" {
+  source = "../pulp_fiction_ecr_repository"
+  name   = "pulp_fiction/backend_service"
 }
