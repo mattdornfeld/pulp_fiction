@@ -9,7 +9,7 @@ workflows:
       - path-filtering/filter:
           name: check_updated_files
           mapping: |
-            docker_images/java_ci_image/BUILD should_build_java_ci_image true
+            docker_images/bazel_ci_image/BUILD should_build_bazel_ci_image true
             terraform/.* should_apply_terraform_changes true
           base-revision: master
           config-path: .circleci/continue_config.yml
