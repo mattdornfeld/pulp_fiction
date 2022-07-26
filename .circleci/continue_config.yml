@@ -19,7 +19,34 @@ commands:
     steps:
       - setup_remote_docker:
           docker_layer_caching: true
-      - run: echo $(aws ecr get-login-password --region us-east-1) | docker login --username AWS --password-stdin 146956608205.dkr.ecr.us-east-1.amazonaws.com
+      - run:
+          name: "Login to ECR"
+          command: |
+            echo $(aws ecr get-login-password --region us-east-1) | \
+            docker login \
+            --username AWS \
+            --password-stdin \
+            146956608205.dkr.ecr.us-east-1.amazonaws.com
+
+  build_and_push_image:
+    description: "Build and Push Docker Image"
+    parameters:
+      docker_image_name:
+        type: string
+    steps:
+      - run:
+          name: "Build and Push Docker Image"
+          command: |
+            DOCKER_IMAGE_TAG=$(if [ ${CIRCLE_BRANCH} == "master" ]; then echo "latest"; else echo ${CIRCLE_BRANCH}; fi)
+            DOCKER_IMAGE_NAME=<< parameters.docker_image_name >>
+            bazel run \
+            --define=DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} \
+            --action_env=DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
+            --action_env=DOCKER_HOST=${DOCKER_HOST} \
+            --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
+            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
+            --action_env=NO_PROXY=${NO_PROXY} \
+            //docker_images/${DOCKER_IMAGE_NAME}:push_image
 
 jobs:
   build_bazel_ci_image:
@@ -32,17 +59,8 @@ jobs:
     steps:
       - checkout
       - configure_docker
-      - run:
-          name: Build and Push Docker Image
-          command: |
-            bazel run \
-            --define=DOCKER_IMAGE_TAG=latest \
-            --action_env=DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
-            --action_env=DOCKER_HOST=${DOCKER_HOST} \
-            --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
-            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
-            --action_env=NO_PROXY=${NO_PROXY} \
-            //docker_images/bazel_ci:push_image
+      - build_and_push_image:
+          docker_image_name: bazel_ci
 
   test_and_plan_terraform_changes:
     working_directory: /app
@@ -96,17 +114,8 @@ jobs:
 #            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
 #            --action_env=NO_PROXY=${NO_PROXY} \
 #            //pulp_fiction_backend_service/...
-      - run:
-          name: Build and Push Docker Image
-          command: |
-            bazel run \
-            --define=DOCKER_IMAGE_TAG=latest \
-            --action_env=DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
-            --action_env=DOCKER_HOST=${DOCKER_HOST} \
-            --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
-            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
-            --action_env=NO_PROXY=${NO_PROXY} \
-            //docker_images/pulp_fiction_backend_service:push_image
+      - build_and_push_image:
+          docker_image_name: pulp_fiction_backend_service
 
 workflows:
   build_bazel_ci_image:
