@@ -4,7 +4,7 @@ build_protos:
 	${BAZEL} build :build_kotlin_grpc
 
 build_jar:
-	${BAZEL} build :pulp_fiction_backend_service
+	${BAZEL} build :pulp_fiction_backend_service_deploy.jar
 
 configure_dev:
 	chmod u+x sbin/configure.sh && sbin/configure.sh
