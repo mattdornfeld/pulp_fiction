@@ -33,7 +33,7 @@ pkg_tar(
 
 container_layer(
     name = "bin_bazelisk_layer",
-    tars = [":bin_bazelisk_tar"]
+    tars = [":bin_bazelisk_tar"],
 )
 
 container_image(
