@@ -289,10 +289,10 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         val uuid = request.userId.toUUID().bind()
         val userLoginCandidate = database.transactionToEffectCatchErrors {
             database.users.find { it.userId eq uuid } }.bind() ?:
-            throw UserNotFoundError("User ${request.userId} not found")
+            shift(UserNotFoundError("User ${request.userId} not found"))
 
         val hashedPass = userLoginCandidate.hashedPassword
         val authenticated = Password.check(request.password, hashedPass).withBcrypt()
-        if (!authenticated) { throw InvalidUserPasswordError() } else { true }
+        if (!authenticated) { shift(InvalidUserPasswordError()) } else { true }
     }
 }
