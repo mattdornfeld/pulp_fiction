@@ -9,6 +9,10 @@ parameters:
     type: boolean
     default: false
 
+  should_build_and_test_backend_service:
+    type: boolean
+    default: false
+
 commands:
   configure_docker:
     description: "Setup a remote Docker host and login to the Docker registry"
@@ -81,9 +85,17 @@ jobs:
     steps:
       - checkout
       - configure_docker
-      - run:
-          name: Run Tests
-          command: bazel test ...
+#      - run:
+#          name: Run Tests
+#          command: |
+#            bazel test \
+#            --define=DOCKER_IMAGE_TAG=latest \
+#            --action_env=DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
+#            --action_env=DOCKER_HOST=${DOCKER_HOST} \
+#            --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
+#            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
+#            --action_env=NO_PROXY=${NO_PROXY} \
+#            //pulp_fiction_backend_service/...
       - run:
           name: Build and Push Docker Image
           command: |
