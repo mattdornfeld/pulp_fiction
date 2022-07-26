@@ -7,3 +7,10 @@ def pull_containers():
         repository = "cimg/base",
         tag = "stable",
     )
+
+    container_pull(
+        name = "java_17_image",
+        registry = "docker.io",
+        repository = "eclipse-temurin",
+        tag = "17-jre",
+    )
