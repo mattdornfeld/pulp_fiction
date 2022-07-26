@@ -6,7 +6,6 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
@@ -34,7 +33,6 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
-import co.firstorderlabs.pulpfiction.backendserver.testutils.assertFalse
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
@@ -97,7 +95,7 @@ internal class PulpFictionBackendServiceTest {
         return Tuple2(pulpFictionBackendService.login(loginRequest).loginSession, loginRequest)
     }
 
-     private suspend fun createUserAndFailLogin(): Tuple2<LoginResponse, LoginResponse> {
+     private suspend fun createFailingLoginRequests(): List<LoginRequest> {
          val tuple2 = createUser()
          val userMetadata = tuple2.first.userPost.userMetadata
          val createUserRequest = tuple2.second
@@ -111,8 +109,7 @@ internal class PulpFictionBackendServiceTest {
          val loginRequestWrongPass =
              TestProtoModelGenerator.generateRandomLoginRequest(userMetadata.userId, incorrectPassword)
 
-         return Tuple2(pulpFictionBackendService.login(loginRequestWrongUser),
-             pulpFictionBackendService.login(loginRequestWrongPass))
+         return listOf(loginRequestWrongUser, loginRequestWrongPass)
      }
     private fun assertMetricsCorrect(
         countMetric: PulpFictionCounter,
@@ -274,11 +271,16 @@ internal class PulpFictionBackendServiceTest {
     @Test
     fun testFailedLogin() {
         runBlocking {
-            val tuple2 = createUserAndFailLogin()
-            val wrongUserResponse = tuple2.first
-            val wrongPasswordResponse = tuple2.second
-            wrongUserResponse.failedLogin.assertFalse{ it.usernameCorrect }
-            wrongPasswordResponse.failedLogin.assertTrue{ it.usernameCorrect}
+            val loginRequests = createFailingLoginRequests()
+            loginRequests.forEach{
+                loginRequest ->
+                Either.catch{ pulpFictionBackendService.login(loginRequest) }
+                    .assertTrue { it.isLeft() }
+                    .mapLeft { error ->
+                        error
+                            .assertEquals(Status.UNAUTHENTICATED.code) { (it as StatusException).status.code }
+                    }
+            }
 
         }
     }

@@ -2,7 +2,6 @@ package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
-import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.failedLogin
 import co.firstorderlabs.protos.pulpfiction.PulpFictionGrpcKt
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostResponse
@@ -19,7 +18,6 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.logEndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
-import com.password4j.Password
 import org.ktorm.database.Database
 import software.amazon.awssdk.services.s3.S3Client
 
@@ -70,23 +68,10 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     }
 
     override suspend fun login(request: PulpFictionProtos.LoginRequest): PulpFictionProtos.LoginResponse {
-        val userLoginCandidate = databaseMessenger.getUserDuringLogin(request).getResultAndHandleErrors()
-
-        val hashedPass = userLoginCandidate?.hashedPassword ?:
-            return loginResponse { this.failedLogin = failedLogin{
-                    this.usernameCorrect = false
-                }
-            }
-        val authenticated = Password.check(request.password, hashedPass).withBcrypt()
-
-        val failedLogin = failedLogin { this.usernameCorrect = true }
-        if( !authenticated ) { return loginResponse {
-                this.failedLogin = failedLogin
-            }
-        }
-
         val endpointName = EndpointName.login
         return effect<PulpFictionError, LoginResponse> {
+            databaseMessenger.checkUserPasswordValid(request).bind()
+
             val loginSession = databaseMessenger
                 .createLoginSession(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.login)

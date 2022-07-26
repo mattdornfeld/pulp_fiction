@@ -175,15 +175,8 @@ message LoginResponse {
     google.protobuf.Timestamp created_at = 3;
     string device_id = 4;
   }
-
-  message FailedLogin {
-    bool username_correct = 1;
-  }
-
-  oneof login_response {
-    LoginSession loginSession = 1;
-    FailedLogin failedLogin = 2;
-  }
+  
+  LoginSession loginSession = 1;
 }
 
 message UpdateUserRequest {
