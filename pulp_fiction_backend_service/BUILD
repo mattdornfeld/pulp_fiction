@@ -116,11 +116,20 @@ ktlint_test(
     visibility = ["//visibility:public"],
 )
 
-kt_jvm_binary(
+#kt_jvm_binary(
+#    name = "pulp_fiction_backend_service",
+#    main_class = "co.firstorderlabs.pulpfiction.PulpFictionBackendServerKt",
+#    srcs = glob(MAIN_SRC_FILES),
+#    deps = [
+#        ":pulp_fiction_backend_service_lib",
+#    ],
+#    visibility = ["//visibility:public"],
+#)
+
+java_binary(
     name = "pulp_fiction_backend_service",
-    main_class = "co.firstorderlabs.pulpfiction.PulpFictionBackendServerKt",
-    srcs = glob(MAIN_SRC_FILES),
-    deps = [
+    main_class = "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServer",
+    runtime_deps = [
         ":pulp_fiction_backend_service_lib",
     ],
     visibility = ["//visibility:public"],

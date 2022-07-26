@@ -9,6 +9,13 @@ class PulpFictionBackendServer(private val port: Int) {
     companion object {
         private fun createPulpFictionBackendService(): PulpFictionBackendService =
             PulpFictionBackendService(DatabaseMessenger.createDatabaseConnection(), S3Messenger.createS3Client())
+
+        @JvmStatic
+        fun main(args: Array<String>) {
+            PulpFictionBackendServer()
+                .start()
+                .blockUntilShutdown()
+        }
     }
 
     private val server = ServerBuilder
@@ -38,11 +45,5 @@ class PulpFictionBackendServer(private val port: Int) {
     private fun blockUntilShutdown(): PulpFictionBackendServer {
         server.awaitTermination()
         return this
-    }
-
-    fun main() {
-        PulpFictionBackendServer()
-            .start()
-            .blockUntilShutdown()
     }
 }
