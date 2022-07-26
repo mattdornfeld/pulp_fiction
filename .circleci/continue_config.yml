@@ -29,7 +29,7 @@ jobs:
       - checkout
       - configure_docker
       - run:
-          name: Build and Push bazel_ci Image
+          name: Build and Push Docker Image
           command: |
             bazel run \
             --define=DOCKER_IMAGE_TAG=latest \
@@ -38,7 +38,7 @@ jobs:
             --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
             --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
             --action_env=NO_PROXY=${NO_PROXY} \
-            //docker_images/bazel_ci_image:push_image
+            //docker_images/bazel_ci:push_image
 
   test_and_plan_terraform_changes:
     working_directory: /app
@@ -71,6 +71,31 @@ jobs:
             bazel run //terraform:root_module init
             bazel run //terraform:root_module apply -- -auto-approve
 
+  build_and_test_backend_service:
+    working_directory: /app
+    docker:
+      - image: 146956608205.dkr.ecr.us-east-1.amazonaws.com/pulp_fiction/bazel_ci
+        aws_auth:
+          aws_access_key_id: $AWS_ACCESS_KEY_ID
+          aws_secret_access_key: $AWS_SECRET_ACCESS_KEY
+    steps:
+      - checkout
+      - configure_docker
+      - run:
+          name: Run Tests
+          command: bazel test ...
+      - run:
+          name: Build and Push Docker Image
+          command: |
+            bazel run \
+            --define=DOCKER_IMAGE_TAG=latest \
+            --action_env=DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
+            --action_env=DOCKER_HOST=${DOCKER_HOST} \
+            --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
+            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
+            --action_env=NO_PROXY=${NO_PROXY} \
+            //docker_images/pulp_fiction_backend_service:push_image
+
 workflows:
   build_bazel_ci_image:
     when: << pipeline.parameters.should_build_bazel_ci_image >>
@@ -94,3 +119,8 @@ workflows:
             branches:
               only:
                 - master
+
+  build_and_test_backend_service:
+    when: << pipeline.parameters.should_build_and_test_backend_service >>
+    jobs:
+      - build_and_test_backend_service

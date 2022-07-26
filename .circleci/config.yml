@@ -9,7 +9,10 @@ workflows:
       - path-filtering/filter:
           name: check_updated_files
           mapping: |
-            docker_images/bazel_ci_image/BUILD should_build_bazel_ci_image true
+            docker_images/bazel_ci/BUILD should_build_bazel_ci_image true
             terraform/.* should_apply_terraform_changes true
+            docker_images/pulp_fiction_backend_service/BUILD should_build_and_test_backend_service true
+            pulp_fiction_backend_service/BUILD should_build_and_test_backend_service true
+            pulp_fiction_backend_service/src/.* should_build_and_test_backend_service true
           base-revision: master
           config-path: .circleci/continue_config.yml

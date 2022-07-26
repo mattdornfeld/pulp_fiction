@@ -1,3 +1,4 @@
 build --verbose_failures
 test --verbose_failures
 build --strategy=SwiftCompile=worker
+build --@io_bazel_rules_docker//transitions:enable=false
