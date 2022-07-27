@@ -11,7 +11,7 @@ parameters:
 
   should_build_and_test_backend_service:
     type: boolean
-    default: false
+    default: true
 
 commands:
   configure_docker:
@@ -103,17 +103,24 @@ jobs:
     steps:
       - checkout
       - configure_docker
-#      - run:
-#          name: Run Tests
-#          command: |
-#            bazel test \
-#            --define=DOCKER_IMAGE_TAG=latest \
-#            --action_env=DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
-#            --action_env=DOCKER_HOST=${DOCKER_HOST} \
-#            --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
-#            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
-#            --action_env=NO_PROXY=${NO_PROXY} \
-#            //pulp_fiction_backend_service/...
+      - run:
+          name: Testcontainers tunnel
+          background: true
+          command: .circleci/autoforward.py
+      - run:
+          name: Run Tests
+          command: |
+            pwd
+            ls
+            bazel test \
+            --action_env=TESTCONTAINERS_RYUK_DISABLED=true \
+            --action_env=TESTCONTAINERS_HOST_OVERRIDE=localhost \
+            --action_env=DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
+            --action_env=DOCKER_HOST=${DOCKER_HOST} \
+            --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
+            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
+            --action_env=NO_PROXY=${NO_PROXY} \
+            //pulp_fiction_backend_service/...
       - build_and_push_image:
           docker_image_name: pulp_fiction_backend_service
 

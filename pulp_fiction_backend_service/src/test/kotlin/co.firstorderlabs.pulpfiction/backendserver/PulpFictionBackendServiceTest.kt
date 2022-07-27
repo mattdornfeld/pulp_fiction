@@ -136,7 +136,7 @@ internal class PulpFictionBackendServiceTest {
 
     private fun Tuple2<EndpointName, DatabaseMetrics.DatabaseOperation>.assertDatabaseMetricsCorrect(
         expectedCount: Double,
-        maxDurationSeconds: Double = 0.5
+        maxDurationSeconds: Double = 1.0
     ) {
         assertMetricsCorrect(
             databaseRequestTotal.withLabels(this.first, this.second),
