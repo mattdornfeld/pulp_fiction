@@ -287,8 +287,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         request: LoginRequest
     ): Effect<PulpFictionError, Boolean> = effect {
         val uuid = request.userId.toUUID().bind()
-        val userLoginCandidate = database.transactionToEffectCatchErrors {
-            database.users.find { it.userId eq uuid } }.bind() ?:
+        val userLoginCandidate = database.users.find { it.userId eq uuid } ?:
             shift(UserNotFoundError("User ${request.userId} not found"))
 
         val hashedPass = userLoginCandidate.hashedPassword
