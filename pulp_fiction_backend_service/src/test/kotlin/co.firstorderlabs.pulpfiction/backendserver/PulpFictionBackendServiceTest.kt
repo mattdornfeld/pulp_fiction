@@ -282,6 +282,12 @@ internal class PulpFictionBackendServiceTest {
                     }
             }
 
+            listOf(
+                tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.checkUserPasswordValid, 1.0),
+                tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.login, 0.0),
+            ).assertDatabaseMetricsCorrect()
+
+
         }
     }
 

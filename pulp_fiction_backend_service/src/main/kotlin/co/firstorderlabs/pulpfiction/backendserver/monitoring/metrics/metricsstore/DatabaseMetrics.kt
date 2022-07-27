@@ -31,6 +31,7 @@ object DatabaseMetrics {
 
     enum class DatabaseOperation : LabelValue {
         checkLoginSessionValid,
+        checkUserPasswordValid,
         createPost,
         createUser,
         login,
