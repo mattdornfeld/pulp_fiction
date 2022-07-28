@@ -51,6 +51,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.localstack.LocalStackContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import java.util.UUID
 
 private typealias RequestAndResponseSuppliers = List<Tuple3<EndpointName, com.google.protobuf.GeneratedMessageV3, suspend (com.google.protobuf.GeneratedMessageV3) -> com.google.protobuf.GeneratedMessageV3>>
 
@@ -95,11 +96,29 @@ internal class PulpFictionBackendServiceTest {
         return Tuple2(pulpFictionBackendService.login(loginRequest).loginSession, loginRequest)
     }
 
+    private suspend fun createFailingLoginRequests(): List<LoginRequest> {
+        val tuple2 = createUser()
+        val userMetadata = tuple2.first.userPost.userMetadata
+        val createUserRequest = tuple2.second
+
+        val incorrectUser = UUID.randomUUID().toString()
+        val incorrectPassword = "fail_${createUserRequest.password}"
+
+        val loginRequestWrongUser =
+            TestProtoModelGenerator.generateRandomLoginRequest(
+                incorrectUser,
+                createUserRequest.password
+            )
+        val loginRequestWrongPass =
+            TestProtoModelGenerator.generateRandomLoginRequest(userMetadata.userId, incorrectPassword)
+
+        return listOf(loginRequestWrongUser, loginRequestWrongPass)
+    }
     private fun assertMetricsCorrect(
         countMetric: PulpFictionCounter,
         durationMetric: PulpFictionSummary,
         expectedCount: Double,
-        maxDurationSeconds: Double = 0.5
+        maxDurationSeconds: Double = 2.0
     ) {
         countMetric
             .assertEquals(expectedCount) { it.get() }
@@ -122,7 +141,7 @@ internal class PulpFictionBackendServiceTest {
             }
     }
 
-    private fun EndpointName.assertEndpointMetricsCorrect(expectedCount: Double, maxDurationSeconds: Double = 0.5) {
+    private fun EndpointName.assertEndpointMetricsCorrect(expectedCount: Double, maxDurationSeconds: Double = 2.0) {
         assertMetricsCorrect(
             endpointRequestTotal.withLabels(this),
             endpointRequestDurationSeconds.withLabels(this),
@@ -136,7 +155,7 @@ internal class PulpFictionBackendServiceTest {
 
     private fun Tuple2<EndpointName, DatabaseMetrics.DatabaseOperation>.assertDatabaseMetricsCorrect(
         expectedCount: Double,
-        maxDurationSeconds: Double = 0.5
+        maxDurationSeconds: Double = 2.0
     ) {
         assertMetricsCorrect(
             databaseRequestTotal.withLabels(this.first, this.second),
@@ -249,6 +268,25 @@ internal class PulpFictionBackendServiceTest {
                 tupleOf(EndpointName.createUser, DatabaseMetrics.DatabaseOperation.createUser, 1.0),
                 tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.login, 1.0),
             ).assertDatabaseMetricsCorrect()
+        }
+    }
+
+    @Test
+    fun testFailedLogin() {
+        runBlocking {
+            val loginRequests = createFailingLoginRequests()
+            loginRequests.forEach {
+                loginRequest ->
+                Either.catch { pulpFictionBackendService.login(loginRequest) }
+                    .assertTrue { it.isLeft() }
+                    .mapLeft { error ->
+                        error
+                            .assertEquals(Status.UNAUTHENTICATED.code) { (it as StatusException).status.code }
+                    }
+            }
+
+            tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.checkUserPasswordValid)
+                .assertDatabaseMetricsCorrect(2.0)
         }
     }
 

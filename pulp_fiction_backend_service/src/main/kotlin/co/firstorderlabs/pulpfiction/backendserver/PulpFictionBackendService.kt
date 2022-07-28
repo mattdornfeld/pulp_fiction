@@ -70,6 +70,11 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     override suspend fun login(request: PulpFictionProtos.LoginRequest): PulpFictionProtos.LoginResponse {
         val endpointName = EndpointName.login
         return effect<PulpFictionError, LoginResponse> {
+            databaseMessenger
+                .checkUserPasswordValid(request)
+                .logDatabaseMetrics(endpointName, DatabaseOperation.checkUserPasswordValid)
+                .bind()
+
             val loginSession = databaseMessenger
                 .createLoginSession(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.login)
