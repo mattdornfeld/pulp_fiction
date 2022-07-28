@@ -118,7 +118,7 @@ internal class PulpFictionBackendServiceTest {
         countMetric: PulpFictionCounter,
         durationMetric: PulpFictionSummary,
         expectedCount: Double,
-        maxDurationSeconds: Double = 0.5
+        maxDurationSeconds: Double = 2.0
     ) {
         countMetric
             .assertEquals(expectedCount) { it.get() }
@@ -141,7 +141,7 @@ internal class PulpFictionBackendServiceTest {
             }
     }
 
-    private fun EndpointName.assertEndpointMetricsCorrect(expectedCount: Double, maxDurationSeconds: Double = 0.5) {
+    private fun EndpointName.assertEndpointMetricsCorrect(expectedCount: Double, maxDurationSeconds: Double = 2.0) {
         assertMetricsCorrect(
             endpointRequestTotal.withLabels(this),
             endpointRequestDurationSeconds.withLabels(this),
@@ -155,7 +155,7 @@ internal class PulpFictionBackendServiceTest {
 
     private fun Tuple2<EndpointName, DatabaseMetrics.DatabaseOperation>.assertDatabaseMetricsCorrect(
         expectedCount: Double,
-        maxDurationSeconds: Double = 0.5
+        maxDurationSeconds: Double = 2.0
     ) {
         assertMetricsCorrect(
             databaseRequestTotal.withLabels(this.first, this.second),
@@ -285,10 +285,8 @@ internal class PulpFictionBackendServiceTest {
                     }
             }
 
-            listOf(
-                tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.checkUserPasswordValid, 2.0),
-                tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.login, 0.0),
-            ).assertDatabaseMetricsCorrect()
+            tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.checkUserPasswordValid)
+                .assertDatabaseMetricsCorrect(2.0)
         }
     }
 
