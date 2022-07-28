@@ -51,6 +51,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.localstack.LocalStackContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import java.util.UUID
 
 private typealias RequestAndResponseSuppliers = List<Tuple3<EndpointName, com.google.protobuf.GeneratedMessageV3, suspend (com.google.protobuf.GeneratedMessageV3) -> com.google.protobuf.GeneratedMessageV3>>
 
@@ -95,22 +96,24 @@ internal class PulpFictionBackendServiceTest {
         return Tuple2(pulpFictionBackendService.login(loginRequest).loginSession, loginRequest)
     }
 
-     private suspend fun createFailingLoginRequests(): List<LoginRequest> {
-         val tuple2 = createUser()
-         val userMetadata = tuple2.first.userPost.userMetadata
-         val createUserRequest = tuple2.second
+    private suspend fun createFailingLoginRequests(): List<LoginRequest> {
+        val tuple2 = createUser()
+        val userMetadata = tuple2.first.userPost.userMetadata
+        val createUserRequest = tuple2.second
 
-         val incorrectUser = "fail_${userMetadata.userId}"
-         val incorrectPassword = "fail_${createUserRequest.password}"
+        val incorrectUser = UUID.randomUUID().toString()
+        val incorrectPassword = "fail_${createUserRequest.password}"
 
-         val loginRequestWrongUser =
-             TestProtoModelGenerator.generateRandomLoginRequest(incorrectUser,
-                     createUserRequest.password)
-         val loginRequestWrongPass =
-             TestProtoModelGenerator.generateRandomLoginRequest(userMetadata.userId, incorrectPassword)
+        val loginRequestWrongUser =
+            TestProtoModelGenerator.generateRandomLoginRequest(
+                incorrectUser,
+                createUserRequest.password
+            )
+        val loginRequestWrongPass =
+            TestProtoModelGenerator.generateRandomLoginRequest(userMetadata.userId, incorrectPassword)
 
-         return listOf(loginRequestWrongUser, loginRequestWrongPass)
-     }
+        return listOf(loginRequestWrongUser, loginRequestWrongPass)
+    }
     private fun assertMetricsCorrect(
         countMetric: PulpFictionCounter,
         durationMetric: PulpFictionSummary,
@@ -272,9 +275,9 @@ internal class PulpFictionBackendServiceTest {
     fun testFailedLogin() {
         runBlocking {
             val loginRequests = createFailingLoginRequests()
-            loginRequests.forEach{
+            loginRequests.forEach {
                 loginRequest ->
-                Either.catch{ pulpFictionBackendService.login(loginRequest) }
+                Either.catch { pulpFictionBackendService.login(loginRequest) }
                     .assertTrue { it.isLeft() }
                     .mapLeft { error ->
                         error
@@ -283,11 +286,9 @@ internal class PulpFictionBackendServiceTest {
             }
 
             listOf(
-                tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.checkUserPasswordValid, 1.0),
+                tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.checkUserPasswordValid, 2.0),
                 tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.login, 0.0),
             ).assertDatabaseMetricsCorrect()
-
-
         }
     }
 

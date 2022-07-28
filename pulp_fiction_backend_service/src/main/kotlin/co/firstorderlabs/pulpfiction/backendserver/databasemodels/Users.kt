@@ -17,8 +17,8 @@ import co.firstorderlabs.protos.pulpfiction.user
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
-import com.password4j.Password
 import com.google.protobuf.ByteString
+import com.password4j.Password
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
 import org.ktorm.entity.sequenceOf

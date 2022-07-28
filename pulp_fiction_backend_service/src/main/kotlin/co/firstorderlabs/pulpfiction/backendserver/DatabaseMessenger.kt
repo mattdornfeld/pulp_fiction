@@ -38,7 +38,12 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.logS3Metrics
-import co.firstorderlabs.pulpfiction.backendserver.types.*
+import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
+import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
+import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
+import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
@@ -109,13 +114,13 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     .select(LoginSessions.sessionToken, LoginSessions.createdAt)
                     .where(
                         (LoginSessions.userId eq userId) and
-                                (LoginSessions.deviceId eq loginSessionProto.deviceId) and
-                                (
-                                        LoginSessions.createdAt greater (
-                                                Instant.now()
-                                                    .minus(MAX_AGE_LOGIN_SESSION)
-                                                )
-                                        )
+                            (LoginSessions.deviceId eq loginSessionProto.deviceId) and
+                            (
+                                LoginSessions.createdAt greater (
+                                    Instant.now()
+                                        .minus(MAX_AGE_LOGIN_SESSION)
+                                    )
+                                )
                     )
                     .orderBy(LoginSessions.createdAt.desc())
                     .limit(1)
@@ -287,8 +292,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         request: LoginRequest
     ): Effect<PulpFictionError, Boolean> = effect {
         val uuid = request.userId.toUUID().bind()
-        val userLoginCandidate = database.users.find { it.userId eq uuid } ?:
-            shift(UserNotFoundError("User ${request.userId} not found"))
+        val userLoginCandidate = database.users.find { it.userId eq uuid }
+            ?: shift(UserNotFoundError("User ${request.userId} not found"))
 
         val hashedPass = userLoginCandidate.hashedPassword
         val authenticated = Password.check(request.password, hashedPass).withBcrypt()
