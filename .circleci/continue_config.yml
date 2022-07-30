@@ -19,12 +19,7 @@ commands:
     steps:
       - run:
           name: "Login to ECR"
-          command: |
-            echo $(aws ecr get-login-password --region us-east-1) | \
-            docker login \
-            --username AWS \
-            --password-stdin \
-            146956608205.dkr.ecr.us-east-1.amazonaws.com
+          command: login_to_ecr
 
   configure_docker:
     description: "Setup a remote Docker host and login to the Docker registry"
