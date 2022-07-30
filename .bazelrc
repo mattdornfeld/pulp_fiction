@@ -1,5 +1,5 @@
 build --@io_bazel_rules_docker//transitions:enable=false
 build --strategy=SwiftCompile=worker
 build --verbose_failures
-test --test_output=all
+test --test_output=errors
 test --verbose_failures

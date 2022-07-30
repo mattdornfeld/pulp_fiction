@@ -61,17 +61,21 @@ commands:
             //docker_images/${DOCKER_IMAGE_NAME}:push_image
 
   run_command_in_docker:
-    description: "Run the specified command in a Docker image"
+    description: "Run the specified command in a Docker container"
     parameters:
       command_name:
         type: string
       command:
         type: string
     steps:
+      - get_docker_image_tag
       - run:
           name: << parameters.command_name >>
           command: |
             docker run \
+            --env AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+            --env AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+            --env DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} \
             --volume $PWD:/app \
             --volume /var/run/docker.sock:/var/run/docker.sock \
             --workdir /app \
@@ -130,11 +134,12 @@ jobs:
     steps:
       - checkout
       - login_to_ecr
-      - get_docker_image_tag
       - run_command_in_docker:
           command_name: Run Tests and Build Image
           command: |
-            "bazel test //pulp_fiction_backend_service/..."
+            "login_to_ecr && \
+            bazel test //pulp_fiction_backend_service/... && \
+            bazel run --define=DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} //docker_images/pulp_fiction_backend_service:push_image"
 
 workflows:
   build_bazel_ci_image:
