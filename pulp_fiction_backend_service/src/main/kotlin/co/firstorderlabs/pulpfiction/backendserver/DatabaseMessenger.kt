@@ -44,6 +44,7 @@ import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
 import org.ktorm.dsl.and
@@ -60,7 +61,6 @@ import org.ktorm.entity.Entity
 import org.ktorm.entity.add
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import software.amazon.awssdk.services.s3.S3Client
-import java.time.Instant
 import java.util.UUID
 
 class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
@@ -113,7 +113,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                             (LoginSessions.deviceId eq loginSessionProto.deviceId) and
                             (
                                 LoginSessions.createdAt greater (
-                                    Instant.now()
+                                    nowTruncated()
                                         .minus(MAX_AGE_LOGIN_SESSION)
                                     )
                                 )

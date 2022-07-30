@@ -16,7 +16,7 @@ run_locally:
 	${BAZEL} run :pulp_fiction_backend_service
 
 test_all:
-	${BAZEL} test ...
+	${BAZEL} test --action_env=TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal ...
 
 #test_unit:
 #	${BAZEL} test :co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServiceTest
