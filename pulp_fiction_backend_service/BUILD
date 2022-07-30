@@ -56,6 +56,7 @@ kt_jvm_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:com_google_protobuf_protobuf_kotlin",
+        "@maven//:com_password4j_password4j",
         "@maven//:io_arrow_kt_arrow_core_jvm",
         "@maven//:io_grpc_grpc_kotlin_stub",
         "@maven//:io_grpc_grpc_netty_shaded",

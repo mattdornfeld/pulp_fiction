@@ -19,6 +19,7 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
 import com.google.protobuf.ByteString
+import com.password4j.Password
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
 import org.ktorm.entity.sequenceOf
@@ -113,7 +114,7 @@ interface User : Entity<User> {
                     this.createdAt = nowTruncated()
                     this.currentDisplayName = request.displayName
                     this.phoneNumber = request.phoneNumber
-                    this.hashedPassword = ""
+                    this.hashedPassword = Password.hash(request.password).withBcrypt().result
                     this.email = request.email
                     this.dateOfBirth = dateOfBirth.bind().orNull()
                 }

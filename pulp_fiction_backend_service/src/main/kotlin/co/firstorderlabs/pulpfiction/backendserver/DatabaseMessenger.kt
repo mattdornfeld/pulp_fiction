@@ -39,13 +39,16 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.logS3Metrics
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
+import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
+import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
+import com.password4j.Password
 import org.ktorm.database.Database
 import org.ktorm.dsl.and
 import org.ktorm.dsl.desc
@@ -59,6 +62,7 @@ import org.ktorm.dsl.select
 import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
 import org.ktorm.entity.add
+import org.ktorm.entity.find
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import software.amazon.awssdk.services.s3.S3Client
 import java.util.UUID
@@ -282,5 +286,17 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 }
             }
         }
+    }
+
+    fun checkUserPasswordValid(
+        request: LoginRequest
+    ): Effect<PulpFictionError, Boolean> = effect {
+        val uuid = request.userId.toUUID().bind()
+        val userLoginCandidate = database.users.find { it.userId eq uuid }
+            ?: shift(UserNotFoundError("User ${request.userId} not found"))
+
+        val hashedPass = userLoginCandidate.hashedPassword
+        val authenticated = Password.check(request.password, hashedPass).withBcrypt()
+        if (!authenticated) { shift(InvalidUserPasswordError()) } else { true }
     }
 }

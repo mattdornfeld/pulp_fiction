@@ -175,7 +175,6 @@ message LoginResponse {
     google.protobuf.Timestamp created_at = 3;
     string device_id = 4;
   }
-
   LoginSession loginSession = 1;
 }
 
