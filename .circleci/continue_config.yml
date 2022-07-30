@@ -144,6 +144,19 @@ jobs:
             bazel test //pulp_fiction_backend_service/... && \
             bazel run --define=DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} //docker_images/pulp_fiction_backend_service:push_image"
 
+  build_backend_service:
+    working_directory: /home/circleci/app
+    machine:
+      image: ubuntu-2004:202010-01
+    steps:
+      - checkout
+      - login_to_ecr
+      - run_command_in_docker:
+          command_name: Build Image
+          command: |
+            "login_to_ecr && \
+            bazel run --define=DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} //docker_images/pulp_fiction_backend_service:push_image"
+
 workflows:
   build_bazel_ci_image:
     when: << pipeline.parameters.should_build_bazel_ci_image >>
@@ -171,4 +184,17 @@ workflows:
   build_and_test_backend_service:
     when: << pipeline.parameters.should_build_and_test_backend_service >>
     jobs:
-      - build_and_test_backend_service
+      - build_and_test_backend_service:
+          filters:
+            branches:
+              ignore:
+                - master
+
+  build_backend_service:
+    when: << pipeline.parameters.should_build_and_test_backend_service >>
+    jobs:
+      - build_backend_service:
+          filters:
+            branches:
+              only:
+                - master
