@@ -3,6 +3,7 @@
 *.tulsiproj
 *.xcodeproj
 .DS_Store
+bazel-app
 bazel-bin
 bazel-out
 bazel-pulp-fiction

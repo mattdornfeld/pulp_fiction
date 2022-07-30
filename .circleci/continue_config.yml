@@ -11,14 +11,12 @@ parameters:
 
   should_build_and_test_backend_service:
     type: boolean
-    default: true
+    default: false
 
 commands:
-  configure_docker:
-    description: "Setup a remote Docker host and login to the Docker registry"
+  login_to_ecr:
+    description: "Login to the ECR Docker registry"
     steps:
-      - setup_remote_docker:
-          docker_layer_caching: true
       - run:
           name: "Login to ECR"
           command: |
@@ -28,16 +26,30 @@ commands:
             --password-stdin \
             146956608205.dkr.ecr.us-east-1.amazonaws.com
 
+  configure_docker:
+    description: "Setup a remote Docker host and login to the Docker registry"
+    steps:
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - login_to_ecr
+
+  get_docker_image_tag:
+    description: "Gets the string based on branch name which will be used to tag a built Docker image"
+    steps:
+      - run:
+          name: "Get Docker Image Tag"
+          command: DOCKER_IMAGE_TAG=$(if [ ${CIRCLE_BRANCH} == "master" ]; then echo "latest"; else echo ${CIRCLE_BRANCH}; fi)
+
   build_and_push_image:
     description: "Build and Push Docker Image"
     parameters:
       docker_image_name:
         type: string
     steps:
+      - get_docker_image_tag
       - run:
           name: "Build and Push Docker Image"
           command: |
-            DOCKER_IMAGE_TAG=$(if [ ${CIRCLE_BRANCH} == "master" ]; then echo "latest"; else echo ${CIRCLE_BRANCH}; fi)
             DOCKER_IMAGE_NAME=<< parameters.docker_image_name >>
             bazel run \
             --define=DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} \
@@ -47,6 +59,24 @@ commands:
             --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
             --action_env=NO_PROXY=${NO_PROXY} \
             //docker_images/${DOCKER_IMAGE_NAME}:push_image
+
+  run_command_in_docker:
+    description: "Run the specified command in a Docker image"
+    parameters:
+      command_name:
+        type: string
+      command:
+        type: string
+    steps:
+      - run:
+          name: << parameters.command_name >>
+          command: |
+            docker run \
+            --volume $PWD:/app \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --workdir /app \
+            146956608205.dkr.ecr.us-east-1.amazonaws.com/pulp_fiction/bazel_ci \
+            bash -c << parameters.command >>
 
 jobs:
   build_bazel_ci_image:
@@ -94,35 +124,17 @@ jobs:
             bazel run //terraform:root_module apply -- -auto-approve
 
   build_and_test_backend_service:
-    working_directory: /app
-    docker:
-      - image: 146956608205.dkr.ecr.us-east-1.amazonaws.com/pulp_fiction/bazel_ci
-        aws_auth:
-          aws_access_key_id: $AWS_ACCESS_KEY_ID
-          aws_secret_access_key: $AWS_SECRET_ACCESS_KEY
+    working_directory: /home/circleci/app
+    machine:
+      image: ubuntu-2004:202010-01
     steps:
       - checkout
-      - configure_docker
-      - run:
-          name: Testcontainers tunnel
-          background: true
-          command: .circleci/autoforward.py
-      - run:
-          name: Run Tests
+      - login_to_ecr
+      - get_docker_image_tag
+      - run_command_in_docker:
+          command_name: Run Tests and Build Image
           command: |
-            pwd
-            ls
-            bazel test \
-            --action_env=TESTCONTAINERS_RYUK_DISABLED=true \
-            --action_env=TESTCONTAINERS_HOST_OVERRIDE=localhost \
-            --action_env=DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
-            --action_env=DOCKER_HOST=${DOCKER_HOST} \
-            --action_env=DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME} \
-            --action_env=DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
-            --action_env=NO_PROXY=${NO_PROXY} \
-            //pulp_fiction_backend_service/...
-      - build_and_push_image:
-          docker_image_name: pulp_fiction_backend_service
+            "bazel test //pulp_fiction_backend_service/..."
 
 workflows:
   build_bazel_ci_image:
