@@ -19,7 +19,12 @@ commands:
     steps:
       - run:
           name: "Login to ECR"
-          command: login_to_ecr
+          command: |
+            echo $(aws ecr get-login-password --region us-east-1) | \
+            docker login \
+            --username AWS \
+            --password-stdin \
+            146956608205.dkr.ecr.us-east-1.amazonaws.com
 
   configure_docker:
     description: "Setup a remote Docker host and login to the Docker registry"
@@ -33,7 +38,10 @@ commands:
     steps:
       - run:
           name: "Get Docker Image Tag"
-          command: DOCKER_IMAGE_TAG=$(if [ ${CIRCLE_BRANCH} == "master" ]; then echo "latest"; else echo ${CIRCLE_BRANCH}; fi)
+          command: |
+            echo 'export DOCKER_IMAGE_TAG=$(if [ ${CIRCLE_BRANCH} == "master" ]; then echo "latest"; else echo ${CIRCLE_BRANCH}; fi)' >> $BASH_ENV
+            source $BASH_ENV
+            echo "Setting DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
 
   build_and_push_image:
     description: "Build and Push Docker Image"
