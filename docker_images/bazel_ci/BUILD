@@ -1,7 +1,7 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push", "container_layer")
 load("@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
 load("@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("//bazel:utils.bzl", "file_container_layer")
 
 container_image(
     name = "base_image",
@@ -25,21 +25,22 @@ install_pkgs(
     output_image_name = "pulp_fiction_build_java_image",
 )
 
-pkg_tar(
-    name = "bin_bazelisk_tar",
+file_container_layer(
+    name = "bazelisk",
     srcs = ["@bazelisk_linux_amd64//file"],
     package_dir = "/usr/local/bin",
 )
 
-container_layer(
-    name = "bin_bazelisk_layer",
-    tars = [":bin_bazelisk_tar"],
+file_container_layer(
+    name = "login_to_ecr",
+    srcs = ["//sbin:login_to_ecr"],
+    package_dir = "/usr/local/bin",
 )
 
 container_image(
     name = "build_image",
     base = ":install_packages",
-    layers = [":bin_bazelisk_layer"],
+    layers = [":bazelisk", ":login_to_ecr"],
     visibility = ["//visibility:public"],
 )
 

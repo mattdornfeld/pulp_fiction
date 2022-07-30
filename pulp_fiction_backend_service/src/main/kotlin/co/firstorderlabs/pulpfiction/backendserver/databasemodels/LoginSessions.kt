@@ -6,6 +6,7 @@ import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
@@ -48,7 +49,7 @@ interface LoginSession : Entity<LoginSession> {
         suspend fun fromRequest(request: LoginRequest): Either<RequestParsingError, LoginSession> = either {
             LoginSession {
                 userId = request.userId.toUUID().bind()
-                createdAt = Instant.now()
+                createdAt = nowTruncated()
                 deviceId = request.deviceId
                 sessionToken = UUID.randomUUID()
             }

@@ -25,6 +25,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
 import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
@@ -38,7 +39,6 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.localstack.LocalStackContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.time.Instant
 
 @Testcontainers
 internal class MigrateDatabaseTest {
@@ -140,7 +140,7 @@ internal class MigrateDatabaseTest {
         val follower = Follower {
             userId = user1.userId
             followerId = user2.userId
-            createdAt = Instant.now()
+            createdAt = nowTruncated()
         }
         database.useTransaction {
             database.users.add(user1)

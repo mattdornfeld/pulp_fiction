@@ -10,6 +10,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
@@ -75,7 +76,7 @@ interface Post : Entity<Post> {
             val postCreatorId = request.loginSession.userId.toUUID().bind()
             Post {
                 this.postId = postId
-                this.createdAt = Instant.now()
+                this.createdAt = nowTruncated()
                 this.postState = PostState.CREATED
                 this.postCreatorId = postCreatorId
                 this.postType = request.getPostType().bind()

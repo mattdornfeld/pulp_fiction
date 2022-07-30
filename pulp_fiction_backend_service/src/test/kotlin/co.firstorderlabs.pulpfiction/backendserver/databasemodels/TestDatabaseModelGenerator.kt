@@ -1,5 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import io.github.serpro69.kfaker.Faker
 import java.time.Instant
 import java.util.UUID
@@ -15,7 +16,7 @@ object TestDatabaseModelGenerator {
         return enumValues2[Random.nextInt(enumValues2.size)]
     }
 
-    private fun generateRandomInstant(): Instant = generateRandomInstant(Instant.EPOCH, Instant.now())
+    private fun generateRandomInstant(): Instant = generateRandomInstant(Instant.EPOCH, nowTruncated())
 
     private fun generateRandomInstant(start: Instant, end: Instant): Instant {
         val startSeconds = start.epochSecond
@@ -39,7 +40,7 @@ object TestDatabaseModelGenerator {
 
     fun User.Companion.generateRandom(userId: UUID): User = User {
         this.userId = userId
-        this.createdAt = Instant.now()
+        this.createdAt = nowTruncated()
         this.currentDisplayName = faker.funnyName.name()
         this.email = faker.internet.email()
         this.phoneNumber = faker.phoneNumber.phoneNumber()
@@ -79,6 +80,6 @@ object TestDatabaseModelGenerator {
     fun Follower.Companion.generateRandom(userId: UUID, followerId: UUID): Follower = Follower {
         this.userId = userId
         this.followerId = followerId
-        this.createdAt = Instant.now()
+        this.createdAt = nowTruncated()
     }
 }

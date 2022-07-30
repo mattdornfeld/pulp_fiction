@@ -15,6 +15,7 @@ import co.firstorderlabs.protos.pulpfiction.UserKt.userMetadata
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.user
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
 import com.google.protobuf.ByteString
@@ -110,7 +111,7 @@ interface User : Entity<User> {
             return either {
                 User {
                     this.userId = UUID.randomUUID()
-                    this.createdAt = Instant.now()
+                    this.createdAt = nowTruncated()
                     this.currentDisplayName = request.displayName
                     this.phoneNumber = request.phoneNumber
                     this.hashedPassword = Password.hash(request.password).withBcrypt().result

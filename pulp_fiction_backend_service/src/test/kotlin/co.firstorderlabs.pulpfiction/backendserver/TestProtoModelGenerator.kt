@@ -17,10 +17,10 @@ import co.firstorderlabs.protos.pulpfiction.createUserRequest
 import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.protos.pulpfiction.loginRequest
 import co.firstorderlabs.pulpfiction.backendserver.testutils.nextByteString
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
 import io.github.serpro69.kfaker.Faker
-import java.time.Instant
 import java.util.Random
 import java.util.UUID
 
@@ -31,7 +31,7 @@ object TestProtoModelGenerator {
     fun generateRandomLoginSession(): LoginSession = loginSession {
         this.sessionToken = UUID.randomUUID().toString()
         this.userId = UUID.randomUUID().toString()
-        this.createdAt = Instant.now().toTimestamp()
+        this.createdAt = nowTruncated().toTimestamp()
     }
 
     fun generateRandomCreateUserRequest(): CreateUserRequest = createUserRequest {
