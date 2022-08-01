@@ -1,7 +1,7 @@
 data "aws_kms_secrets" "pulp_fiction_backend_service_database_credentials" {
   secret {
     name    = "credentials"
-    payload = file("../../../pulp_fiction_backend_service_database_credentials.yml.encrypted")
+    payload = file("${abspath(path.root)}/pulp_fiction_backend_service_database_credentials.yml.encrypted")
   }
 }
 
