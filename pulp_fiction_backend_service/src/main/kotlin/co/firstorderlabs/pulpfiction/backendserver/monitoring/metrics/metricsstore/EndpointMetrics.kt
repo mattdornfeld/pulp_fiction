@@ -33,6 +33,7 @@ object EndpointMetrics {
         createPost,
         createUser,
         getPost,
+        getUser,
         login;
 
         override fun getValue(): String = name

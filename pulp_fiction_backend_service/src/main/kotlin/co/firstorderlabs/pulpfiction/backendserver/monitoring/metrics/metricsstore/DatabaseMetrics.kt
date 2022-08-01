@@ -34,6 +34,7 @@ object DatabaseMetrics {
         checkUserPasswordValid,
         createPost,
         createUser,
+        getUser,
         login,
         getPost;
 

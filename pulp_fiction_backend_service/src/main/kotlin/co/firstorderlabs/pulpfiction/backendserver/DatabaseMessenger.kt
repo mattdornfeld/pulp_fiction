@@ -9,7 +9,9 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.post
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
@@ -288,13 +290,25 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         }
     }
 
+    private fun getUserFromUserId(
+        userId: String
+    ): Effect<PulpFictionError, User> = effect {
+        val uuid = userId.toUUID().bind()
+        database.users.find { it.userId eq uuid }
+            ?: shift(UserNotFoundError("User $userId not found"))
+    }
+
+    fun getPublicUserMetadata(
+        request: GetUserRequest
+    ): Effect<PulpFictionError, UserMetadata> = effect {
+        val maybeUserId = getUserFromUserId(request.userId).bind()
+        maybeUserId.toNonSensitiveUserMetadataProto()
+    }
+
     fun checkUserPasswordValid(
         request: LoginRequest
     ): Effect<PulpFictionError, Boolean> = effect {
-        val uuid = request.userId.toUUID().bind()
-        val userLoginCandidate = database.users.find { it.userId eq uuid }
-            ?: shift(UserNotFoundError("User ${request.userId} not found"))
-
+        val userLoginCandidate = getUserFromUserId(request.userId).bind()
         val hashedPass = userLoginCandidate.hashedPassword
         val authenticated = Password.check(request.password, hashedPass).withBcrypt()
         if (!authenticated) { shift(InvalidUserPasswordError()) } else { true }
