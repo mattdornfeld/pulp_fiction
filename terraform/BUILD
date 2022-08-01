@@ -12,15 +12,19 @@ load(
     "TERRAFORM_AWS_PROVIDER"
 )
 
+SECRETS_FILES = [
+    "//terraform/secrets:pulp_fiction_backend_service_database_credentials.yml.encrypted",
+    ]
+
 terraform_module(
     name = "module",
-    srcs = glob(["**/*.tf"]),
+    srcs = glob(["**/*.tf"]) + SECRETS_FILES,
     providers = [
         TERRAFORM_AWS_PROVIDER,
     ],
     deps = [
-        "//terraform/modules/pulp_fiction:module",
-        "//terraform/modules/pulp_fiction_ecr_repository:module",
+        "//terraform/modules/pulp_fiction_aws_account:module",
+        "//terraform/modules/pulp_fiction_aws_account/modules/pulp_fiction_ecr_repository:module",
     ]
 )
 

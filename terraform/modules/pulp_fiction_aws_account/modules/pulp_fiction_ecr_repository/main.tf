@@ -1,10 +1,6 @@
 resource "aws_ecr_repository" "pulp_fiction_ecr_repository" {
   name                 = var.name
   image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
 }
 
 resource "aws_ecr_lifecycle_policy" "pulp_fiction_ecr_repository" {
