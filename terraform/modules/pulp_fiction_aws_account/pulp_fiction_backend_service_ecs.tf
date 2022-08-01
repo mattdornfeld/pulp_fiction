@@ -5,13 +5,13 @@ resource "aws_ecs_task_definition" "pulp_fiction_backend_service" {
   cpu                      = 1024
   memory                   = 2048
   execution_role_arn       = aws_iam_role.pulp_fiction_backend_service.arn
-  container_definitions    = jsonencode([
+  container_definitions = jsonencode([
     {
-      name         = "pulp_fiction_backend_service"
-      image        = "146956608205.dkr.ecr.us-east-1.amazonaws.com/pulp_fiction/backend_service"
-      cpu          = 1024
-      memory       = 2048
-      essential    = true
+      name      = "pulp_fiction_backend_service"
+      image     = "146956608205.dkr.ecr.us-east-1.amazonaws.com/pulp_fiction/backend_service"
+      cpu       = 1024
+      memory    = 2048
+      essential = true
       portMappings = [
         {
           containerPort = 9090
@@ -20,7 +20,7 @@ resource "aws_ecs_task_definition" "pulp_fiction_backend_service" {
       ]
       logConfiguration = {
         logDriver = "awslogs"
-        options   = {
+        options = {
           awslogs-region        = "us-east-1"
           awslogs-group         = aws_cloudwatch_log_group.pulp_fiction.id
           awslogs-stream-prefix = "ecs"
@@ -39,7 +39,7 @@ resource "aws_ecs_service" "pulp_fiction_backend_service" {
 
   network_configuration {
     assign_public_ip = false
-    security_groups  = [
+    security_groups = [
       aws_security_group.egress_all.id,
       aws_security_group.ingress_api.id,
     ]

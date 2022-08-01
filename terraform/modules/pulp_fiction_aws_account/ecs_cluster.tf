@@ -1,5 +1,5 @@
 resource "aws_kms_key" "pulp_fiction_ecs_cluster_logging" {
-  description             = "pulp_fiction_ecs_cluster_logging"
+  description = "pulp_fiction_ecs_cluster_logging"
 }
 
 resource "aws_cloudwatch_log_group" "pulp_fiction" {
