@@ -10,6 +10,6 @@ terraform {
   }
 }
 
-module "pulp_fiction" {
-  source = "./modules/pulp_fiction"
+module "pulp_fiction_aws_account" {
+  source = "./modules/pulp_fiction_aws_account"
 }
