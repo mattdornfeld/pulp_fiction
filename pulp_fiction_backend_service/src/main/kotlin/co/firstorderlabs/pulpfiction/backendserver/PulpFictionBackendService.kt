@@ -111,6 +111,8 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     override suspend fun getUser(request: PulpFictionProtos.GetUserRequest): PulpFictionProtos.GetUserResponse {
         val endpointName = EndpointName.getUser
         return effect<PulpFictionError, GetUserResponse> {
+            checkLoginSessionValid(request.loginSession, endpointName).bind()
+
             val userMetadata = databaseMessenger
                 .getPublicUserMetadata(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.getUser)

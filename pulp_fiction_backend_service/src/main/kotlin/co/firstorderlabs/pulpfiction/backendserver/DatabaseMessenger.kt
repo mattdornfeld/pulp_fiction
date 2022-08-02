@@ -290,7 +290,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         }
     }
 
-    private fun getUserFromUserId(
+    private suspend fun getUserFromUserId(
         userId: String
     ): Effect<PulpFictionError, User> = effect {
         val uuid = userId.toUUID().bind()
@@ -298,11 +298,14 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             ?: shift(UserNotFoundError("User $userId not found"))
     }
 
-    fun getPublicUserMetadata(
+    suspend fun getPublicUserMetadata(
         request: GetUserRequest
     ): Effect<PulpFictionError, UserMetadata> = effect {
         val maybeUserId = getUserFromUserId(request.userId).bind()
-        maybeUserId.toNonSensitiveUserMetadataProto()
+        val maybeAvatar = database.userPostData.find {
+            it.userId eq request.userId.toUUID().bind()
+        }?.avatarImageS3Key
+        maybeUserId.toNonSensitiveUserMetadataProto(maybeAvatar)
     }
 
     fun checkUserPasswordValid(

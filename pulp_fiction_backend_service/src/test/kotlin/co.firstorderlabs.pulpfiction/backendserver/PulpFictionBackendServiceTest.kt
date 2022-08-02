@@ -10,6 +10,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.Logi
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
 import co.firstorderlabs.protos.pulpfiction.getPostRequest
+import co.firstorderlabs.protos.pulpfiction.getUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.buildGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetPostRequest
@@ -249,6 +250,53 @@ internal class PulpFictionBackendServiceTest {
     }
 
     @Test
+    fun testGetUser() {
+        runBlocking {
+            val tuple2 = createUser()
+            val post = tuple2.first
+            val createdUserMetadata = post.userPost.userMetadata
+            val createUserRequest = tuple2.second
+
+            val loginRequest =
+                TestProtoModelGenerator.generateRandomLoginRequest(
+                    createdUserMetadata.userId,
+                    createUserRequest.password
+                )
+            val loginSession = pulpFictionBackendService.login(loginRequest).loginSession
+
+            val user = pulpFictionBackendService.getUser(
+                getUserRequest {
+                    this.loginSession = loginSession
+                    this.userId = createdUserMetadata.userId
+                }
+            )
+
+            user.userMetadata
+                .assertEquals(createdUserMetadata.userId) { it.userId }
+                .assertEquals(createdUserMetadata.displayName) { it.displayName }
+                .assertEquals(createdUserMetadata.avatarImageUrl) { it.avatarImageUrl }
+
+            /* Test failing case */
+            Either.catch {
+                pulpFictionBackendService.getUser(
+                    getUserRequest {
+                        this.loginSession = loginSession
+                        this.userId = UUID.randomUUID().toString()
+                    }
+                )
+            }
+                .assertTrue { it.isLeft() }
+                .mapLeft { error ->
+                    error
+                        .assertEquals(Status.NOT_FOUND.code) { (it as StatusException).status.code }
+                }
+
+            tupleOf(EndpointName.getUser, DatabaseMetrics.DatabaseOperation.getUser)
+                .assertDatabaseMetricsCorrect(2.0)
+        }
+    }
+
+    @Test
     fun testLogin() {
         runBlocking {
             val tuple2 = createUserAndLogin()
@@ -275,13 +323,15 @@ internal class PulpFictionBackendServiceTest {
     fun testFailedLogin() {
         runBlocking {
             val loginRequests = createFailingLoginRequests()
-            loginRequests.forEach {
-                loginRequest ->
+            loginRequests.forEachIndexed {
+                idx, loginRequest ->
                 Either.catch { pulpFictionBackendService.login(loginRequest) }
                     .assertTrue { it.isLeft() }
                     .mapLeft { error ->
                         error
-                            .assertEquals(Status.UNAUTHENTICATED.code) { (it as StatusException).status.code }
+                            .assertEquals(
+                                listOf(Status.NOT_FOUND.code, Status.UNAUTHENTICATED.code).elementAt(idx)
+                            ) { (it as StatusException).status.code }
                     }
             }
 

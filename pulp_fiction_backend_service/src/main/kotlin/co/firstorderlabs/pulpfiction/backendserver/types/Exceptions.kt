@@ -42,7 +42,7 @@ class S3DownloadError(cause: Throwable) : PulpFictionError(cause) {
 
 class UserNotFoundError(msgMaybe: String) : PulpFictionError(msgMaybe) {
     override fun toStatusException(): StatusException =
-        StatusException(Status.UNAUTHENTICATED.withCause(this))
+        StatusException(Status.NOT_FOUND.withCause(this))
 }
 
 class InvalidUserPasswordError() : PulpFictionError() {

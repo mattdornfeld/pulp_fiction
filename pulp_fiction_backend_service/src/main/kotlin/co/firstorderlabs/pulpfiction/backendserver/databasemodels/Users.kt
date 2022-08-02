@@ -51,12 +51,13 @@ interface User : Entity<User> {
     var email: String?
     var dateOfBirth: LocalDate?
 
-    fun toNonSensitiveUserMetadataProto(): UserMetadata {
+    fun toNonSensitiveUserMetadataProto(avatarJpg: String? = null): UserMetadata {
         val user = this
         return userMetadata {
             this.userId = user.userId.toString()
             this.createdAt = user.createdAt.toTimestamp()
             this.displayName = user.currentDisplayName
+            if (avatarJpg != null) this.avatarImageUrl = avatarJpg
         }
     }
 
