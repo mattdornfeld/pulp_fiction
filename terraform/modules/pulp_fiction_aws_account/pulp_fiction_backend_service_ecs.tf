@@ -4,7 +4,8 @@ resource "aws_ecs_task_definition" "pulp_fiction_backend_service" {
   network_mode             = "awsvpc"
   cpu                      = 1024
   memory                   = 2048
-  execution_role_arn       = aws_iam_role.pulp_fiction_backend_service.arn
+  execution_role_arn       = aws_iam_role.pulp_fiction_backend_service_execution_role.arn
+  task_role_arn            = aws_iam_role.pulp_fiction_backend_service_task_role.arn
   container_definitions = jsonencode([
     {
       name      = "pulp_fiction_backend_service"
