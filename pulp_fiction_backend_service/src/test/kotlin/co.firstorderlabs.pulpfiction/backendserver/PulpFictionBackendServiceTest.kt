@@ -276,7 +276,17 @@ internal class PulpFictionBackendServiceTest {
                 .assertEquals(createdUserMetadata.displayName) { it.displayName }
                 .assertEquals(createdUserMetadata.avatarImageUrl) { it.avatarImageUrl }
 
-            /* Test failing case */
+            tupleOf(EndpointName.getUser, DatabaseMetrics.DatabaseOperation.getUser)
+                .assertDatabaseMetricsCorrect(1.0)
+        }
+    }
+
+    @Test
+    fun testFailedGetUser() {
+        runBlocking {
+            val tuple2 = createUserAndLogin()
+            val loginSession = tuple2.first
+
             Either.catch {
                 pulpFictionBackendService.getUser(
                     getUserRequest {
@@ -292,7 +302,7 @@ internal class PulpFictionBackendServiceTest {
                 }
 
             tupleOf(EndpointName.getUser, DatabaseMetrics.DatabaseOperation.getUser)
-                .assertDatabaseMetricsCorrect(2.0)
+                .assertDatabaseMetricsCorrect(1.0)
         }
     }
 
@@ -323,14 +333,15 @@ internal class PulpFictionBackendServiceTest {
     fun testFailedLogin() {
         runBlocking {
             val loginRequests = createFailingLoginRequests()
-            loginRequests.forEachIndexed {
-                idx, loginRequest ->
+            val expectedExceptions = listOf(Status.NOT_FOUND.code, Status.UNAUTHENTICATED.code)
+            loginRequests.zip(expectedExceptions) {
+                loginRequest, expectedException ->
                 Either.catch { pulpFictionBackendService.login(loginRequest) }
                     .assertTrue { it.isLeft() }
                     .mapLeft { error ->
                         error
                             .assertEquals(
-                                listOf(Status.NOT_FOUND.code, Status.UNAUTHENTICATED.code).elementAt(idx)
+                                expectedException
                             ) { (it as StatusException).status.code }
                     }
             }

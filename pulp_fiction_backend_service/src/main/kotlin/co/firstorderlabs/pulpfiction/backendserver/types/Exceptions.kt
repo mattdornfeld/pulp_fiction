@@ -40,7 +40,13 @@ class S3DownloadError(cause: Throwable) : PulpFictionError(cause) {
         StatusException(Status.INTERNAL.withCause(this))
 }
 
-class UserNotFoundError(msgMaybe: String) : PulpFictionError(msgMaybe) {
+class UserNotFoundError(userId: String) : PulpFictionError("User $userId not found.") {
+    override fun toStatusException(): StatusException =
+        StatusException(Status.NOT_FOUND.withCause(this))
+}
+
+class NoUserPostError(userId: String) :
+    PulpFictionError("User $userId does not have a matching UserPost.") {
     override fun toStatusException(): StatusException =
         StatusException(Status.NOT_FOUND.withCause(this))
 }

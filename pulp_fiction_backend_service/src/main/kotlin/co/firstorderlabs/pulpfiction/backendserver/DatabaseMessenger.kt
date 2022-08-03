@@ -43,6 +43,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
+import co.firstorderlabs.pulpfiction.backendserver.types.NoUserPostError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
@@ -295,17 +296,22 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionError, User> = effect {
         val uuid = userId.toUUID().bind()
         database.users.find { it.userId eq uuid }
-            ?: shift(UserNotFoundError("User $userId not found"))
+            ?: shift(UserNotFoundError(userId))
     }
 
     suspend fun getPublicUserMetadata(
         request: GetUserRequest
     ): Effect<PulpFictionError, UserMetadata> = effect {
-        val maybeUserId = getUserFromUserId(request.userId).bind()
-        val maybeAvatar = database.userPostData.find {
-            it.userId eq request.userId.toUUID().bind()
-        }?.avatarImageS3Key
-        maybeUserId.toNonSensitiveUserMetadataProto(maybeAvatar)
+        val userId = getUserFromUserId(request.userId).bind()
+
+        /* Get UserPost */
+        val requestUserId = request.userId
+        val userPost = database.userPostData.find {
+            it.userId eq requestUserId.toUUID().bind()
+        }
+            ?: shift(NoUserPostError(requestUserId))
+        val avatar = userPost.avatarImageS3Key
+        userId.toNonSensitiveUserMetadataProto(avatar)
     }
 
     fun checkUserPasswordValid(
