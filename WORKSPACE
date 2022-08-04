@@ -155,9 +155,10 @@ load(
     )
 
 ARROW_VERSION = "1.1.2"
-AWS_SDK_VERSION = "1.11.729"
+AWS_SDK_VERSION = "2.17.243"
 FLOGGER_VERSION = '0.7.4'
 GRPC_VERSION = "1.47.0"
+JACKSON_VERSION = "2.13.3"
 JUNIT_VERSION = "5.8.2"
 KOTLIN_VERSION = "1.6.0"
 KTORM_VERSION = "3.5.0"
@@ -168,11 +169,13 @@ TEST_CONTAINERS_VERSION = "1.17.2"
 maven_install(
     name = "maven",
     artifacts = [
-        "com.amazonaws:aws-java-sdk-core:" + AWS_SDK_VERSION,
-        "com.amazonaws:aws-java-sdk-s3:" + AWS_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-s3:1.11.729",
         "com.google.guava:guava:31.1-jre",
         "com.google.protobuf:protobuf-java:" + PROTOBUF_VERSION,
         "com.google.protobuf:protobuf-kotlin:" + PROTOBUF_VERSION,
+        "com.fasterxml.jackson.core:jackson-annotations:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.core:jackson-databind:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:" + JACKSON_VERSION,
         "com.password4j:password4j:1.6.0",
         "com.squareup:kotlinpoet:1.11.0",
         "io.arrow-kt:arrow-core-jvm:" + ARROW_VERSION,
@@ -201,9 +204,10 @@ maven_install(
         "org.testcontainers:postgresql:" + TEST_CONTAINERS_VERSION,
         "org.testcontainers:testcontainers:" + TEST_CONTAINERS_VERSION,
         "org.testcontainers:localstack:" + TEST_CONTAINERS_VERSION,
-        "software.amazon.awssdk:apache-client:2.17.224",
-        "software.amazon.awssdk:core:2.17.224",
-        "software.amazon.awssdk:s3:2.17.224",
+        "software.amazon.awssdk:apache-client:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:core:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:kms:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:s3:" + AWS_SDK_VERSION,
         "com.google.flogger:flogger-slf4j-backend:" + FLOGGER_VERSION,
         "com.google.flogger:flogger:" + FLOGGER_VERSION,
     ] + IO_GRPC_GRPC_JAVA_ARTIFACTS,

@@ -1,8 +1,8 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.continuations.Effect
-import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs
-import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs.CONTENT_DATA_S3_BUCKET_NAME
+import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
+import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs.CONTENT_DATA_S3_BUCKET_NAME
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.S3UploadError
@@ -18,7 +18,7 @@ class S3Messenger(val s3Client: S3Client) {
     companion object {
         fun createS3Client(): S3Client = S3Client
             .builder()
-            .region(S3Configs.S3_BUCKET_REGION)
+            .region(AwsConfigs.ACCOUNT_REGION)
             .httpClientBuilder(ApacheHttpClient.builder())
             .build()
     }

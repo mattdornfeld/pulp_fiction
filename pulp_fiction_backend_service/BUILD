@@ -56,6 +56,9 @@ kt_jvm_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:com_google_protobuf_protobuf_kotlin",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_dataformat_jackson_dataformat_yaml",
         "@maven//:com_password4j_password4j",
         "@maven//:io_arrow_kt_arrow_core_jvm",
         "@maven//:io_grpc_grpc_kotlin_stub",
@@ -72,6 +75,7 @@ kt_jvm_library(
         "@maven//:software_amazon_awssdk_auth",
         "@maven//:software_amazon_awssdk_core",
         "@maven//:software_amazon_awssdk_http_client_spi",
+        "@maven//:software_amazon_awssdk_kms",
         "@maven//:software_amazon_awssdk_regions",
         "@maven//:software_amazon_awssdk_s3",
 #        "@maven//:com_google_flogger_flogger_slf4j_backend",
@@ -100,6 +104,7 @@ kt_jvm_library(
         "@maven//:org_testcontainers_testcontainers",
         "@maven//:org_testcontainers_localstack",
     ],
+    resources = glob(["src/test/resources/**/*"]),
 )
 
 junit5_tests(
@@ -108,6 +113,7 @@ junit5_tests(
         "co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServiceTest",
         "co.firstorderlabs.pulpfiction.backendserver.MigrateDatabaseTest",
         "co.firstorderlabs.pulpfiction.backendserver.S3MessengerTest",
+        "co.firstorderlabs.pulpfiction.backendserver.SecretsDecrypterTest",
     ],
 )
 
@@ -116,16 +122,6 @@ ktlint_test(
     srcs = glob(SRC_FILES),
     visibility = ["//visibility:public"],
 )
-
-#kt_jvm_binary(
-#    name = "pulp_fiction_backend_service",
-#    main_class = "co.firstorderlabs.pulpfiction.PulpFictionBackendServerKt",
-#    srcs = glob(MAIN_SRC_FILES),
-#    deps = [
-#        ":pulp_fiction_backend_service_lib",
-#    ],
-#    visibility = ["//visibility:public"],
-#)
 
 java_binary(
     name = "pulp_fiction_backend_service",
