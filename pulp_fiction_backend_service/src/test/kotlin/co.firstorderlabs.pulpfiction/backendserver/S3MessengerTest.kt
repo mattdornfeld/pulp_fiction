@@ -5,14 +5,14 @@ import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateUserPostRequest
-import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs.CONTENT_DATA_S3_BUCKET_NAME
+import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs.CONTENT_DATA_S3_BUCKET_NAME
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum.Companion.IMAGE_POSTS_KEY_BASE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key.Companion.JPG
-import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
+import co.firstorderlabs.pulpfiction.backendserver.testutils.S3AndPostgresContainers
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.runBlockingEffect
 import co.firstorderlabs.pulpfiction.backendserver.testutils.toByteString
@@ -55,11 +55,11 @@ suspend fun S3Messenger.getObjectTags(
     post: ReferencesS3Key
 ): Effect<PulpFictionError, List<Tag>> = getObjectTags(post.toS3Key())
 
-fun List<Tag>.toMap(): Map<String, String> = this.associate { it.key() to it.value() }
+fun List<Tag>.deserializeJsonToMap(): Map<String, String> = this.associate { it.key() to it.value() }
 
 @Testcontainers
 class S3MessengerTest {
-    companion object : TestContainerDependencies() {
+    companion object : S3AndPostgresContainers() {
         @Container
         override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
 
@@ -103,7 +103,7 @@ class S3MessengerTest {
         s3Messenger
             .getObjectTags(referencesS3Key)
             .bind()
-            .toMap()
+            .deserializeJsonToMap()
             .assertEquals(expectedTags) { it }
     }
 

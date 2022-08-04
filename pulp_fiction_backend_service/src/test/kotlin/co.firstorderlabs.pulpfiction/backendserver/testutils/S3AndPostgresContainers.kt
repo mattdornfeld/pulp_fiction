@@ -1,7 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver.testutils
 
 import co.firstorderlabs.pulpfiction.backendserver.MigrateDatabase
-import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs
+import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.LOCAL_STACK_IMAGE
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.POSTGRES_IMAGE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
@@ -22,7 +22,7 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest
 
-abstract class TestContainerDependencies {
+abstract class S3AndPostgresContainers {
     protected abstract val postgreSQLContainer: PostgreSQLContainer<Nothing>
     protected abstract val localStackContainer: LocalStackContainer
 
@@ -43,7 +43,7 @@ abstract class TestContainerDependencies {
             .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test")))
             .build()
 
-        s3Client.createBucket(CreateBucketRequest.builder().bucket(S3Configs.CONTENT_DATA_S3_BUCKET_NAME).build())
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(AwsConfigs.CONTENT_DATA_S3_BUCKET_NAME).build())
 
         s3Client
     }
