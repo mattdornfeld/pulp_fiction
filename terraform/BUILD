@@ -13,7 +13,7 @@ load(
 )
 
 SECRETS_FILES = [
-    "//secrets:pulp_fiction_backend_service_database_credentials.yml.encrypted",
+    "//secrets:pulp_fiction_backend_service_database_credentials.json.encrypted",
     ]
 
 terraform_module(
