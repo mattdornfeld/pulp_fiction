@@ -2,6 +2,8 @@ package co.firstorderlabs.pulpfiction.backendserver.testutils
 
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.LOCAL_STACK_IMAGE
 import org.testcontainers.containers.localstack.LocalStackContainer
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.kms.KmsClient
 
@@ -15,6 +17,7 @@ abstract class KmsContainer {
         return@lazy KmsClient.builder()
             .region(Region.of(localStackContainer.region))
             .endpointOverride(localStackContainer.getEndpointOverride(LocalStackContainer.Service.KMS))
+            .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test")))
             .build()
     }
 }
