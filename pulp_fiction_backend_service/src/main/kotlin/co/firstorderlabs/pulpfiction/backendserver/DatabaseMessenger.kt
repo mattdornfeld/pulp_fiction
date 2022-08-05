@@ -95,12 +95,17 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             this@transactionToEffect.useTransaction { block(it) }
         }
 
-        fun createDatabaseConnection(): Database = Database.connect(
-            url = DatabaseConfigs.URL,
-            user = DatabaseConfigs.USER,
-            password = DatabaseConfigs.PASSWORD,
-            dialect = PostgreSqlDialect(),
-        )
+        fun createDatabaseConnection(): Database {
+            val databaseCredentials = SecretsDecrypter()
+                .decryptJsonCredentialsFileWithKmsKey(DatabaseConfigs.ENCRYPTED_CREDENTIALS_FILE)
+
+            return Database.connect(
+                url = DatabaseConfigs.URL,
+                user = databaseCredentials["username"],
+                password = databaseCredentials["password"],
+                dialect = PostgreSqlDialect(),
+            )
+        }
     }
 
     fun checkLoginSessionValid(loginSessionProto: PulpFictionProtos.LoginResponse.LoginSession): Effect<PulpFictionError, Unit> =
@@ -114,13 +119,13 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     .select(LoginSessions.sessionToken, LoginSessions.createdAt)
                     .where(
                         (LoginSessions.userId eq userId) and
-                            (LoginSessions.deviceId eq loginSessionProto.deviceId) and
-                            (
-                                LoginSessions.createdAt greater (
-                                    nowTruncated()
-                                        .minus(MAX_AGE_LOGIN_SESSION)
-                                    )
-                                )
+                                (LoginSessions.deviceId eq loginSessionProto.deviceId) and
+                                (
+                                        LoginSessions.createdAt greater (
+                                                nowTruncated()
+                                                    .minus(MAX_AGE_LOGIN_SESSION)
+                                                )
+                                        )
                     )
                     .orderBy(LoginSessions.createdAt.desc())
                     .limit(1)
@@ -297,6 +302,10 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
         val hashedPass = userLoginCandidate.hashedPassword
         val authenticated = Password.check(request.password, hashedPass).withBcrypt()
-        if (!authenticated) { shift(InvalidUserPasswordError()) } else { true }
+        if (!authenticated) {
+            shift(InvalidUserPasswordError())
+        } else {
+            true
+        }
     }
 }
