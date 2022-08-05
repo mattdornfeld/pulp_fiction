@@ -45,12 +45,6 @@ class UserNotFoundError(userId: String) : PulpFictionError("User $userId not fou
         StatusException(Status.NOT_FOUND.withCause(this))
 }
 
-class NoUserPostError(userId: String) :
-    PulpFictionError("User $userId does not have a matching UserPost.") {
-    override fun toStatusException(): StatusException =
-        StatusException(Status.NOT_FOUND.withCause(this))
-}
-
 class InvalidUserPasswordError() : PulpFictionError() {
     override fun toStatusException(): StatusException =
         StatusException(Status.UNAUTHENTICATED.withCause(this))

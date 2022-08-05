@@ -43,7 +43,6 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
-import co.firstorderlabs.pulpfiction.backendserver.types.NoUserPostError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
@@ -65,7 +64,10 @@ import org.ktorm.dsl.select
 import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
 import org.ktorm.entity.add
+import org.ktorm.entity.filter
 import org.ktorm.entity.find
+import org.ktorm.entity.first
+import org.ktorm.entity.sortedBy
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import software.amazon.awssdk.services.s3.S3Client
 import java.util.UUID
@@ -304,12 +306,15 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionError, UserMetadata> = effect {
         val userId = getUserFromUserId(request.userId).bind()
 
-        /* Get UserPost */
+        /* Get Most Recent UserPost */
         val requestUserId = request.userId
-        val userPost = database.userPostData.find {
-            it.userId eq requestUserId.toUUID().bind()
-        }
-            ?: shift(NoUserPostError(requestUserId))
+
+        val userPost = database.transactionToEffectCatchErrors {
+            database.userPostData
+                .filter { it.userId eq requestUserId.toUUID().bind() }
+                .sortedBy { it.createdAt.desc() }
+                .first()
+        }.bind()
         val avatar = userPost.avatarImageS3Key
         userId.toNonSensitiveUserMetadataProto(avatar)
     }
