@@ -18,8 +18,5 @@ run_locally:
 test_all:
 	${BAZEL} test ...
 
-#test_unit:
-#	${BAZEL} test :co.firstorderlabs.pulpfiction.backendserver.PulpFictionBackendServiceTest
-
 test_lint:
 	${BAZEL} test :test_lint

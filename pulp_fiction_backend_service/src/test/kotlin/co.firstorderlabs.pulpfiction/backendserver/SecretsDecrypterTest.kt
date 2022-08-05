@@ -1,4 +1,4 @@
-package co.firstorderlabs.pulpfiction.backendserver;
+package co.firstorderlabs.pulpfiction.backendserver
 
 import co.firstorderlabs.pulpfiction.backendserver.SecretsDecrypter.Companion.deserializeJsonToMap
 import co.firstorderlabs.pulpfiction.backendserver.testutils.KmsContainer
@@ -42,11 +42,5 @@ class SecretsDecrypterTest {
             secretsDecrypter.encryptJsonCredentialsFileWithKmsKey(keyId, jsonCredentialsFile.toPath())
         val credentials = secretsDecrypter.decryptJsonCredentialsFileWithKmsKey(encryptedJsonCredentialsFile.toPath())
         jsonCredentialsFile.assertEquals(credentials) { it.deserializeJsonToMap() }
-    }
-
-    @Test
-    fun test() {
-        val f = "pulp_fiction_backend_service_database_credentials.json.encrypted"
-
     }
 }

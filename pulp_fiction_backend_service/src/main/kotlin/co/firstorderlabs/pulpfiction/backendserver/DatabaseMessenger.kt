@@ -119,13 +119,13 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     .select(LoginSessions.sessionToken, LoginSessions.createdAt)
                     .where(
                         (LoginSessions.userId eq userId) and
-                                (LoginSessions.deviceId eq loginSessionProto.deviceId) and
-                                (
-                                        LoginSessions.createdAt greater (
-                                                nowTruncated()
-                                                    .minus(MAX_AGE_LOGIN_SESSION)
-                                                )
-                                        )
+                            (LoginSessions.deviceId eq loginSessionProto.deviceId) and
+                            (
+                                LoginSessions.createdAt greater (
+                                    nowTruncated()
+                                        .minus(MAX_AGE_LOGIN_SESSION)
+                                    )
+                                )
                     )
                     .orderBy(LoginSessions.createdAt.desc())
                     .limit(1)
