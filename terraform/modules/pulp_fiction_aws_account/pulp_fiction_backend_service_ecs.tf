@@ -10,15 +10,21 @@ resource "aws_ecs_task_definition" "pulp_fiction_backend_service" {
     {
       name      = "pulp_fiction_backend_service"
       image     = "146956608205.dkr.ecr.us-east-1.amazonaws.com/pulp_fiction/backend_service"
-      cpu       = 1024
-      memory    = 2048
       essential = true
+
+      environment = [
+        {
+          name  = "DATABASE_ENDPOINT"
+          value = aws_rds_cluster.pulp_fiction_backend_service.endpoint
+        }
+      ]
       portMappings = [
         {
           containerPort = 9090
           hostPort      = 9090
         }
       ]
+
       logConfiguration = {
         logDriver = "awslogs"
         options = {
