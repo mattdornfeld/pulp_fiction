@@ -6,7 +6,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.LabelValue
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionSummary
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.finally
 import co.firstorderlabs.pulpfiction.backendserver.utils.onError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toLabelValue
@@ -37,9 +37,9 @@ object CreatePostDataMetrics {
 
     fun PostType.toLabelValue(): PostTypeLabelValue = PostTypeLabelValue(this)
 
-    suspend fun <A> Effect<PulpFictionError, A>.logCreatePostDataMetrics(
+    suspend fun <A> Effect<PulpFictionRequestError, A>.logCreatePostDataMetrics(
         postType: PostType,
-    ): Effect<PulpFictionError, A> {
+    ): Effect<PulpFictionRequestError, A> {
         val postTypeLabelValue = postType.toLabelValue()
         val timer = createPostDataDurationSeconds.withLabels(postTypeLabelValue).startTimer()
         createPostDataTotal.withLabels(postTypeLabelValue).inc()

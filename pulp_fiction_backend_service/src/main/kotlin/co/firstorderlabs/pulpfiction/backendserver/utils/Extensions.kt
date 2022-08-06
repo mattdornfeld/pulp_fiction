@@ -6,7 +6,7 @@ import arrow.core.Some
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.StringLabelValue
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import com.google.protobuf.Timestamp
 import java.time.Instant
@@ -26,20 +26,20 @@ fun Instant.toTimestamp(): Timestamp {
         .build()
 }
 
-suspend fun <A> Effect<PulpFictionError, A>.getResultAndHandleErrors(): A {
-    return this.fold({ error: PulpFictionError ->
+suspend fun <A> Effect<PulpFictionRequestError, A>.getResultAndHandleErrors(): A {
+    return this.fold({ error: PulpFictionRequestError ->
         throw error.toStatusException()
     }
     ) { it }
 }
 
-suspend fun <A> Effect<PulpFictionError, A>.onError(block: suspend (PulpFictionError) -> Unit): Effect<PulpFictionError, A> =
+suspend fun <A> Effect<PulpFictionRequestError, A>.onError(block: suspend (PulpFictionRequestError) -> Unit): Effect<PulpFictionRequestError, A> =
     this.handleErrorWith {
         block(it)
         effect { shift(it) }
     }
 
-suspend fun <A> Effect<PulpFictionError, A>.finally(block: suspend () -> Unit): Effect<PulpFictionError, A> =
+suspend fun <A> Effect<PulpFictionRequestError, A>.finally(block: suspend () -> Unit): Effect<PulpFictionRequestError, A> =
     this.redeemWith({
         block()
         effect { shift(it) }

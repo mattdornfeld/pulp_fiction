@@ -5,7 +5,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.LabelValue
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionSummary
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.finally
 import co.firstorderlabs.pulpfiction.backendserver.utils.onError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toLabelValue
@@ -36,10 +36,10 @@ object S3Metrics {
         override fun getValue(): String = name
     }
 
-    suspend fun <A> Effect<PulpFictionError, A>.logS3Metrics(
+    suspend fun <A> Effect<PulpFictionRequestError, A>.logS3Metrics(
         endpointName: EndpointMetrics.EndpointName,
         s3Operation: S3Operation,
-    ): Effect<PulpFictionError, A> {
+    ): Effect<PulpFictionRequestError, A> {
         val timer = s3RequestDurationSeconds.withLabels(endpointName, s3Operation).startTimer()
         s3RequestTotal.withLabels(endpointName, s3Operation).inc()
         return this@logS3Metrics
