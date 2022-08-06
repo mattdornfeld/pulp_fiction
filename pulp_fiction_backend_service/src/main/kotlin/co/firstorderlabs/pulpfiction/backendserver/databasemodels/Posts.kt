@@ -8,7 +8,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
@@ -72,7 +72,7 @@ interface Post : Entity<Post> {
         suspend fun fromRequest(
             postId: UUID,
             request: CreatePostRequest
-        ): Either<PulpFictionError, Post> = either {
+        ): Either<PulpFictionRequestError, Post> = either {
             val postCreatorId = request.loginSession.userId.toUUID().bind()
             Post {
                 this.postId = postId

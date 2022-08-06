@@ -7,6 +7,8 @@ import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.StringLabelValue
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import com.google.protobuf.Timestamp
 import java.time.Instant
@@ -26,20 +28,27 @@ fun Instant.toTimestamp(): Timestamp {
         .build()
 }
 
-suspend fun <A> Effect<PulpFictionError, A>.getResultAndHandleErrors(): A {
-    return this.fold({ error: PulpFictionError ->
+suspend fun <A> Effect<PulpFictionRequestError, A>.getResultAndHandleErrors(): A {
+    return this.fold({ error: PulpFictionRequestError ->
         throw error.toStatusException()
     }
     ) { it }
 }
 
-suspend fun <A> Effect<PulpFictionError, A>.onError(block: suspend (PulpFictionError) -> Unit): Effect<PulpFictionError, A> =
+suspend fun <A> Effect<PulpFictionStartupError, A>.getResultAndThrowException(): A {
+    return this.fold({ error: PulpFictionStartupError ->
+        throw error
+    }
+    ) { it }
+}
+
+suspend fun <R : PulpFictionError, A> Effect<R, A>.onError(block: suspend (R) -> Unit): Effect<R, A> =
     this.handleErrorWith {
         block(it)
         effect { shift(it) }
     }
 
-suspend fun <A> Effect<PulpFictionError, A>.finally(block: suspend () -> Unit): Effect<PulpFictionError, A> =
+suspend fun <R : PulpFictionError, A> Effect<R, A>.finally(block: suspend () -> Unit): Effect<R, A> =
     this.redeemWith({
         block()
         effect { shift(it) }
@@ -47,6 +56,18 @@ suspend fun <A> Effect<PulpFictionError, A>.finally(block: suspend () -> Unit): 
         block()
         effect { it }
     }
+
+suspend fun <R : PulpFictionError, A, B> Effect<R, A>.map(block: suspend (A) -> B): Effect<R, B> =
+    this.redeemWith({
+        effect { shift(it) }
+    }) {
+        effect { block(it) }
+    }
+
+suspend fun <R : PulpFictionError, A, B> Effect<R, A>.flatMap(block: suspend (A) -> Effect<R, B>): Effect<R, B> =
+    this.redeemWith({
+        effect { shift(it) }
+    }) { block(it) }
 
 fun LocalDate.toYearMonthDay(): String = DateTimeFormatter.ISO_LOCAL_DATE.format(this)
 
@@ -62,3 +83,6 @@ fun <A> A.fluentPrintln(prepend: String = ""): A {
     println(prepend + this)
     return this
 }
+
+fun <A, B> Map<A, B>.getOrThrow(key: A): B =
+    this.getOrElse(key) { throw java.lang.IllegalArgumentException("$key not found in map") }

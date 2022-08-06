@@ -10,8 +10,8 @@ file_container_layer(
 )
 
 file_container_layer(
-    name = "pulp_fiction_backend_service_database_credentials_yml_encrypted",
-    srcs = ["//secrets:pulp_fiction_backend_service_database_credentials.yml.encrypted"],
+    name = "pulp_fiction_backend_service_database_credentials_json_encrypted",
+    srcs = ["//secrets:pulp_fiction_backend_service_database_credentials.json.encrypted"],
     package_dir = "/var/pulp_fiction_backend_service/secrets",
 )
 
@@ -20,7 +20,7 @@ container_image(
     base = "@java_17_image//image",
     layers = [
         ":pulp_fiction_backend_service_jar",
-        ":pulp_fiction_backend_service_database_credentials_yml_encrypted"
+        ":pulp_fiction_backend_service_database_credentials_json_encrypted"
         ],
     workdir = "/app",
     cmd = "java -jar pulp_fiction_backend_service_deploy.jar",

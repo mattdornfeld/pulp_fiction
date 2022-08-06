@@ -30,7 +30,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.s3RequestDurationSeconds
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.s3RequestTotal
-import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
+import co.firstorderlabs.pulpfiction.backendserver.testutils.S3AndPostgresContainers
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
@@ -57,7 +57,7 @@ private typealias RequestAndResponseSuppliers = List<Tuple3<EndpointName, com.go
 
 @Testcontainers
 internal class PulpFictionBackendServiceTest {
-    companion object : TestContainerDependencies() {
+    companion object : S3AndPostgresContainers() {
         @Container
         override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
 
