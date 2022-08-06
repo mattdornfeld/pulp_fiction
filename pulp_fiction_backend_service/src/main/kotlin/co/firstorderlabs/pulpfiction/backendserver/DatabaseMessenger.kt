@@ -46,9 +46,11 @@ import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
+import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import com.password4j.Password
+import kotlinx.coroutines.runBlocking
 import org.ktorm.database.Database
 import org.ktorm.dsl.and
 import org.ktorm.dsl.desc
@@ -95,11 +97,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             this@transactionToEffect.useTransaction { block(it) }
         }
 
-        fun createDatabaseConnection(): Database {
+        fun createDatabaseConnection(): Database = runBlocking {
             val databaseCredentials = SecretsDecrypter()
                 .decryptJsonCredentialsFileWithKmsKey(DatabaseConfigs.ENCRYPTED_CREDENTIALS_FILE)
+                .getResultAndThrowException()
 
-            return Database.connect(
+            Database.connect(
                 url = DatabaseConfigs.URL,
                 user = databaseCredentials["username"],
                 password = databaseCredentials["password"],

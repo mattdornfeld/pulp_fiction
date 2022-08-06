@@ -6,7 +6,9 @@ import arrow.core.Some
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.StringLabelValue
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import com.google.protobuf.Timestamp
 import java.time.Instant
@@ -33,13 +35,20 @@ suspend fun <A> Effect<PulpFictionRequestError, A>.getResultAndHandleErrors(): A
     ) { it }
 }
 
-suspend fun <A> Effect<PulpFictionRequestError, A>.onError(block: suspend (PulpFictionRequestError) -> Unit): Effect<PulpFictionRequestError, A> =
+suspend fun <A> Effect<PulpFictionStartupError, A>.getResultAndThrowException(): A {
+    return this.fold({ error: PulpFictionStartupError ->
+        throw error
+    }
+    ) { it }
+}
+
+suspend fun <R : PulpFictionError, A> Effect<R, A>.onError(block: suspend (R) -> Unit): Effect<R, A> =
     this.handleErrorWith {
         block(it)
         effect { shift(it) }
     }
 
-suspend fun <A> Effect<PulpFictionRequestError, A>.finally(block: suspend () -> Unit): Effect<PulpFictionRequestError, A> =
+suspend fun <R : PulpFictionError, A> Effect<R, A>.finally(block: suspend () -> Unit): Effect<R, A> =
     this.redeemWith({
         block()
         effect { shift(it) }
@@ -47,6 +56,18 @@ suspend fun <A> Effect<PulpFictionRequestError, A>.finally(block: suspend () -> 
         block()
         effect { it }
     }
+
+suspend fun <R : PulpFictionError, A, B> Effect<R, A>.map(block: suspend (A) -> B): Effect<R, B> =
+    this.redeemWith({
+        effect { shift(it) }
+    }) {
+        effect { block(it) }
+    }
+
+suspend fun <R : PulpFictionError, A, B> Effect<R, A>.flatMap(block: suspend (A) -> Effect<R, B>): Effect<R, B> =
+    this.redeemWith({
+        effect { shift(it) }
+    }) { block(it) }
 
 fun LocalDate.toYearMonthDay(): String = DateTimeFormatter.ISO_LOCAL_DATE.format(this)
 

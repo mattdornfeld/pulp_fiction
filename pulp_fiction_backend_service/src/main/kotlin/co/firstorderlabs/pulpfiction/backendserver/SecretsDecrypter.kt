@@ -1,9 +1,19 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
+import arrow.core.continuations.Effect
+import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
+import co.firstorderlabs.pulpfiction.backendserver.types.AwsError
+import co.firstorderlabs.pulpfiction.backendserver.types.IOError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
+import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
+import co.firstorderlabs.pulpfiction.backendserver.utils.flatMap
+import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
+import co.firstorderlabs.pulpfiction.backendserver.utils.map
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.io.ByteStreams
+import kotlinx.coroutines.runBlocking
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.kms.KmsClient
 import software.amazon.awssdk.services.kms.model.DecryptRequest
@@ -35,36 +45,58 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
         private fun ByteArray.base64Decode(): ByteArray =
             base64Decoder.decode(this)
 
-        private fun Path.toByteArray(): ByteArray {
-            val fileInputStream = FileInputStream(this.toFile())
-            return ByteStreams.toByteArray(fileInputStream)
-        }
+        private suspend fun Path.toByteArray(): Effect<PulpFictionStartupError, ByteArray> =
+            effectWithError({ IOError(it) }) {
+                val fileInputStream = FileInputStream(this@toByteArray.toFile())
+                ByteStreams.toByteArray(fileInputStream)
+            }
 
-        private fun Path.toSdkBytes(): SdkBytes =
-            this.toByteArray().toSdkBytes()
+        private suspend fun Path.toSdkBytes(): Effect<PulpFictionStartupError, SdkBytes> =
+            this.toByteArray().map { it.toSdkBytes() }
 
         private fun ByteArray.toSdkBytes(): SdkBytes =
             SdkBytes.fromByteArray(this)
 
-        private fun SdkBytes.deserializeJsonToMap(): Map<String, String> =
-            ObjectMapper()
-                .readValue(
-                    this.asByteArray(),
-                    object : TypeReference<Map<String, String>>() {}
-                )
+        private suspend fun SdkBytes.deserializeJsonToMap(): Effect<PulpFictionStartupError, Map<String, String>> =
+            effectWithError({ IOError(it) }) {
+                ObjectMapper()
+                    .readValue(
+                        this@deserializeJsonToMap.asByteArray(),
+                        object : TypeReference<Map<String, String>>() {}
+                    )
+            }
 
-        private fun DecryptResponse.deserializeJsonToMap(): Map<String, String> =
+        private suspend fun DecryptResponse.deserializeJsonToMap(): Effect<PulpFictionStartupError, Map<String, String>> =
             this.plaintext().deserializeJsonToMap()
 
-        fun File.deserializeJsonToMap(): Map<String, String> =
-            this.toPath().toSdkBytes().deserializeJsonToMap()
+        suspend fun File.deserializeJsonToMap(): Effect<PulpFictionStartupError, Map<String, String>> =
+            this.toPath().toSdkBytes().flatMap { it.deserializeJsonToMap() }
 
-        private fun EncryptResponse.writeToFile(path: Path): File {
-            val file = path.toFile()
-            val fileOutputStream = FileOutputStream(file)
-            fileOutputStream.write(this.ciphertextBlob().asByteArray().base64Encode())
-            return file
-        }
+        private suspend fun EncryptResponse.writeToFile(path: Path): Effect<PulpFictionStartupError, File> =
+            effectWithError({ IOError(it) }) {
+                val file = path.toFile()
+                val fileOutputStream = FileOutputStream(file)
+                fileOutputStream.write(this@writeToFile.ciphertextBlob().asByteArray().base64Encode())
+                file
+            }
+
+        private fun KmsClient.decryptAndHandleError(decryptRequest: DecryptRequest): Effect<PulpFictionStartupError, DecryptResponse> =
+            effect {
+                try {
+                    this@decryptAndHandleError.decrypt(decryptRequest)
+                } catch (cause: Throwable) {
+                    shift(AwsError(cause))
+                }
+            }
+
+        private fun KmsClient.encryptAndHandleError(encryptRequest: EncryptRequest): Effect<PulpFictionStartupError, EncryptResponse> =
+            effect {
+                try {
+                    this@encryptAndHandleError.encrypt(encryptRequest)
+                } catch (cause: Throwable) {
+                    shift(AwsError(cause))
+                }
+            }
 
         private fun Path.getEncryptedPath() =
             Paths.get("$this.encrypted")
@@ -75,42 +107,53 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
         }
 
         @JvmStatic
-        fun main(args: Array<String>) {
+        fun main(args: Array<String>) = runBlocking {
             when (Mode.valueOf(args[0])) {
                 Mode.encrypt -> {
                     val credentialsFilePath = Paths.get(args[1])
                     val keyId = args[2]
                     SecretsDecrypter()
                         .encryptJsonCredentialsFileWithKmsKey(keyId, credentialsFilePath)
+                        .getResultAndThrowException()
                 }
                 Mode.decrypt -> {
                     val encryptedCredentialsFilePath = Paths.get(args[1])
                     val credentials = SecretsDecrypter()
                         .decryptJsonCredentialsFileWithKmsKey(encryptedCredentialsFilePath)
+                        .getResultAndThrowException()
                     println(credentials)
                 }
             }
         }
     }
 
-    fun decryptJsonCredentialsFileWithKmsKey(encryptedJsonCredentialsFilePath: Path): Map<String, String> {
-        val jsonCredentialsFileAsBytes = encryptedJsonCredentialsFilePath
-            .toByteArray()
-            .base64Decode()
-            .toSdkBytes()
+    fun decryptJsonCredentialsFileWithKmsKey(encryptedJsonCredentialsFilePath: Path): Effect<PulpFictionStartupError, Map<String, String>> =
+        effect {
+            val jsonCredentialsFileAsBytes = encryptedJsonCredentialsFilePath
+                .toByteArray()
+                .bind()
+                .base64Decode()
+                .toSdkBytes()
 
-        val decryptRequest = DecryptRequest
-            .builder()
-            .ciphertextBlob(jsonCredentialsFileAsBytes)
-            .build()
+            val decryptRequest = DecryptRequest
+                .builder()
+                .ciphertextBlob(jsonCredentialsFileAsBytes)
+                .build()
 
-        return kmsClient.decrypt(decryptRequest).deserializeJsonToMap()
-    }
+            kmsClient
+                .decryptAndHandleError(decryptRequest)
+                .flatMap { it.deserializeJsonToMap() }
+                .bind()
+        }
 
-    fun encryptJsonCredentialsFileWithKmsKey(keyId: String, jsonCredentialsFilePath: Path): File {
+    fun encryptJsonCredentialsFileWithKmsKey(
+        keyId: String,
+        jsonCredentialsFilePath: Path
+    ): Effect<PulpFictionStartupError, File> = effect {
         val jsonCredentialsFileAsBytes = jsonCredentialsFilePath
             .toByteArray()
-            .toSdkBytes()
+            .map { it.toSdkBytes() }
+            .bind()
 
         val encryptRequest = EncryptRequest
             .builder()
@@ -118,8 +161,9 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
             .plaintext(jsonCredentialsFileAsBytes)
             .build()
 
-        return kmsClient
-            .encrypt(encryptRequest)
-            .writeToFile(jsonCredentialsFilePath.getEncryptedPath())
+        kmsClient
+            .encryptAndHandleError(encryptRequest)
+            .flatMap { it.writeToFile(jsonCredentialsFilePath.getEncryptedPath()) }
+            .bind()
     }
 }

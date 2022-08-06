@@ -3,7 +3,21 @@ package co.firstorderlabs.pulpfiction.backendserver.types
 import io.grpc.Status
 import io.grpc.StatusException
 
-sealed class PulpFictionRequestError(msgMaybe: String?, causeMaybe: Throwable?) : Throwable(msgMaybe, causeMaybe) {
+sealed class PulpFictionError(msgMaybe: String?, causeMaybe: Throwable?) : Throwable(msgMaybe, causeMaybe) {
+    constructor(msg: String) : this(msg, null)
+    constructor(cause: Throwable) : this(null, cause)
+    constructor() : this(null, null)
+}
+
+sealed class PulpFictionStartupError(msgMaybe: String?, causeMaybe: Throwable?) :
+    PulpFictionError(msgMaybe, causeMaybe) {
+    constructor(msg: String) : this(msg, null)
+    constructor(cause: Throwable) : this(null, cause)
+    constructor() : this(null, null)
+}
+
+sealed class PulpFictionRequestError(msgMaybe: String?, causeMaybe: Throwable?) :
+    PulpFictionError(msgMaybe, causeMaybe) {
     constructor(msg: String) : this(msg, null)
     constructor(cause: Throwable) : this(null, cause)
     constructor() : this(null, null)
@@ -50,7 +64,8 @@ class InvalidUserPasswordError() : PulpFictionRequestError() {
         StatusException(Status.UNAUTHENTICATED.withCause(this))
 }
 
-class ServiceStartupError() : PulpFictionRequestError() {
-    override fun toStatusException(): StatusException =
-        StatusException(Status.INTERNAL.withCause(this))
-}
+class ServiceStartupError(cause: Throwable) : PulpFictionStartupError(cause)
+
+class IOError(cause: Throwable) : PulpFictionStartupError(cause)
+
+class AwsError(cause: Throwable) : PulpFictionStartupError(cause)
