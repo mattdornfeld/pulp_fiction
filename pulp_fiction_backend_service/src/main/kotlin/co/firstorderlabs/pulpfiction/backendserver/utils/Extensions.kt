@@ -83,3 +83,6 @@ fun <A> A.fluentPrintln(prepend: String = ""): A {
     println(prepend + this)
     return this
 }
+
+fun <A, B> Map<A, B>.getOrThrow(key: A): B =
+    this.getOrElse(key) { throw java.lang.IllegalArgumentException("$key not found in map") }

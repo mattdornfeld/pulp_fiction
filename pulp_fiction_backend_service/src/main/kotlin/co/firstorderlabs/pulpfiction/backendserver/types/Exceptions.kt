@@ -69,3 +69,5 @@ class ServiceStartupError(cause: Throwable) : PulpFictionStartupError(cause)
 class IOError(cause: Throwable) : PulpFictionStartupError(cause)
 
 class AwsError(cause: Throwable) : PulpFictionStartupError(cause)
+
+class DatabaseConnectionError(cause: Throwable) : PulpFictionStartupError(cause)

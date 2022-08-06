@@ -38,19 +38,20 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.logS3Metrics
+import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseConnectionError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
-import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
+import co.firstorderlabs.pulpfiction.backendserver.utils.getOrThrow
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import com.password4j.Password
-import kotlinx.coroutines.runBlocking
 import org.ktorm.database.Database
 import org.ktorm.dsl.and
 import org.ktorm.dsl.desc
@@ -88,6 +89,22 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             this@transactionToEffectCatchErrors.useTransaction { block(it) }
         }
 
+        private suspend fun Database.Companion.connectAndHandleErrors(
+            url: String,
+            databaseCredentials: Map<String, String>,
+        ): Effect<PulpFictionStartupError, Database> = effect {
+            try {
+                Database.connect(
+                    url = url,
+                    user = databaseCredentials.getOrThrow("username"),
+                    password = databaseCredentials.getOrThrow("password"),
+                    dialect = PostgreSqlDialect(),
+                )
+            } catch (cause: Throwable) {
+                shift(DatabaseConnectionError(cause))
+            }
+        }
+
         /**
          * Runs a database transaction as an effectful computation
          */
@@ -97,17 +114,14 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             this@transactionToEffect.useTransaction { block(it) }
         }
 
-        fun createDatabaseConnection(): Database = runBlocking {
+        fun createDatabaseConnection(): Effect<PulpFictionStartupError, Database> = effect {
             val databaseCredentials = SecretsDecrypter()
                 .decryptJsonCredentialsFileWithKmsKey(DatabaseConfigs.ENCRYPTED_CREDENTIALS_FILE)
-                .getResultAndThrowException()
+                .bind()
 
-            Database.connect(
-                url = DatabaseConfigs.URL,
-                user = databaseCredentials["username"],
-                password = databaseCredentials["password"],
-                dialect = PostgreSqlDialect(),
-            )
+            Database
+                .connectAndHandleErrors(DatabaseConfigs.URL, databaseCredentials)
+                .bind()
         }
     }
 
