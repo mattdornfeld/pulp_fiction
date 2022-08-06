@@ -38,6 +38,7 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
     companion object {
         private val base64Encoder: Base64.Encoder = Base64.getEncoder()
         private val base64Decoder: Base64.Decoder = Base64.getDecoder()
+        private val logger: StructuredLogger = StructuredLogger()
 
         private fun ByteArray.base64Encode(): ByteArray =
             base64Encoder.encode(this)
@@ -107,7 +108,7 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
         }
 
         @JvmStatic
-        fun main(args: Array<String>) = runBlocking {
+        fun main(args: Array<String>): Unit = runBlocking {
             when (Mode.valueOf(args[0])) {
                 Mode.encrypt -> {
                     val credentialsFilePath = Paths.get(args[1])
@@ -140,6 +141,11 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
                 .ciphertextBlob(jsonCredentialsFileAsBytes)
                 .build()
 
+            logger
+                .withTag(encryptedJsonCredentialsFilePath)
+                .withTag(StructuredLogger.Companion.TagClasses.KmsKeyId(decryptRequest.keyId()))
+                .info("Decrypting file with KMS key")
+
             kmsClient
                 .decryptAndHandleError(decryptRequest)
                 .flatMap { it.deserializeJsonToMap() }
@@ -160,6 +166,11 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
             .keyId(keyId)
             .plaintext(jsonCredentialsFileAsBytes)
             .build()
+
+        logger
+            .withTag(jsonCredentialsFilePath)
+            .withTag(StructuredLogger.Companion.TagClasses.KmsKeyId(keyId))
+            .info("Encrypting file with KMS key")
 
         kmsClient
             .encryptAndHandleError(encryptRequest)
