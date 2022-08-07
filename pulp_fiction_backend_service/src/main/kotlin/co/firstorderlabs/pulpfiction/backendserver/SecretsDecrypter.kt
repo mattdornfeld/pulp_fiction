@@ -5,6 +5,7 @@ import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
 import co.firstorderlabs.pulpfiction.backendserver.types.AwsError
 import co.firstorderlabs.pulpfiction.backendserver.types.IOError
+import co.firstorderlabs.pulpfiction.backendserver.types.KmsKeyId
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.flatMap
@@ -114,7 +115,7 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
                     val credentialsFilePath = Paths.get(args[1])
                     val keyId = args[2]
                     SecretsDecrypter()
-                        .encryptJsonCredentialsFileWithKmsKey(keyId, credentialsFilePath)
+                        .encryptJsonCredentialsFileWithKmsKey(KmsKeyId(keyId), credentialsFilePath)
                         .getResultAndThrowException()
                 }
                 Mode.decrypt -> {
@@ -143,7 +144,7 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
 
             logger
                 .withTag(encryptedJsonCredentialsFilePath)
-                .withTag(StructuredLogger.Companion.TagClasses.KmsKeyId(decryptRequest.keyId()))
+                .withTag(KmsKeyId(decryptRequest.keyId()))
                 .info("Decrypting file with KMS key")
 
             kmsClient
@@ -153,7 +154,7 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
         }
 
     fun encryptJsonCredentialsFileWithKmsKey(
-        keyId: String,
+        kmsKeyId: KmsKeyId,
         jsonCredentialsFilePath: Path
     ): Effect<PulpFictionStartupError, File> = effect {
         val jsonCredentialsFileAsBytes = jsonCredentialsFilePath
@@ -163,13 +164,13 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
 
         val encryptRequest = EncryptRequest
             .builder()
-            .keyId(keyId)
+            .keyId(kmsKeyId.kmsKeyId)
             .plaintext(jsonCredentialsFileAsBytes)
             .build()
 
         logger
             .withTag(jsonCredentialsFilePath)
-            .withTag(StructuredLogger.Companion.TagClasses.KmsKeyId(keyId))
+            .withTag(kmsKeyId)
             .info("Encrypting file with KMS key")
 
         kmsClient

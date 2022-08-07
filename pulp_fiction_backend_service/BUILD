@@ -30,6 +30,9 @@ load(
 MAIN_SRC_FILES = ["src/main/kotlin/**/*.kt"]
 TEST_SRC_FILES = ["src/test/kotlin/**/*.kt"]
 SRC_FILES = MAIN_SRC_FILES + TEST_SRC_FILES
+# Formatting breaks on files skipped
+# TODO (matt): Remove this filter if this issue gets fixed https://github.com/pinterest/ktlint/issues/1577
+FORMAT_FILES = [f for f in glob(SRC_FILES) if "src/main/kotlin/co/firstorderlabs/pulpfiction/backendserver/types/ValueClasses.kt" not in f]
 
 kt_jvm_proto_library(
     name = "build_kotlin_protos",
@@ -44,7 +47,7 @@ kt_jvm_grpc_library(
 
 ktlint_fix(
     name = "format",
-    srcs = glob(SRC_FILES),
+    srcs = FORMAT_FILES,
 )
 
 kt_jvm_library(
@@ -119,7 +122,7 @@ junit5_tests(
 
 ktlint_test(
     name = "test_lint",
-    srcs = glob(SRC_FILES),
+    srcs = FORMAT_FILES,
     visibility = ["//visibility:public"],
 )
 

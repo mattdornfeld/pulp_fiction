@@ -1,5 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
+import co.firstorderlabs.pulpfiction.backendserver.types.KmsKeyId
 import com.google.common.collect.ImmutableMap
 import com.google.common.collect.ImmutableMap.Builder
 import com.google.common.flogger.FluentLogger
@@ -20,11 +21,6 @@ class StructuredLogger(
             val path: MetadataKey<String> = MetadataKey.single("path", String::class.java)
             val kmsKeyId: MetadataKey<String> = MetadataKey.single("kmsKeyId", String::class.java)
         }
-
-        object TagClasses {
-            @JvmInline
-            value class KmsKeyId(val kmsKeyId: String)
-        }
     }
 
     private fun buildTags(): ImmutableMap<MetadataKey<String>, String> =
@@ -38,7 +34,8 @@ class StructuredLogger(
                 .reduce(
                     logger.at(level),
                     { logger, tag -> logger.with(tag.key, tag.value) },
-                    { l1, _ -> l1 })
+                    { l1, _ -> l1 }
+                )
 
         return loggerApi
             .withInjectedLogSite(LogSites.callerOf(StructuredLogger::class.java))
@@ -49,7 +46,7 @@ class StructuredLogger(
         return StructuredLogger(builder)
     }
 
-    fun withTag(kmsKeyId: TagClasses.KmsKeyId): StructuredLogger {
+    fun withTag(kmsKeyId: KmsKeyId): StructuredLogger {
         val builder = this.tagsBuilder.put(Tags.kmsKeyId, kmsKeyId.kmsKeyId)
         return StructuredLogger(builder)
     }
