@@ -5,18 +5,18 @@ import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateUserPostRequest
-import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs.CONTENT_DATA_S3_BUCKET_NAME
+import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs.CONTENT_DATA_S3_BUCKET_NAME
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum.Companion.IMAGE_POSTS_KEY_BASE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key.Companion.JPG
-import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
+import co.firstorderlabs.pulpfiction.backendserver.testutils.S3AndPostgresContainers
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.runBlockingEffect
 import co.firstorderlabs.pulpfiction.backendserver.testutils.toByteString
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.S3DownloadError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import com.google.protobuf.ByteString
@@ -34,14 +34,14 @@ import java.util.UUID
 
 suspend fun S3Messenger.getObject(
     s3Key: String,
-): Effect<PulpFictionError, ByteString> = effectWithError({ S3DownloadError(it) }) {
+): Effect<PulpFictionRequestError, ByteString> = effectWithError({ S3DownloadError(it) }) {
     val getObjectRequest = GetObjectRequest.builder().bucket(CONTENT_DATA_S3_BUCKET_NAME).key(s3Key).build()
     s3Client.getObjectAsBytes(getObjectRequest).asByteArray().toByteString()
 }
 
 suspend fun S3Messenger.getObjectTags(
     s3Key: String
-): Effect<PulpFictionError, List<Tag>> = effectWithError({ S3DownloadError(it) }) {
+): Effect<PulpFictionRequestError, List<Tag>> = effectWithError({ S3DownloadError(it) }) {
     val getObjectTaggingRequest =
         GetObjectTaggingRequest.builder().bucket(CONTENT_DATA_S3_BUCKET_NAME).key(s3Key).build()
     s3Client.getObjectTagging(getObjectTaggingRequest).tagSet()
@@ -49,17 +49,17 @@ suspend fun S3Messenger.getObjectTags(
 
 suspend fun S3Messenger.getObject(
     post: ReferencesS3Key,
-): Effect<PulpFictionError, ByteString> = getObject(post.toS3Key())
+): Effect<PulpFictionRequestError, ByteString> = getObject(post.toS3Key())
 
 suspend fun S3Messenger.getObjectTags(
     post: ReferencesS3Key
-): Effect<PulpFictionError, List<Tag>> = getObjectTags(post.toS3Key())
+): Effect<PulpFictionRequestError, List<Tag>> = getObjectTags(post.toS3Key())
 
-fun List<Tag>.toMap(): Map<String, String> = this.associate { it.key() to it.value() }
+fun List<Tag>.deserializeJsonToMap(): Map<String, String> = this.associate { it.key() to it.value() }
 
 @Testcontainers
 class S3MessengerTest {
-    companion object : TestContainerDependencies() {
+    companion object : S3AndPostgresContainers() {
         @Container
         override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
 
@@ -90,7 +90,7 @@ class S3MessengerTest {
         referencesS3Key: ReferencesS3Key,
         objectAsByteString: ByteString,
         expectedTags: Map<String, String>
-    ): Effect<PulpFictionError, Unit> = effect {
+    ): Effect<PulpFictionRequestError, Unit> = effect {
         s3Messenger
             .putAndTagObject(referencesS3Key, objectAsByteString)
             .bind()
@@ -103,7 +103,7 @@ class S3MessengerTest {
         s3Messenger
             .getObjectTags(referencesS3Key)
             .bind()
-            .toMap()
+            .deserializeJsonToMap()
             .assertEquals(expectedTags) { it }
     }
 

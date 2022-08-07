@@ -40,14 +40,17 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.logS3Metrics
+import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseConnectionError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
+import co.firstorderlabs.pulpfiction.backendserver.utils.getOrThrow
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import com.password4j.Password
@@ -78,8 +81,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     companion object {
         private suspend fun <A> effectWithDatabaseError(
-            block: suspend arrow.core.continuations.EffectScope<PulpFictionError>.() -> A
-        ): Effect<PulpFictionError, A> = effectWithError({ DatabaseError(it) }) { block(this) }
+            block: suspend arrow.core.continuations.EffectScope<PulpFictionRequestError>.() -> A
+        ): Effect<PulpFictionRequestError, A> = effectWithError({ DatabaseError(it) }) { block(this) }
 
         /**
          * Runs a database transaction as an effectful computation,
@@ -87,8 +90,24 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
          */
         private suspend fun <A> Database.transactionToEffectCatchErrors(
             block: suspend (org.ktorm.database.Transaction) -> A,
-        ): Effect<PulpFictionError, A> = effectWithDatabaseError {
+        ): Effect<PulpFictionRequestError, A> = effectWithDatabaseError {
             this@transactionToEffectCatchErrors.useTransaction { block(it) }
+        }
+
+        private suspend fun Database.Companion.connectAndHandleErrors(
+            url: String,
+            databaseCredentials: Map<String, String>,
+        ): Effect<PulpFictionStartupError, Database> = effect {
+            try {
+                Database.connect(
+                    url = url,
+                    user = databaseCredentials.getOrThrow("username"),
+                    password = databaseCredentials.getOrThrow("password"),
+                    dialect = PostgreSqlDialect(),
+                )
+            } catch (cause: Throwable) {
+                shift(DatabaseConnectionError(cause))
+            }
         }
 
         /**
@@ -96,19 +115,22 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
          */
         private suspend fun <A> Database.transactionToEffect(
             block: suspend (org.ktorm.database.Transaction) -> A,
-        ): Effect<PulpFictionError, A> = effect {
+        ): Effect<PulpFictionRequestError, A> = effect {
             this@transactionToEffect.useTransaction { block(it) }
         }
 
-        fun createDatabaseConnection(): Database = Database.connect(
-            url = DatabaseConfigs.URL,
-            user = DatabaseConfigs.USER,
-            password = DatabaseConfigs.PASSWORD,
-            dialect = PostgreSqlDialect(),
-        )
+        fun createDatabaseConnection(): Effect<PulpFictionStartupError, Database> = effect {
+            val databaseCredentials = SecretsDecrypter()
+                .decryptJsonCredentialsFileWithKmsKey(DatabaseConfigs.ENCRYPTED_CREDENTIALS_FILE)
+                .bind()
+
+            Database
+                .connectAndHandleErrors(DatabaseConfigs.URL, databaseCredentials)
+                .bind()
+        }
     }
 
-    fun checkLoginSessionValid(loginSessionProto: PulpFictionProtos.LoginResponse.LoginSession): Effect<PulpFictionError, Unit> =
+    fun checkLoginSessionValid(loginSessionProto: PulpFictionProtos.LoginResponse.LoginSession): Effect<PulpFictionRequestError, Unit> =
         effect {
             val userId = loginSessionProto.userId.toUUID().bind()
             // TODO (matt): Implement hashing for sessionToken
@@ -138,7 +160,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .getOrElse { shift(LoginSessionInvalidError()) }
         }
 
-    suspend fun createLoginSession(request: LoginRequest): Effect<PulpFictionError, LoginSession> = effect {
+    suspend fun createLoginSession(request: LoginRequest): Effect<PulpFictionRequestError, LoginSession> = effect {
         val loginSession = LoginSession.fromRequest(request).bind()
         database.transactionToEffectCatchErrors {
             database.loginSessions.add(loginSession)
@@ -149,7 +171,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     private suspend fun createComment(
         post: Post,
         request: CreateCommentRequest
-    ): Effect<PulpFictionError, PulpFictionProtos.Post> =
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> =
         effect {
             val commentDatum = CommentDatum.fromRequest(post, request).bind()
             database.commentData.add(commentDatum)
@@ -162,7 +184,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     private suspend fun createImagePost(
         post: Post,
         request: CreateImagePostRequest
-    ): Effect<PulpFictionError, PulpFictionProtos.Post> =
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> =
         effect {
             val imagePostDatum = ImagePostDatum.fromRequest(post, request)
 
@@ -181,7 +203,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     private suspend fun createUserPost(
         post: Post,
         request: CreateUserPostRequest
-    ): Effect<PulpFictionError, PulpFictionProtos.Post> =
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> =
         effect {
             val userPostDatum = UserPostDatum.fromRequest(post, request)
 
@@ -200,7 +222,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     private suspend fun createPostData(
         post: Post,
         request: CreatePostRequest
-    ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         when (post.postType) {
             PulpFictionProtos.Post.PostType.COMMENT -> createComment(post, request.createCommentRequest).bind()
             PulpFictionProtos.Post.PostType.IMAGE -> createImagePost(post, request.createImagePostRequest).bind()
@@ -211,7 +233,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     fun createPost(
         request: CreatePostRequest
-    ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         val postId = PostId.generate()
         val post = Post.fromRequest(postId.postId, request).bind()
 
@@ -230,7 +252,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     fun createUser(
         request: PulpFictionProtos.CreateUserRequest
-    ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         val user = User.fromRequest(request).bind()
 
         database.transactionToEffect {
@@ -242,7 +264,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     private suspend fun <A> getPostData(
         postId: UUID,
         table: PostData<A>
-    ): Effect<PulpFictionError, A> where A : PostDatum, A : Entity<A> = database.transactionToEffectCatchErrors {
+    ): Effect<PulpFictionRequestError, A> where A : PostDatum, A : Entity<A> = database.transactionToEffectCatchErrors {
         database
             .from(table)
             .select()
@@ -255,7 +277,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     suspend fun getPost(
         request: GetPostRequest
-    ): Effect<PulpFictionError, PulpFictionProtos.Post> = effect {
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         val postId = request.postId.toUUID().bind()
         val post = database.transactionToEffectCatchErrors {
             database.from(Posts)
@@ -295,7 +317,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     private suspend fun getUserFromUserId(
         userId: String
-    ): Effect<PulpFictionError, User> = effect {
+    ): Effect<PulpFictionRequestError, User> = effect {
         val uuid = userId.toUUID().bind()
         database.users.find { it.userId eq uuid }
             ?: shift(UserNotFoundError(userId))
@@ -303,7 +325,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     suspend fun getPublicUserMetadata(
         request: GetUserRequest
-    ): Effect<PulpFictionError, UserMetadata> = effect {
+    ): Effect<PulpFictionRequestError, UserMetadata> = effect {
         val userId = getUserFromUserId(request.userId).bind()
 
         /* Get Most Recent UserPost */
@@ -321,10 +343,14 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     fun checkUserPasswordValid(
         request: LoginRequest
-    ): Effect<PulpFictionError, Boolean> = effect {
+    ): Effect<PulpFictionRequestError, Boolean> = effect {
         val userLoginCandidate = getUserFromUserId(request.userId).bind()
         val hashedPass = userLoginCandidate.hashedPassword
         val authenticated = Password.check(request.password, hashedPass).withBcrypt()
-        if (!authenticated) { shift(InvalidUserPasswordError()) } else { true }
+        if (!authenticated) {
+            shift(InvalidUserPasswordError())
+        } else {
+            true
+        }
     }
 }

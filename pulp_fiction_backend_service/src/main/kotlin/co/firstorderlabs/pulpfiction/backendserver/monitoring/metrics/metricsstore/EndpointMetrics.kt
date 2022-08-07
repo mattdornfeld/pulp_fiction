@@ -5,7 +5,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.LabelValue
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionSummary
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.finally
 import co.firstorderlabs.pulpfiction.backendserver.utils.onError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toLabelValue
@@ -39,9 +39,9 @@ object EndpointMetrics {
         override fun getValue(): String = name
     }
 
-    suspend fun <A> Effect<PulpFictionError, A>.logEndpointMetrics(
+    suspend fun <A> Effect<PulpFictionRequestError, A>.logEndpointMetrics(
         endpointName: EndpointName,
-    ): Effect<PulpFictionError, A> {
+    ): Effect<PulpFictionRequestError, A> {
         val timer = endpointRequestDurationSeconds.withLabels(endpointName).startTimer()
         endpointRequestTotal.withLabels(endpointName).inc()
         return this@logEndpointMetrics

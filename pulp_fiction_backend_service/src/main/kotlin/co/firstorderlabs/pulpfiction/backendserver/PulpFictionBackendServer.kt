@@ -1,14 +1,20 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs
+import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import io.grpc.ServerBuilder
+import kotlinx.coroutines.runBlocking
 
 class PulpFictionBackendServer(private val port: Int) {
     constructor() : this(ServiceConfigs.SERVICE_PORT)
 
     companion object {
-        private fun createPulpFictionBackendService(): PulpFictionBackendService =
-            PulpFictionBackendService(DatabaseMessenger.createDatabaseConnection(), S3Messenger.createS3Client())
+        private fun createPulpFictionBackendService(): PulpFictionBackendService = runBlocking {
+            PulpFictionBackendService(
+                DatabaseMessenger.createDatabaseConnection().getResultAndThrowException(),
+                S3Messenger.createS3Client()
+            )
+        }
 
         @JvmStatic
         fun main(args: Array<String>) {

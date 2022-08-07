@@ -24,7 +24,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postIds
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
-import co.firstorderlabs.pulpfiction.backendserver.testutils.TestContainerDependencies
+import co.firstorderlabs.pulpfiction.backendserver.testutils.S3AndPostgresContainers
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
@@ -42,7 +42,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
 internal class MigrateDatabaseTest {
-    companion object : TestContainerDependencies() {
+    companion object : S3AndPostgresContainers() {
         @Container
         override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
 

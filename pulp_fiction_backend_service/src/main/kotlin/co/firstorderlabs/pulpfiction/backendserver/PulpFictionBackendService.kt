@@ -18,7 +18,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.logDatabaseMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.EndpointName
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.logEndpointMetrics
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
 import org.ktorm.database.Database
 import software.amazon.awssdk.services.s3.S3Client
@@ -30,14 +30,14 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     private suspend fun checkLoginSessionValid(
         loginSession: LoginResponse.LoginSession,
         endpointName: EndpointName
-    ): Effect<PulpFictionError, Unit> =
+    ): Effect<PulpFictionRequestError, Unit> =
         databaseMessenger
             .checkLoginSessionValid(loginSession)
             .logDatabaseMetrics(endpointName, DatabaseOperation.checkLoginSessionValid)
 
     override suspend fun createPost(request: PulpFictionProtos.CreatePostRequest): PulpFictionProtos.CreatePostResponse {
         val endpointName = EndpointName.createPost
-        return effect<PulpFictionError, CreatePostResponse> {
+        return effect<PulpFictionRequestError, CreatePostResponse> {
             checkLoginSessionValid(request.loginSession, endpointName).bind()
 
             val postProto = databaseMessenger
@@ -55,7 +55,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
 
     override suspend fun createUser(request: PulpFictionProtos.CreateUserRequest): PulpFictionProtos.CreateUserResponse {
         val endpointName = EndpointName.createUser
-        return effect<PulpFictionError, CreateUserResponse> {
+        return effect<PulpFictionRequestError, CreateUserResponse> {
             val userPost = databaseMessenger
                 .createUser(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.createUser)
@@ -71,7 +71,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
 
     override suspend fun login(request: PulpFictionProtos.LoginRequest): PulpFictionProtos.LoginResponse {
         val endpointName = EndpointName.login
-        return effect<PulpFictionError, LoginResponse> {
+        return effect<PulpFictionRequestError, LoginResponse> {
             databaseMessenger
                 .checkUserPasswordValid(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.checkUserPasswordValid)
@@ -92,7 +92,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
 
     override suspend fun getPost(request: PulpFictionProtos.GetPostRequest): PulpFictionProtos.GetPostResponse {
         val endpointName = EndpointName.getPost
-        return effect<PulpFictionError, GetPostResponse> {
+        return effect<PulpFictionRequestError, GetPostResponse> {
             checkLoginSessionValid(request.loginSession, endpointName).bind()
 
             val post = databaseMessenger

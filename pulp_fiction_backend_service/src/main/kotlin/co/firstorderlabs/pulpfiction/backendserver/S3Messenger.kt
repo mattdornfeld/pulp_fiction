@@ -1,10 +1,10 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.continuations.Effect
-import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs
-import co.firstorderlabs.pulpfiction.backendserver.configs.S3Configs.CONTENT_DATA_S3_BUCKET_NAME
+import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
+import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs.CONTENT_DATA_S3_BUCKET_NAME
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.S3UploadError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import com.google.protobuf.ByteString
@@ -18,7 +18,7 @@ class S3Messenger(val s3Client: S3Client) {
     companion object {
         fun createS3Client(): S3Client = S3Client
             .builder()
-            .region(S3Configs.S3_BUCKET_REGION)
+            .region(AwsConfigs.ACCOUNT_REGION)
             .httpClientBuilder(ApacheHttpClient.builder())
             .build()
     }
@@ -26,7 +26,7 @@ class S3Messenger(val s3Client: S3Client) {
     suspend fun putAndTagObject(
         postData: ReferencesS3Key,
         imageJpg: ByteString
-    ): Effect<PulpFictionError, PutObjectResponse> = effectWithError({ S3UploadError(it) }) {
+    ): Effect<PulpFictionRequestError, PutObjectResponse> = effectWithError({ S3UploadError(it) }) {
         val putObjectRequest = PutObjectRequest
             .builder()
             .bucket(CONTENT_DATA_S3_BUCKET_NAME)

@@ -30,6 +30,11 @@ fun <A, B> A.assertEquals(expected: B, actualSupplier: (A) -> B): A {
     return this
 }
 
+fun <A, B> A.assertEquals(expected: B): A {
+    Assertions.assertEquals(expected, { this })
+    return this
+}
+
 fun <A> A.assertTrue(conditionSupplier: (A) -> Boolean): A {
     Assertions.assertTrue(conditionSupplier(this))
     return this
