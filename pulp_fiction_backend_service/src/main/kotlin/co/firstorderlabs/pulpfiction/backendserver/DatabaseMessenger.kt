@@ -3,6 +3,7 @@ package co.firstorderlabs.pulpfiction.backendserver
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.getOrElse
+import arrow.core.toOption
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
@@ -326,7 +327,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     suspend fun getPublicUserMetadata(
         request: GetUserRequest
     ): Effect<PulpFictionRequestError, UserMetadata> = effect {
-        val userId = getUserFromUserId(request.userId).bind()
+        val user = getUserFromUserId(request.userId).bind()
 
         /* Get Most Recent UserPost */
         val requestUserId = request.userId
@@ -337,8 +338,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .sortedBy { it.createdAt.desc() }
                 .first()
         }.bind()
-        val avatar = userPost.avatarImageS3Key
-        userId.toNonSensitiveUserMetadataProto(avatar)
+        val avatarImageS3Key = userPost.avatarImageS3Key.toOption()
+        user.toNonSensitiveUserMetadataProto(avatarImageS3Key)
     }
 
     fun checkUserPasswordValid(
