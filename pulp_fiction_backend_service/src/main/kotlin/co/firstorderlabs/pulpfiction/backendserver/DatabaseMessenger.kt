@@ -338,8 +338,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .sortedBy { it.createdAt.desc() }
                 .first()
         }.bind()
-        val avatarImageS3Key = userPost.avatarImageS3Key.toOption()
-        user.toNonSensitiveUserMetadataProto(avatarImageS3Key)
+        val avatarImageS3KeyMaybe = userPost.avatarImageS3Key.toOption()
+        user.toNonSensitiveUserMetadataProto(avatarImageS3KeyMaybe)
     }
 
     fun checkUserPasswordValid(
