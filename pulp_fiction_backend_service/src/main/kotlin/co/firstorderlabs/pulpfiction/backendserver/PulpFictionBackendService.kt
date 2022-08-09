@@ -122,6 +122,6 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             }
         }
             .logEndpointMetrics(endpointName)
-            .getResultAndHandleErrors()
+            .getResultAndThrowException()
     }
 }
