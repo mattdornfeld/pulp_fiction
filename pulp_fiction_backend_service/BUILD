@@ -30,6 +30,9 @@ load(
 MAIN_SRC_FILES = ["src/main/kotlin/**/*.kt"]
 TEST_SRC_FILES = ["src/test/kotlin/**/*.kt"]
 SRC_FILES = MAIN_SRC_FILES + TEST_SRC_FILES
+# Formatting breaks on files skipped
+# TODO (matt): Remove this filter if this issue gets fixed https://github.com/pinterest/ktlint/issues/1577
+FORMAT_FILES = [f for f in glob(SRC_FILES) if "src/main/kotlin/co/firstorderlabs/pulpfiction/backendserver/types/ValueClasses.kt" not in f]
 
 kt_jvm_proto_library(
     name = "build_kotlin_protos",
@@ -44,7 +47,7 @@ kt_jvm_grpc_library(
 
 ktlint_fix(
     name = "format",
-    srcs = glob(SRC_FILES),
+    srcs = FORMAT_FILES,
 )
 
 kt_jvm_library(
@@ -53,12 +56,14 @@ kt_jvm_library(
     deps = [
         ":build_kotlin_grpc",
         ":build_kotlin_protos",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_protobuf_protobuf_java",
-        "@maven//:com_google_protobuf_protobuf_kotlin",
         "@maven//:com_fasterxml_jackson_core_jackson_annotations",
         "@maven//:com_fasterxml_jackson_core_jackson_databind",
         "@maven//:com_fasterxml_jackson_dataformat_jackson_dataformat_yaml",
+        "@maven//:com_google_flogger_flogger",
+        "@maven//:com_google_flogger_flogger_slf4j_backend",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
+        "@maven//:com_google_protobuf_protobuf_kotlin",
         "@maven//:com_password4j_password4j",
         "@maven//:io_arrow_kt_arrow_core_jvm",
         "@maven//:io_grpc_grpc_kotlin_stub",
@@ -71,6 +76,8 @@ kt_jvm_library(
         "@maven//:org_ktorm_ktorm_core",
         "@maven//:org_ktorm_ktorm_support_postgresql",
         "@maven//:org_postgresql_postgresql",
+        "@maven//:org_slf4j_slf4j_api",
+        "@maven//:org_slf4j_slf4j_simple",
         "@maven//:software_amazon_awssdk_apache_client",
         "@maven//:software_amazon_awssdk_auth",
         "@maven//:software_amazon_awssdk_core",
@@ -78,10 +85,6 @@ kt_jvm_library(
         "@maven//:software_amazon_awssdk_kms",
         "@maven//:software_amazon_awssdk_regions",
         "@maven//:software_amazon_awssdk_s3",
-#        "@maven//:com_google_flogger_flogger_slf4j_backend",
-#        "@maven//:com_google_flogger_flogger",
-#        "@maven//:org_slf4j_slf4j_api",
-#        "@maven//:org_slf4j_slf4j_simple",
     ],
     resources = glob(["src/main/resources/**/*"]),
 )
@@ -119,7 +122,7 @@ junit5_tests(
 
 ktlint_test(
     name = "test_lint",
-    srcs = glob(SRC_FILES),
+    srcs = FORMAT_FILES,
     visibility = ["//visibility:public"],
 )
 

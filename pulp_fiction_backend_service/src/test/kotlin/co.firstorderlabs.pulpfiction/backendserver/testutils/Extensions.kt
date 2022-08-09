@@ -31,7 +31,7 @@ fun <A, B> A.assertEquals(expected: B, actualSupplier: (A) -> B): A {
 }
 
 fun <A, B> A.assertEquals(expected: B): A {
-    Assertions.assertEquals(expected, { this })
+    Assertions.assertEquals(expected, this)
     return this
 }
 

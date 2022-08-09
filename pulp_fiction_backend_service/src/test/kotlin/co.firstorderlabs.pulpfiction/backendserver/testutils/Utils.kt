@@ -3,20 +3,20 @@ package co.firstorderlabs.pulpfiction.backendserver.testutils
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.types.IOError
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
-import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
+import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import com.google.common.io.Resources
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.StandardCopyOption
 
-fun <A> runBlockingEffect(f: suspend arrow.core.continuations.EffectScope<PulpFictionRequestError>.() -> A): A =
+fun <R : PulpFictionError, A> runBlockingEffect(f: suspend arrow.core.continuations.EffectScope<R>.() -> A): A =
     runBlocking {
-        effect<PulpFictionRequestError, A> {
+        effect<R, A> {
             f()
-        }.getResultAndHandleErrors()
+        }.getResultAndThrowException()
     }
 
 data class ResourceFile(val fileName: String) {

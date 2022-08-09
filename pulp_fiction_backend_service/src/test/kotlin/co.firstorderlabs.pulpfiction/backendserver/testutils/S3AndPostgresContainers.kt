@@ -1,6 +1,11 @@
 package co.firstorderlabs.pulpfiction.backendserver.testutils
 
+import arrow.core.continuations.Effect
+import arrow.core.continuations.effect
+import arrow.core.some
+import co.firstorderlabs.pulpfiction.backendserver.DatabaseMessenger
 import co.firstorderlabs.pulpfiction.backendserver.MigrateDatabase
+import co.firstorderlabs.pulpfiction.backendserver.SecretsDecrypter
 import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.LOCAL_STACK_IMAGE
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.POSTGRES_IMAGE
@@ -11,8 +16,12 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
+import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseUrl
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
+import co.firstorderlabs.pulpfiction.backendserver.utils.getOrThrow
+import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
+import kotlinx.coroutines.runBlocking
 import org.ktorm.database.Database
-import org.ktorm.support.postgresql.PostgreSqlDialect
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.localstack.LocalStackContainer
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
@@ -26,14 +35,42 @@ abstract class S3AndPostgresContainers {
     protected abstract val postgreSQLContainer: PostgreSQLContainer<Nothing>
     protected abstract val localStackContainer: LocalStackContainer
 
-    protected val database by lazy {
-        Database.connect(
-            url = postgreSQLContainer.jdbcUrl,
-            user = postgreSQLContainer.username,
-            password = postgreSQLContainer.password,
-            dialect = PostgreSqlDialect(),
-        )
+    private val pulpFictionKmsClient: PulpFictionKmsClient by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        PulpFictionKmsClient(localStackContainer)
     }
+
+    private val secretsDecrypter: SecretsDecrypter by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        SecretsDecrypter(pulpFictionKmsClient.kmsClient)
+    }
+
+    protected val database by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        runBlocking {
+            createDatabaseConnection(postgreSQLContainer).getResultAndThrowException()
+        }
+    }
+
+    private suspend fun createDatabaseConnection(postgreSQLContainer: PostgreSQLContainer<Nothing>): Effect<PulpFictionStartupError, Database> =
+        effect {
+            val kmsKeyId = pulpFictionKmsClient.createKey().bind()
+            val jsonCredentialsFile = ResourceFile("test_credentials.json").toTempFile().bind()
+            val encryptedJsonCredentialsFile =
+                secretsDecrypter.encryptJsonCredentialsFileWithKmsKey(kmsKeyId, jsonCredentialsFile.toPath()).bind()
+
+            val databaseCredentials =
+                secretsDecrypter.decryptJsonCredentialsFileWithKmsKey(
+                    encryptedJsonCredentialsFile.toPath(),
+                    kmsKeyId.some()
+                ).bind()
+            postgreSQLContainer
+                .withUsername(databaseCredentials.getOrThrow(DatabaseMessenger.DATABASE_CREDENTIALS_USERNAME_KEY))
+            postgreSQLContainer.withPassword(databaseCredentials.getOrThrow(DatabaseMessenger.DATABASE_CREDENTIALS_PASSWORD_KEY))
+
+            DatabaseMessenger.createDatabaseConnection(
+                DatabaseUrl(postgreSQLContainer.jdbcUrl),
+                databaseCredentials
+            )
+                .bind()
+        }
 
     protected val s3Client: S3Client by lazy {
         val s3Client = S3Client.builder()
@@ -60,4 +97,5 @@ abstract class S3AndPostgresContainers {
 
     protected fun createLockStackContainer(): LocalStackContainer = LocalStackContainer(LOCAL_STACK_IMAGE)
         .withServices(LocalStackContainer.Service.S3)
+        .withServices(LocalStackContainer.Service.KMS)
 }

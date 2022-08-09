@@ -5,10 +5,9 @@ import arrow.core.Option
 import arrow.core.Some
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
+import arrow.core.getOrElse
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.StringLabelValue
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import com.google.protobuf.Timestamp
 import java.time.Instant
@@ -28,16 +27,9 @@ fun Instant.toTimestamp(): Timestamp {
         .build()
 }
 
-suspend fun <A> Effect<PulpFictionRequestError, A>.getResultAndHandleErrors(): A {
-    return this.fold({ error: PulpFictionRequestError ->
-        throw error.toStatusException()
-    }
-    ) { it }
-}
-
-suspend fun <A> Effect<PulpFictionStartupError, A>.getResultAndThrowException(): A {
-    return this.fold({ error: PulpFictionStartupError ->
-        throw error
+suspend fun <A, B : PulpFictionError> Effect<B, A>.getResultAndThrowException(): A {
+    return this.fold({ error: B ->
+        throw error.processError()
     }
     ) { it }
 }
@@ -74,9 +66,6 @@ fun LocalDate.toYearMonthDay(): String = DateTimeFormatter.ISO_LOCAL_DATE.format
 fun String.toUUID(): Either<RequestParsingError, UUID> =
     Either.catch { UUID.fromString(this) }.mapLeft { RequestParsingError(it) }
 
-fun <A> A.whenThen(condition: (a: A) -> Boolean, operation: (a: A) -> A): A =
-    if (condition(this)) operation(this) else this
-
 fun Throwable.toLabelValue(): StringLabelValue = StringLabelValue(this.toString())
 
 fun <A> A.fluentPrintln(prepend: String = ""): A {
@@ -86,3 +75,9 @@ fun <A> A.fluentPrintln(prepend: String = ""): A {
 
 fun <A, B> Map<A, B>.getOrThrow(key: A): B =
     this.getOrElse(key) { throw java.lang.IllegalArgumentException("$key not found in map") }
+
+fun <A> A.whenThen(condition: (a: A) -> Boolean, operation: (a: A) -> A): A =
+    if (condition(this)) operation(this) else this
+
+fun <A, B> A.ifDefinedThen(maybeB: Option<B>, block: (a: A, b: B) -> A): A =
+    maybeB.map { block(this, it) }.getOrElse { this }

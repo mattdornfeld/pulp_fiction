@@ -7,6 +7,8 @@ sealed class PulpFictionError(msgMaybe: String?, causeMaybe: Throwable?) : Throw
     constructor(msg: String) : this(msg, null)
     constructor(cause: Throwable) : this(null, cause)
     constructor() : this(null, null)
+
+    abstract fun processError(): Throwable
 }
 
 sealed class PulpFictionStartupError(msgMaybe: String?, causeMaybe: Throwable?) :
@@ -14,6 +16,8 @@ sealed class PulpFictionStartupError(msgMaybe: String?, causeMaybe: Throwable?) 
     constructor(msg: String) : this(msg, null)
     constructor(cause: Throwable) : this(null, cause)
     constructor() : this(null, null)
+
+    override fun processError(): Throwable = this
 }
 
 sealed class PulpFictionRequestError(msgMaybe: String?, causeMaybe: Throwable?) :
@@ -23,6 +27,8 @@ sealed class PulpFictionRequestError(msgMaybe: String?, causeMaybe: Throwable?) 
     constructor() : this(null, null)
 
     abstract fun toStatusException(): StatusException
+
+    override fun processError(): Throwable = toStatusException()
 }
 
 class DatabaseError(cause: Throwable) : PulpFictionRequestError(cause) {
