@@ -89,7 +89,6 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
         private fun KmsClient.decryptAndHandleError(decryptRequest: DecryptRequest): Effect<PulpFictionStartupError, DecryptResponse> =
             effect {
                 try {
-                    println(1)
                     this@decryptAndHandleError.decrypt(decryptRequest)
                 } catch (cause: Throwable) {
                     shift(AwsError(cause))
