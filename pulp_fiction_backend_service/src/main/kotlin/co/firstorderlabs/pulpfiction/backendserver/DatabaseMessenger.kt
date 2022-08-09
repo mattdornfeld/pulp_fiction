@@ -43,6 +43,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.logS3Metrics
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseConnectionError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
+import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseUrl
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
@@ -74,6 +75,7 @@ import org.ktorm.entity.first
 import org.ktorm.entity.sortedBy
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import software.amazon.awssdk.services.s3.S3Client
+import java.nio.file.Path
 import java.util.UUID
 
 class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
@@ -81,6 +83,9 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     private val s3Messenger = S3Messenger(s3Client)
 
     companion object {
+        private val logger: StructuredLogger = StructuredLogger()
+        const val DATABASE_CREDENTIALS_USERNAME_KEY = "username"
+        const val DATABASE_CREDENTIALS_PASSWORD_KEY = "password"
         private suspend fun <A> effectWithDatabaseError(
             block: suspend arrow.core.continuations.EffectScope<PulpFictionRequestError>.() -> A
         ): Effect<PulpFictionRequestError, A> = effectWithError({ DatabaseError(it) }) { block(this) }
@@ -96,14 +101,16 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         }
 
         private suspend fun Database.Companion.connectAndHandleErrors(
-            url: String,
+            databaseUrl: DatabaseUrl,
             databaseCredentials: Map<String, String>,
         ): Effect<PulpFictionStartupError, Database> = effect {
             try {
-                Database.connect(
-                    url = url,
-                    user = databaseCredentials.getOrThrow("username"),
-                    password = databaseCredentials.getOrThrow("password"),
+                logger.withTag(databaseUrl).info("Connecting to database")
+
+                connect(
+                    url = databaseUrl.databaseUrl,
+                    user = databaseCredentials.getOrThrow(DATABASE_CREDENTIALS_USERNAME_KEY),
+                    password = databaseCredentials.getOrThrow(DATABASE_CREDENTIALS_PASSWORD_KEY),
                     dialect = PostgreSqlDialect(),
                 )
             } catch (cause: Throwable) {
@@ -120,15 +127,28 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             this@transactionToEffect.useTransaction { block(it) }
         }
 
-        fun createDatabaseConnection(): Effect<PulpFictionStartupError, Database> = effect {
-            val databaseCredentials = SecretsDecrypter()
-                .decryptJsonCredentialsFileWithKmsKey(DatabaseConfigs.ENCRYPTED_CREDENTIALS_FILE)
-                .bind()
-
+        fun createDatabaseConnection(
+            databaseUrl: DatabaseUrl,
+            databaseCredentials: Map<String, String>
+        ): Effect<PulpFictionStartupError, Database> = effect {
             Database
-                .connectAndHandleErrors(DatabaseConfigs.URL, databaseCredentials)
+                .connectAndHandleErrors(databaseUrl, databaseCredentials)
                 .bind()
         }
+
+        fun createDatabaseConnection(
+            databaseUrl: DatabaseUrl,
+            encryptedCredentialsFile: Path
+        ): Effect<PulpFictionStartupError, Database> = effect {
+            val databaseCredentials = SecretsDecrypter()
+                .decryptJsonCredentialsFileWithKmsKey(encryptedCredentialsFile)
+                .bind()
+
+            createDatabaseConnection(databaseUrl, databaseCredentials).bind()
+        }
+
+        fun createDatabaseConnection(): Effect<PulpFictionStartupError, Database> =
+            createDatabaseConnection(DatabaseConfigs.databaseUrl, DatabaseConfigs.ENCRYPTED_CREDENTIALS_FILE)
     }
 
     fun checkLoginSessionValid(loginSessionProto: PulpFictionProtos.LoginResponse.LoginSession): Effect<PulpFictionRequestError, Unit> =

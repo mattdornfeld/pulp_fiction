@@ -1,7 +1,10 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
+import arrow.core.None
+import arrow.core.Option
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
+import arrow.core.some
 import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
 import co.firstorderlabs.pulpfiction.backendserver.types.AwsError
 import co.firstorderlabs.pulpfiction.backendserver.types.IOError
@@ -10,6 +13,7 @@ import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.flatMap
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
+import co.firstorderlabs.pulpfiction.backendserver.utils.ifDefinedThen
 import co.firstorderlabs.pulpfiction.backendserver.utils.map
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -85,6 +89,7 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
         private fun KmsClient.decryptAndHandleError(decryptRequest: DecryptRequest): Effect<PulpFictionStartupError, DecryptResponse> =
             effect {
                 try {
+                    println(1)
                     this@decryptAndHandleError.decrypt(decryptRequest)
                 } catch (cause: Throwable) {
                     shift(AwsError(cause))
@@ -113,15 +118,16 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
             when (Mode.valueOf(args[0])) {
                 Mode.encrypt -> {
                     val credentialsFilePath = Paths.get(args[1])
-                    val keyId = args[2]
+                    val kmsKeyId = KmsKeyId(args[2])
                     SecretsDecrypter()
-                        .encryptJsonCredentialsFileWithKmsKey(KmsKeyId(keyId), credentialsFilePath)
+                        .encryptJsonCredentialsFileWithKmsKey(kmsKeyId, credentialsFilePath)
                         .getResultAndThrowException()
                 }
                 Mode.decrypt -> {
                     val encryptedCredentialsFilePath = Paths.get(args[1])
+                    val kmsKeyId = KmsKeyId(args[2])
                     val credentials = SecretsDecrypter()
-                        .decryptJsonCredentialsFileWithKmsKey(encryptedCredentialsFilePath)
+                        .decryptJsonCredentialsFileWithKmsKey(encryptedCredentialsFilePath, kmsKeyId.some())
                         .getResultAndThrowException()
                     println(credentials)
                 }
@@ -129,7 +135,10 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
         }
     }
 
-    fun decryptJsonCredentialsFileWithKmsKey(encryptedJsonCredentialsFilePath: Path): Effect<PulpFictionStartupError, Map<String, String>> =
+    fun decryptJsonCredentialsFileWithKmsKey(
+        encryptedJsonCredentialsFilePath: Path,
+        kmsKeyIdMaybe: Option<KmsKeyId> = None,
+    ): Effect<PulpFictionStartupError, Map<String, String>> =
         effect {
             val jsonCredentialsFileAsBytes = encryptedJsonCredentialsFilePath
                 .toByteArray()
@@ -140,6 +149,9 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
             val decryptRequest = DecryptRequest
                 .builder()
                 .ciphertextBlob(jsonCredentialsFileAsBytes)
+                .ifDefinedThen(
+                    kmsKeyIdMaybe
+                ) { decryptRequestBuilder, kmsKeyId -> decryptRequestBuilder.keyId(kmsKeyId.kmsKeyId) }
                 .build()
 
             logger

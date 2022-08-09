@@ -2,12 +2,9 @@ package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.Either
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
 import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.protos.pulpfiction.getUserRequest
@@ -36,7 +33,6 @@ import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
-import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import io.grpc.Status
 import io.grpc.StatusException
@@ -60,16 +56,16 @@ private typealias RequestAndResponseSuppliers = List<Tuple3<EndpointName, com.go
 internal class PulpFictionBackendServiceTest {
     companion object : S3AndPostgresContainers() {
         @Container
-        override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
+        override val localStackContainer: LocalStackContainer = createLockStackContainer()
 
         @Container
-        override val localStackContainer: LocalStackContainer = createLockStackContainer()
+        override val postgreSQLContainer: PostgreSQLContainer<Nothing> = createPostgreSQLContainer()
 
         @BeforeAll
         @JvmStatic
         override fun migrateDatabase() = super.migrateDatabase()
 
-        private val pulpFictionBackendService by lazy { PulpFictionBackendService(database, s3Client) }
+        private val pulpFictionBackendService by lazy(LazyThreadSafetyMode.PUBLICATION) { PulpFictionBackendService(database, s3Client) }
         private val s3Messenger by lazy { S3Messenger(s3Client) }
     }
 
@@ -115,6 +111,7 @@ internal class PulpFictionBackendServiceTest {
 
         return listOf(loginRequestWrongUser, loginRequestWrongPass)
     }
+
     private fun assertMetricsCorrect(
         countMetric: PulpFictionCounter,
         durationMetric: PulpFictionSummary,
@@ -334,8 +331,7 @@ internal class PulpFictionBackendServiceTest {
         runBlocking {
             val loginRequests = createFailingLoginRequests()
             val expectedExceptions = listOf(Status.NOT_FOUND.code, Status.UNAUTHENTICATED.code)
-            loginRequests.zip(expectedExceptions) {
-                loginRequest, expectedException ->
+            loginRequests.zip(expectedExceptions) { loginRequest, expectedException ->
                 Either.catch { pulpFictionBackendService.login(loginRequest) }
                     .assertTrue { it.isLeft() }
                     .mapLeft { error ->
@@ -361,11 +357,11 @@ internal class PulpFictionBackendServiceTest {
                     tupleOf(
                         EndpointName.createPost,
                         loginSession.generateRandomCreatePostRequest()
-                    ) { pulpFictionBackendService.createPost(it as CreatePostRequest) },
+                    ) { pulpFictionBackendService.createPost(it as PulpFictionProtos.CreatePostRequest) },
                     tupleOf(
                         EndpointName.getPost,
                         loginSession.generateRandomGetPostRequest()
-                    ) { pulpFictionBackendService.getPost(it as GetPostRequest) }
+                    ) { pulpFictionBackendService.getPost(it as PulpFictionProtos.GetPostRequest) }
                 )
 
             requestAndResponseSuppliers.forEach { requestAndResponseSupplier ->
@@ -401,7 +397,7 @@ internal class PulpFictionBackendServiceTest {
 
         postMetadata
             .assertEquals(loginSession.userId) { it.postCreatorId }
-            .assertEquals(PostState.CREATED) { it.postState }
+            .assertEquals(PulpFictionProtos.Post.PostState.CREATED) { it.postState }
             .assertTrue { it.createdAt.isWithinLast(100) }
 
         val getPostRequest = loginSession.buildGetPostRequest(postMetadata)
@@ -455,7 +451,7 @@ internal class PulpFictionBackendServiceTest {
         postMetadata
             .assertEquals(loginSession.userId) { it.postCreatorId }
             .assertTrue { postMetadata.createdAt.isWithinLast(100) }
-            .assertEquals(PostState.CREATED) { it.postState }
+            .assertEquals(PulpFictionProtos.Post.PostState.CREATED) { it.postState }
 
         val getPostRequest = loginSession.buildGetPostRequest(postMetadata)
         val post = pulpFictionBackendService.getPost(getPostRequest).post
