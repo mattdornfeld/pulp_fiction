@@ -8,8 +8,6 @@ import arrow.core.continuations.effect
 import arrow.core.getOrElse
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.StringLabelValue
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionError
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
-import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import com.google.protobuf.Timestamp
 import java.time.Instant
@@ -29,16 +27,9 @@ fun Instant.toTimestamp(): Timestamp {
         .build()
 }
 
-suspend fun <A> Effect<PulpFictionRequestError, A>.getResultAndHandleErrors(): A {
-    return this.fold({ error: PulpFictionRequestError ->
-        throw error.toStatusException()
-    }
-    ) { it }
-}
-
-suspend fun <A> Effect<PulpFictionStartupError, A>.getResultAndThrowException(): A {
-    return this.fold({ error: PulpFictionStartupError ->
-        throw error
+suspend fun <A, B : PulpFictionError> Effect<B, A>.getResultAndThrowException(): A {
+    return this.fold({ error: B ->
+        throw error.processError()
     }
     ) { it }
 }

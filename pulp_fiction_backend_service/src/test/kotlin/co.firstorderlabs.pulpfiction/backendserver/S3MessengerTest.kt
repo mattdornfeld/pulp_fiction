@@ -114,7 +114,7 @@ class S3MessengerTest {
             .generateRandomCreatePostRequest()
             .withRandomCreateImagePostRequest()
 
-        runBlockingEffect {
+        runBlockingEffect<PulpFictionRequestError, Unit> {
             val post = Post.fromRequest(UUID.randomUUID(), createPostRequest).bind()
             val imagePostDatum = ImagePostDatum.fromRequest(post, createPostRequest.createImagePostRequest)
             uploadObjectAndAssertCorrect(
@@ -137,7 +137,7 @@ class S3MessengerTest {
             .generateRandomCreatePostRequest()
             .withRandomCreateUserPostRequest()
 
-        runBlockingEffect {
+        runBlockingEffect<PulpFictionRequestError, Unit> {
             val post = Post.fromRequest(UUID.randomUUID(), createPostRequest).bind()
             val userPostDatum = UserPostDatum.fromRequest(post, createPostRequest.createUserPostRequest)
             uploadObjectAndAssertCorrect(

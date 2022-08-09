@@ -19,7 +19,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.EndpointName
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.logEndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
-import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndHandleErrors
+import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import org.ktorm.database.Database
 import software.amazon.awssdk.services.s3.S3Client
 
@@ -50,7 +50,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             }
         }
             .logEndpointMetrics(endpointName)
-            .getResultAndHandleErrors()
+            .getResultAndThrowException()
     }
 
     override suspend fun createUser(request: PulpFictionProtos.CreateUserRequest): PulpFictionProtos.CreateUserResponse {
@@ -66,7 +66,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             }
         }
             .logEndpointMetrics(endpointName)
-            .getResultAndHandleErrors()
+            .getResultAndThrowException()
     }
 
     override suspend fun login(request: PulpFictionProtos.LoginRequest): PulpFictionProtos.LoginResponse {
@@ -87,7 +87,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             }
         }
             .logEndpointMetrics(endpointName)
-            .getResultAndHandleErrors()
+            .getResultAndThrowException()
     }
 
     override suspend fun getPost(request: PulpFictionProtos.GetPostRequest): PulpFictionProtos.GetPostResponse {
@@ -105,7 +105,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             }
         }
             .logEndpointMetrics(endpointName)
-            .getResultAndHandleErrors()
+            .getResultAndThrowException()
     }
 
     override suspend fun getUser(request: PulpFictionProtos.GetUserRequest): PulpFictionProtos.GetUserResponse {

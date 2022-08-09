@@ -33,6 +33,7 @@ import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
+import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import io.grpc.Status
 import io.grpc.StatusException
@@ -220,7 +221,7 @@ internal class PulpFictionBackendServiceTest {
 
             s3Messenger
                 .getObject(userPost.userMetadata.avatarImageUrl)
-                .getResultAndHandleErrors()
+                .getResultAndThrowException()
                 .assertEquals(
                     "The user avatar stored in s3 should be the one passed in to the CreateUser endpoint",
                     createUserRequest.avatarJpg
@@ -409,7 +410,7 @@ internal class PulpFictionBackendServiceTest {
 
         s3Messenger
             .getObject(post.imagePost.imageUrl)
-            .getResultAndHandleErrors()
+            .getResultAndThrowException()
             .assertEquals(
                 "The imageJpg uploaded to s3 should equal the imageJpg in the create post request",
                 createPostRequest.createImagePostRequest.imageJpg
