@@ -1,6 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
+import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.continuations.either
@@ -51,12 +52,13 @@ interface User : Entity<User> {
     var email: String?
     var dateOfBirth: LocalDate?
 
-    fun toNonSensitiveUserMetadataProto(): UserMetadata {
+    fun toNonSensitiveUserMetadataProto(avatarImageS3KeyMaybe: Option<String> = None): UserMetadata {
         val user = this
         return userMetadata {
             this.userId = user.userId.toString()
             this.createdAt = user.createdAt.toTimestamp()
             this.displayName = user.currentDisplayName
+            avatarImageS3KeyMaybe.map { this.avatarImageUrl = it }
         }
     }
 

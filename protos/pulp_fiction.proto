@@ -118,7 +118,7 @@ message CreateUserRequest {
 }
 
 message GetUserResponse {
-  User userMetadata = 1;
+  User.UserMetadata userMetadata = 1;
 }
 
 message GetFeedRequest {

@@ -7,10 +7,12 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostResponse
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse
 import co.firstorderlabs.protos.pulpfiction.createPostResponse
 import co.firstorderlabs.protos.pulpfiction.createUserResponse
 import co.firstorderlabs.protos.pulpfiction.getPostResponse
+import co.firstorderlabs.protos.pulpfiction.getUserResponse
 import co.firstorderlabs.protos.pulpfiction.loginResponse
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.DatabaseOperation
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.logDatabaseMetrics
@@ -100,6 +102,23 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
 
             getPostResponse {
                 this.post = post
+            }
+        }
+            .logEndpointMetrics(endpointName)
+            .getResultAndHandleErrors()
+    }
+
+    override suspend fun getUser(request: PulpFictionProtos.GetUserRequest): PulpFictionProtos.GetUserResponse {
+        val endpointName = EndpointName.getUser
+        return effect<PulpFictionRequestError, GetUserResponse> {
+            checkLoginSessionValid(request.loginSession, endpointName).bind()
+
+            val userMetadata = databaseMessenger
+                .getPublicUserMetadata(request)
+                .logDatabaseMetrics(endpointName, DatabaseOperation.getUser)
+                .bind()
+            getUserResponse {
+                this.userMetadata = userMetadata
             }
         }
             .logEndpointMetrics(endpointName)

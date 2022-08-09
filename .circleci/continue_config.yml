@@ -39,7 +39,7 @@ commands:
       - run:
           name: "Get Docker Image Tag"
           command: |
-            echo 'export DOCKER_IMAGE_TAG=$(if [ ${CIRCLE_BRANCH} == "master" ]; then echo "latest"; else echo ${CIRCLE_BRANCH}; fi)' >> $BASH_ENV
+            echo 'export DOCKER_IMAGE_TAG=$(if [ ${CIRCLE_BRANCH} == "master" ]; then echo "latest"; else echo ${CIRCLE_BRANCH//\//-}; fi)' >> $BASH_ENV
             source $BASH_ENV
             echo "Setting DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
 

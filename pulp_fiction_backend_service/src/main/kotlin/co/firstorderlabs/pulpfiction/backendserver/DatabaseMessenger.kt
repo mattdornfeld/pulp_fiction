@@ -3,13 +3,16 @@ package co.firstorderlabs.pulpfiction.backendserver
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.getOrElse
+import arrow.core.toOption
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.post
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
@@ -65,7 +68,10 @@ import org.ktorm.dsl.select
 import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
 import org.ktorm.entity.add
+import org.ktorm.entity.filter
 import org.ktorm.entity.find
+import org.ktorm.entity.first
+import org.ktorm.entity.sortedBy
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import software.amazon.awssdk.services.s3.S3Client
 import java.util.UUID
@@ -310,13 +316,36 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         }
     }
 
+    private suspend fun getUserFromUserId(
+        userId: String
+    ): Effect<PulpFictionRequestError, User> = effect {
+        val uuid = userId.toUUID().bind()
+        database.users.find { it.userId eq uuid }
+            ?: shift(UserNotFoundError(userId))
+    }
+
+    suspend fun getPublicUserMetadata(
+        request: GetUserRequest
+    ): Effect<PulpFictionRequestError, UserMetadata> = effect {
+        val user = getUserFromUserId(request.userId).bind()
+
+        /* Get Most Recent UserPost */
+        val requestUserId = request.userId
+
+        val userPost = database.transactionToEffectCatchErrors {
+            database.userPostData
+                .filter { it.userId eq requestUserId.toUUID().bind() }
+                .sortedBy { it.createdAt.desc() }
+                .first()
+        }.bind()
+        val avatarImageS3KeyMaybe = userPost.avatarImageS3Key.toOption()
+        user.toNonSensitiveUserMetadataProto(avatarImageS3KeyMaybe)
+    }
+
     fun checkUserPasswordValid(
         request: LoginRequest
     ): Effect<PulpFictionRequestError, Boolean> = effect {
-        val uuid = request.userId.toUUID().bind()
-        val userLoginCandidate = database.users.find { it.userId eq uuid }
-            ?: shift(UserNotFoundError("User ${request.userId} not found"))
-
+        val userLoginCandidate = getUserFromUserId(request.userId).bind()
         val hashedPass = userLoginCandidate.hashedPassword
         val authenticated = Password.check(request.password, hashedPass).withBcrypt()
         if (!authenticated) {
