@@ -1,10 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
-import arrow.core.None
-import arrow.core.Option
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
-import arrow.core.some
 import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
 import co.firstorderlabs.pulpfiction.backendserver.types.AwsError
 import co.firstorderlabs.pulpfiction.backendserver.types.IOError
@@ -13,7 +10,6 @@ import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.flatMap
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
-import co.firstorderlabs.pulpfiction.backendserver.utils.ifDefinedThen
 import co.firstorderlabs.pulpfiction.backendserver.utils.map
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -126,7 +122,7 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
                     val encryptedCredentialsFilePath = Paths.get(args[1])
                     val kmsKeyId = KmsKeyId(args[2])
                     val credentials = SecretsDecrypter()
-                        .decryptJsonCredentialsFileWithKmsKey(encryptedCredentialsFilePath, kmsKeyId.some())
+                        .decryptJsonCredentialsFileWithKmsKey(kmsKeyId, encryptedCredentialsFilePath)
                         .getResultAndThrowException()
                     println(credentials)
                 }
@@ -135,8 +131,8 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
     }
 
     fun decryptJsonCredentialsFileWithKmsKey(
+        kmsKeyId: KmsKeyId,
         encryptedJsonCredentialsFilePath: Path,
-        kmsKeyIdMaybe: Option<KmsKeyId> = None,
     ): Effect<PulpFictionStartupError, Map<String, String>> =
         effect {
             val jsonCredentialsFileAsBytes = encryptedJsonCredentialsFilePath
@@ -148,9 +144,7 @@ class SecretsDecrypter(private val kmsClient: KmsClient) {
             val decryptRequest = DecryptRequest
                 .builder()
                 .ciphertextBlob(jsonCredentialsFileAsBytes)
-                .ifDefinedThen(
-                    kmsKeyIdMaybe
-                ) { decryptRequestBuilder, kmsKeyId -> decryptRequestBuilder.keyId(kmsKeyId.kmsKeyId) }
+                .keyId(kmsKeyId.kmsKeyId)
                 .build()
 
             logger

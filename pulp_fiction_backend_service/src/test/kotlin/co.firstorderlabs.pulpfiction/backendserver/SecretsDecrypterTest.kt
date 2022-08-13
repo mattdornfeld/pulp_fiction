@@ -1,6 +1,5 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
-import arrow.core.some
 import co.firstorderlabs.pulpfiction.backendserver.SecretsDecrypter.Companion.deserializeJsonToMap
 import co.firstorderlabs.pulpfiction.backendserver.testutils.KmsContainer
 import co.firstorderlabs.pulpfiction.backendserver.testutils.ResourceFile
@@ -30,7 +29,7 @@ class SecretsDecrypterTest {
                 secretsDecrypter.encryptJsonCredentialsFileWithKmsKey(kmsKeyId, jsonCredentialsFile.toPath()).bind()
             val credentials =
                 secretsDecrypter
-                    .decryptJsonCredentialsFileWithKmsKey(encryptedJsonCredentialsFile.toPath(), kmsKeyId.some())
+                    .decryptJsonCredentialsFileWithKmsKey(kmsKeyId, encryptedJsonCredentialsFile.toPath())
                     .bind()
             val expectedCredentials = jsonCredentialsFile.deserializeJsonToMap().bind()
             expectedCredentials.assertEquals(credentials)

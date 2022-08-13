@@ -2,7 +2,6 @@ package co.firstorderlabs.pulpfiction.backendserver.testutils
 
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
-import arrow.core.some
 import co.firstorderlabs.pulpfiction.backendserver.DatabaseMessenger
 import co.firstorderlabs.pulpfiction.backendserver.MigrateDatabase
 import co.firstorderlabs.pulpfiction.backendserver.SecretsDecrypter
@@ -58,8 +57,8 @@ abstract class S3AndPostgresContainers {
 
             val databaseCredentials =
                 secretsDecrypter.decryptJsonCredentialsFileWithKmsKey(
-                    encryptedJsonCredentialsFile.toPath(),
-                    kmsKeyId.some()
+                    kmsKeyId,
+                    encryptedJsonCredentialsFile.toPath()
                 ).bind()
             postgreSQLContainer
                 .withUsername(databaseCredentials.getOrThrow(DatabaseMessenger.DATABASE_CREDENTIALS_USERNAME_KEY))

@@ -141,7 +141,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             encryptedCredentialsFile: Path
         ): Effect<PulpFictionStartupError, Database> = effect {
             val databaseCredentials = SecretsDecrypter()
-                .decryptJsonCredentialsFileWithKmsKey(encryptedCredentialsFile)
+                .decryptJsonCredentialsFileWithKmsKey(DatabaseConfigs.KMS_KEY_ID, encryptedCredentialsFile)
                 .bind()
 
             createDatabaseConnection(databaseUrl, databaseCredentials).bind()

@@ -16,6 +16,10 @@ resource "aws_ecs_task_definition" "pulp_fiction_backend_service" {
         {
           name  = "DATABASE_ENDPOINT"
           value = aws_rds_cluster.pulp_fiction_backend_service.endpoint
+        },
+        {
+          name  = "KMS_KEY_ID"
+          value = aws_kms_key.pulp_fiction_backend_service_secrets_encryption.id
         }
       ]
       portMappings = [
