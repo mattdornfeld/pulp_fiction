@@ -11,10 +11,7 @@ locals {
 
 resource "aws_db_subnet_group" "pulp_fiction_backend_service" {
   name = "pulp_fiction_backend_service"
-  subnet_ids = [
-    aws_subnet.private_d.id,
-    aws_subnet.private_e.id,
-  ]
+  subnet_ids = local.private_subnet_ids
 }
 
 resource "aws_rds_cluster" "pulp_fiction_backend_service" {

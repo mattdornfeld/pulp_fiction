@@ -44,14 +44,14 @@ resource "aws_subnet" "private_e" {
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.pulp_fiction.id
-  tags = {
+  tags   = {
     "Name" = "public"
   }
 }
 
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.pulp_fiction.id
-  tags = {
+  tags   = {
     "Name" = "private"
   }
 }
@@ -114,4 +114,16 @@ resource "aws_security_group" "egress_all" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+locals {
+  public_subnet_ids = [
+    aws_subnet.public_d.id,
+    aws_subnet.public_e.id,
+  ]
+
+  private_subnet_ids = [
+    aws_subnet.private_d.id,
+    aws_subnet.private_e.id,
+  ]
 }
