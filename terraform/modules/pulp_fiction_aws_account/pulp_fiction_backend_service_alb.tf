@@ -16,7 +16,7 @@ resource "aws_alb_target_group" "pulp_fiction_backend_service" {
   target_type      = "ip"
 
   health_check {
-    path = "/grpc.health.v1.Health/Check"
+    path    = "/grpc.health.v1.Health/Check"
     matcher = "0-99"
   }
 }

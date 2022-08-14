@@ -10,7 +10,7 @@ locals {
 }
 
 resource "aws_db_subnet_group" "pulp_fiction_backend_service" {
-  name = "pulp_fiction_backend_service"
+  name       = "pulp_fiction_backend_service"
   subnet_ids = local.private_subnet_ids
 }
 
