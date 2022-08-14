@@ -69,10 +69,6 @@ resource "aws_ecs_service" "pulp_fiction_backend_service" {
     weight            = 100
   }
 
-#  deployment_controller {
-#    type = "CODE_DEPLOY"
-#  }
-
   load_balancer {
     target_group_arn = aws_alb_target_group.pulp_fiction_backend_service.arn
     container_name   = local.pulp_fiction_backend_service_container_name

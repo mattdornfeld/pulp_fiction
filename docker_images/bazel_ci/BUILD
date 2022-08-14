@@ -26,21 +26,19 @@ install_pkgs(
 )
 
 file_container_layer(
-    name = "bazelisk",
-    srcs = ["@bazelisk_linux_amd64//file"],
-    package_dir = "/usr/local/bin",
-)
-
-file_container_layer(
-    name = "login_to_ecr",
-    srcs = ["//sbin:login_to_ecr"],
+    name = "bin_files",
+    srcs = [
+        "//sbin:login_to_ecr",
+        "//sbin:update_ecs_service",
+        "@bazelisk_linux_amd64//file",
+    ],
     package_dir = "/usr/local/bin",
 )
 
 container_image(
     name = "build_image",
     base = ":install_packages",
-    layers = [":bazelisk", ":login_to_ecr"],
+    layers = [":bin_files"],
     visibility = ["//visibility:public"],
 )
 

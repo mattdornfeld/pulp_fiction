@@ -1,0 +1,7 @@
+#!/bin/bash
+aws ecs update-service \
+  --region us-east-1 \
+  --cluster "${ECS_CLUSTER_NAME}" \
+  --service "${ECS_SERVICE_NAME}" \
+  --force-new-deployment \
+  --no-cli-pager
