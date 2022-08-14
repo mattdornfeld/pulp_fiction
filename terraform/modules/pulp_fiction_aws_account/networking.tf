@@ -115,3 +115,15 @@ resource "aws_security_group" "egress_all" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+locals {
+  public_subnet_ids = [
+    aws_subnet.public_d.id,
+    aws_subnet.public_e.id,
+  ]
+
+  private_subnet_ids = [
+    aws_subnet.private_d.id,
+    aws_subnet.private_e.id,
+  ]
+}

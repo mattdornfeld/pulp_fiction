@@ -27,6 +27,12 @@ load(
     "junit5_tests",
 )
 
+#load(
+#    "//rules:shell.bzl",
+#    "sh_binary"
+#)
+
+
 MAIN_SRC_FILES = ["src/main/kotlin/**/*.kt"]
 TEST_SRC_FILES = ["src/test/kotlin/**/*.kt"]
 SRC_FILES = MAIN_SRC_FILES + TEST_SRC_FILES
@@ -36,12 +42,21 @@ FORMAT_FILES = [f for f in glob(SRC_FILES) if "src/main/kotlin/co/firstorderlabs
 
 kt_jvm_proto_library(
     name = "build_kotlin_protos",
-    deps = ["//protos:pulp_fiction_proto"],
+    deps = [
+        "//protos:pulp_fiction_proto",
+        "//protos:health_proto",
+    ],
 )
 
 kt_jvm_grpc_library(
-    name = "build_kotlin_grpc",
+    name = "build_kotlin_grpc_pulp_fiction_service",
     srcs = ["//protos:pulp_fiction_proto"],
+    deps = [":build_kotlin_protos"],
+)
+
+kt_jvm_grpc_library(
+    name = "build_kotlin_grpc_health_service",
+    srcs = ["//protos:health_proto"],
     deps = [":build_kotlin_protos"],
 )
 
@@ -54,7 +69,8 @@ kt_jvm_library(
     name = "pulp_fiction_backend_service_lib",
     srcs = glob(MAIN_SRC_FILES),
     deps = [
-        ":build_kotlin_grpc",
+        ":build_kotlin_grpc_health_service",
+        ":build_kotlin_grpc_pulp_fiction_service",
         ":build_kotlin_protos",
         "@maven//:com_fasterxml_jackson_core_jackson_annotations",
         "@maven//:com_fasterxml_jackson_core_jackson_databind",
@@ -133,4 +149,13 @@ java_binary(
         ":pulp_fiction_backend_service_lib",
     ],
     visibility = ["//visibility:public"],
+)
+
+sh_binary(
+    name = "update_ecs_pulp_fiction_backend_service",
+    srcs = ["//sbin:update_ecs_service"],
+    env = {
+        "ECS_CLUSTER_NAME": "pulp_fiction",
+        "ECS_SERVICE_NAME": "pulp_fiction_backend_service",
+    },
 )

@@ -27,6 +27,7 @@ class PulpFictionBackendServer(private val port: Int) {
     private val server = ServerBuilder
         .forPort(port)
         .addService(createPulpFictionBackendService())
+        .addService(HealthCheckService())
         .build()
 
     private fun start(): PulpFictionBackendServer {

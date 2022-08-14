@@ -1,3 +1,8 @@
+locals {
+  pulp_fiction_backend_service_container_name = "pulp_fiction_backend_service"
+  pulp_fiction_backend_service_container_port = 9090
+}
+
 resource "aws_ecs_task_definition" "pulp_fiction_backend_service" {
   family                   = "pulp_fiction_backend_service"
   requires_compatibilities = ["FARGATE"]
@@ -8,7 +13,7 @@ resource "aws_ecs_task_definition" "pulp_fiction_backend_service" {
   task_role_arn            = aws_iam_role.pulp_fiction_backend_service_task_role.arn
   container_definitions = jsonencode([
     {
-      name      = "pulp_fiction_backend_service"
+      name      = local.pulp_fiction_backend_service_container_name
       image     = "146956608205.dkr.ecr.us-east-1.amazonaws.com/pulp_fiction/backend_service"
       essential = true
 
@@ -24,8 +29,8 @@ resource "aws_ecs_task_definition" "pulp_fiction_backend_service" {
       ]
       portMappings = [
         {
-          containerPort = 9090
-          hostPort      = 9090
+          containerPort = local.pulp_fiction_backend_service_container_port
+          hostPort      = local.pulp_fiction_backend_service_container_port
         }
       ]
 
@@ -53,17 +58,20 @@ resource "aws_ecs_service" "pulp_fiction_backend_service" {
     security_groups = [
       aws_security_group.egress_all.id,
       aws_security_group.pulp_fiction_backend_service.id,
+      aws_security_group.pulp_fiction_backend_service_ingress.id,
     ]
-    subnets = [
-      aws_subnet.private_d.id,
-      aws_subnet.private_e.id,
-    ]
+    subnets = local.private_subnet_ids
   }
 
   capacity_provider_strategy {
-    # forces replacement
     base              = 1
     capacity_provider = "FARGATE"
     weight            = 100
+  }
+
+  load_balancer {
+    target_group_arn = aws_alb_target_group.pulp_fiction_backend_service.arn
+    container_name   = local.pulp_fiction_backend_service_container_name
+    container_port   = local.pulp_fiction_backend_service_container_port
   }
 }

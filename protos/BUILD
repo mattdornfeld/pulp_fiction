@@ -8,3 +8,9 @@ proto_library(
         "@com_google_protobuf//:timestamp_proto",
     ],
 )
+
+proto_library(
+    name = "health_proto",
+    srcs = ["health.proto"],
+    visibility = ["//visibility:public"],
+)
