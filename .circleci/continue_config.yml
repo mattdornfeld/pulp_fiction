@@ -140,9 +140,9 @@ jobs:
       - run_command_in_docker:
           command_name: Run Tests and Build Image
           command: |
-            "login_to_ecr && \
-            bazel test //pulp_fiction_backend_service/... && \
-            bazel run --define=DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} //docker_images/pulp_fiction_backend_service:push_image"
+            "bazel run //docker_images:login_to_ecr && \
+             bazel test //pulp_fiction_backend_service/... && \
+             bazel run --define=DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} //docker_images/pulp_fiction_backend_service:push_image"
 
   build_and_deploy_backend_service:
     working_directory: /home/circleci/app
@@ -152,11 +152,14 @@ jobs:
       - checkout
       - login_to_ecr
       - run_command_in_docker:
-          command_name: Build Image and Update Service
+          command_name: Build Image
           command: |
-            "login_to_ecr && \
-            bazel run --define=DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} //docker_images/pulp_fiction_backend_service:push_image && \
-            ECS_CLUSTER_NAME=pulp_fiction ECS_SERVICE_NAME=pulp_fiction_backend_service update_ecs_service"
+            "bazel run //docker_images:login_to_ecr && \
+             bazel run --define=DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG} //docker_images/pulp_fiction_backend_service:push_image"
+      - run_command_in_docker:
+          command_name: Update ECS Service
+          command: |
+              "bazel run //pulp_fiction_backend_service:update_ecs_pulp_fiction_backend_service"
 
 workflows:
   build_bazel_ci_image:
@@ -188,7 +191,7 @@ workflows:
       - build_and_test_backend_service:
           filters:
             branches:
-              only:
+              ignore:
                 - master
 
   build_and_deploy_backend_service:
@@ -197,5 +200,5 @@ workflows:
       - build_and_deploy_backend_service:
           filters:
             branches:
-              ignore:
+              only:
                 - master

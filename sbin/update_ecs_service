@@ -1,7 +1,16 @@
 #!/bin/bash
-aws ecs update-service \
-  --region us-east-1 \
-  --cluster "${ECS_CLUSTER_NAME}" \
-  --service "${ECS_SERVICE_NAME}" \
-  --force-new-deployment \
-  --no-cli-pager
+set -e
+
+ARGS="--region us-east-1 \
+  --cluster ${ECS_CLUSTER_NAME} \
+  --service ${ECS_SERVICE_NAME} \
+  --force-new-deployment"
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  ARGS="${ARGS} --no-cli-pager"
+fi
+
+CMD="aws ecs update-service ${ARGS}"
+echo "${CMD}"
+eval "${CMD}"
+echo "Service ${ECS_SERVICE_NAME} in cluster ${ECS_CLUSTER_NAME} is updating with latest image"

@@ -23,7 +23,7 @@ container_image(
         ":pulp_fiction_backend_service_database_credentials_json_encrypted"
         ],
     workdir = "/app",
-    cmd = "java -jar pulp_fiction_backend_service_deploy.jar",
+    cmd = "java  -jar pulp_fiction_backend_service_deploy.jar",
     visibility = ["//visibility:public"],
 )
 

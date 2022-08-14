@@ -27,6 +27,12 @@ load(
     "junit5_tests",
 )
 
+#load(
+#    "//rules:shell.bzl",
+#    "sh_binary"
+#)
+
+
 MAIN_SRC_FILES = ["src/main/kotlin/**/*.kt"]
 TEST_SRC_FILES = ["src/test/kotlin/**/*.kt"]
 SRC_FILES = MAIN_SRC_FILES + TEST_SRC_FILES
@@ -143,4 +149,13 @@ java_binary(
         ":pulp_fiction_backend_service_lib",
     ],
     visibility = ["//visibility:public"],
+)
+
+sh_binary(
+    name = "update_ecs_pulp_fiction_backend_service",
+    srcs = ["//sbin:update_ecs_service"],
+    env = {
+        "ECS_CLUSTER_NAME": "pulp_fiction",
+        "ECS_SERVICE_NAME": "pulp_fiction_backend_service",
+    },
 )
