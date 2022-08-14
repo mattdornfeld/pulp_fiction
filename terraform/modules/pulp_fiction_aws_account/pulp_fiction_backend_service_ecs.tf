@@ -58,6 +58,7 @@ resource "aws_ecs_service" "pulp_fiction_backend_service" {
     security_groups  = [
       aws_security_group.egress_all.id,
       aws_security_group.pulp_fiction_backend_service.id,
+      aws_security_group.pulp_fiction_backend_service_ingress.id,
     ]
     subnets = local.private_subnet_ids
   }
@@ -67,6 +68,10 @@ resource "aws_ecs_service" "pulp_fiction_backend_service" {
     capacity_provider = "FARGATE"
     weight            = 100
   }
+
+#  deployment_controller {
+#    type = "CODE_DEPLOY"
+#  }
 
   load_balancer {
     target_group_arn = aws_alb_target_group.pulp_fiction_backend_service.arn

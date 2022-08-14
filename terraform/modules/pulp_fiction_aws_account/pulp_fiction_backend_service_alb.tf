@@ -14,6 +14,11 @@ resource "aws_alb_target_group" "pulp_fiction_backend_service" {
   protocol_version = "GRPC"
   vpc_id           = aws_vpc.pulp_fiction.id
   target_type      = "ip"
+
+  health_check {
+    path = "/grpc.health.v1.Health/Check"
+    matcher = "0-99"
+  }
 }
 
 resource "aws_alb_listener" "pulp_fiction_https" {

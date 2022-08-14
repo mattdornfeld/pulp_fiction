@@ -4,6 +4,21 @@ resource "aws_security_group" "pulp_fiction_backend_service" {
   vpc_id      = aws_vpc.pulp_fiction.id
 }
 
+resource "aws_security_group" "pulp_fiction_backend_service_ingress" {
+  name        = "pulp_fiction_backend_service_ingress"
+  description = "Security group for pulp_fiction_backend_service"
+  vpc_id      = aws_vpc.pulp_fiction.id
+
+  ingress {
+    description     = "Allows traffic from load balancer to pulp_fiction_backend_service"
+    protocol        = "tcp"
+    from_port       = local.pulp_fiction_backend_service_container_port
+    to_port         = local.pulp_fiction_backend_service_container_port
+    security_groups = [aws_security_group.pulp_fiction_backend_service_alb.id]
+  }
+}
+
+
 resource "aws_security_group" "pulp_fiction_backend_service_aurora" {
   name        = "pulp_fiction_backend_service_aurora"
   description = "Allows inbound access from the pulp_fiction_backend_service to its database"
@@ -43,8 +58,8 @@ resource "aws_security_group" "pulp_fiction_backend_service_alb" {
   egress {
     description     = "Allows traffic from load balancer to pulp_fiction_backend_service"
     protocol        = "tcp"
-    from_port       = 9090
-    to_port         = 9090
+    from_port       = local.pulp_fiction_backend_service_container_port
+    to_port         = local.pulp_fiction_backend_service_container_port
     security_groups = [aws_security_group.pulp_fiction_backend_service.id]
   }
 }
