@@ -1,7 +1,7 @@
 BAZEL=bazel
 
 build_protos:
-	${BAZEL} build :build_kotlin_grpc
+	${BAZEL} build :build_kotlin_grpc_pulp_fiction_service :build_kotlin_grpc_health_service
 
 build_jar:
 	${BAZEL} build :pulp_fiction_backend_service_deploy.jar
