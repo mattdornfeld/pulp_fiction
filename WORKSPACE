@@ -89,7 +89,7 @@ spm_repositories(
         ),
         spm_pkg(
             "https://github.com/pointfreeco/swift-composable-architecture.git",
-            exact_version = "0.34.0",
+            exact_version = "0.39.1",
             products = ["ComposableArchitecture"],
         ),
     ],
