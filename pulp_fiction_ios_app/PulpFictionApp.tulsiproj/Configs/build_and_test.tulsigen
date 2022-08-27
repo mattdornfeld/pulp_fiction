@@ -1,0 +1,135 @@
+{
+  "additionalFilePaths" : [
+    "pulp_fiction_ios_app/BUILD"
+  ],
+  "buildTargets" : [
+    "//pulp_fiction_ios_app:build_app",
+    "//pulp_fiction_ios_app:test_unit"
+  ],
+  "optionSet" : {
+    "BazelBuildOptionsDebug" : {
+      "p" : "$(inherited)"
+    },
+    "BazelBuildOptionsRelease" : {
+      "p" : "$(inherited)"
+    },
+    "BazelBuildStartupOptionsDebug" : {
+      "p" : "$(inherited)"
+    },
+    "BazelBuildStartupOptionsRelease" : {
+      "p" : "$(inherited)"
+    },
+    "BuildActionPostActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "BuildActionPreActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "CommandlineArguments" : {
+      "p" : "$(inherited)"
+    },
+    "EnvironmentVariables" : {
+      "p" : "$(inherited)"
+    },
+    "LaunchActionPostActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "LaunchActionPreActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "ProjectGenerationBazelStartupOptions" : {
+      "p" : "$(inherited)"
+    },
+    "TestActionPostActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "TestActionPreActionScript" : {
+      "p" : "$(inherited)"
+    }
+  },
+  "projectName" : "PulpFictionApp",
+  "sourceFilters" : [
+    "bazel-out",
+    "bazel-out/ios-x86_64-min15.0-applebin_ios-ios_x86_64-dbg-ST-7d4ed54d38ca",
+    "bazel-out/ios-x86_64-min15.0-applebin_ios-ios_x86_64-dbg-ST-7d4ed54d38ca/bin",
+    "bazel-out/ios-x86_64-min15.0-applebin_ios-ios_x86_64-dbg-ST-7d4ed54d38ca/bin/external",
+    "bazel-out/ios-x86_64-min15.0-applebin_ios-ios_x86_64-dbg-ST-7d4ed54d38ca/bin/external/swift_pkgs",
+    "bazel-out/ios-x86_64-min15.0-applebin_ios-ios_x86_64-dbg-ST-7d4ed54d38ca/bin/external/swift_pkgs/spm_build",
+    "bazel-out/ios-x86_64-min15.0-applebin_ios-ios_x86_64-dbg-ST-7d4ed54d38ca/bin/external/swift_pkgs/spm_build/x86_64-apple-macosx",
+    "bazel-out/ios-x86_64-min15.0-applebin_ios-ios_x86_64-dbg-ST-7d4ed54d38ca/bin/external/swift_pkgs/spm_build/x86_64-apple-macosx/release",
+    "bazel-out/ios-x86_64-min15.0-applebin_ios-ios_x86_64-dbg-ST-7d4ed54d38ca/bin/external/swift_pkgs/spm_build/x86_64-apple-macosx/release/SQLiteObjc.build",
+    "external",
+    "external/bazel_build_rules_cc",
+    "external/bazel_build_rules_cc/cc",
+    "external/bazel_build_rules_cc/cc/private",
+    "external/bazel_build_rules_cc/cc/private/rules_impl",
+    "external/bazel_skylib",
+    "external/bazel_skylib/lib",
+    "external/bazel_skylib/rules",
+    "external/bazel_tools",
+    "external/bazel_tools/tools",
+    "external/bazel_tools/tools/build_defs",
+    "external/bazel_tools/tools/build_defs/cc",
+    "external/bazel_tools/tools/cpp",
+    "external/bazel_tools/tools/python",
+    "external/bazel_tools/tools/python/private",
+    "external/build_bazel_apple_support",
+    "external/build_bazel_apple_support/lib",
+    "external/build_bazel_apple_support/rules",
+    "external/build_bazel_rules_apple",
+    "external/build_bazel_rules_apple/apple",
+    "external/build_bazel_rules_apple/apple/internal",
+    "external/build_bazel_rules_apple/apple/internal/aspects",
+    "external/build_bazel_rules_apple/apple/internal/partials",
+    "external/build_bazel_rules_apple/apple/internal/partials/support",
+    "external/build_bazel_rules_apple/apple/internal/providers",
+    "external/build_bazel_rules_apple/apple/internal/resource_actions",
+    "external/build_bazel_rules_apple/apple/internal/testing",
+    "external/build_bazel_rules_apple/apple/internal/utils",
+    "external/build_bazel_rules_apple/apple/testing",
+    "external/build_bazel_rules_apple/apple/testing/default_runner",
+    "external/build_bazel_rules_swift",
+    "external/build_bazel_rules_swift/swift",
+    "external/build_bazel_rules_swift/swift/internal",
+    "external/cgrindel_bazel_starlib",
+    "external/cgrindel_bazel_starlib/updatesrc",
+    "external/cgrindel_bazel_starlib/updatesrc/private",
+    "external/cgrindel_rules_spm",
+    "external/cgrindel_rules_spm/spm",
+    "external/cgrindel_rules_spm/spm/private",
+    "external/cgrindel_rules_spm/spm/private/modulemap_parser",
+    "external/cgrindel_rules_swiftformat",
+    "external/cgrindel_rules_swiftformat/swiftformat",
+    "external/cgrindel_rules_swiftformat/swiftformat/internal",
+    "external/com_github_protocolbuffers_protobuf",
+    "external/com_github_protocolbuffers_protobuf/src",
+    "external/com_github_protocolbuffers_protobuf/src/google",
+    "external/com_github_protocolbuffers_protobuf/src/google/protobuf",
+    "external/rules_cc",
+    "external/rules_cc/cc",
+    "external/rules_java",
+    "external/rules_java/java",
+    "external/rules_proto",
+    "external/rules_proto/proto",
+    "external/rules_proto/proto/private",
+    "external/rules_proto/proto/private/rules",
+    "external/rules_python",
+    "external/rules_python/python",
+    "external/rules_python/python/private",
+    "external/swift_pkgs",
+    "external/swift_pkgs/SQLite.swift",
+    "external/swift_pkgs/combine-schedulers",
+    "external/swift_pkgs/swift-case-paths",
+    "external/swift_pkgs/swift-collections",
+    "external/swift_pkgs/swift-composable-architecture",
+    "external/swift_pkgs/swift-custom-dump",
+    "external/swift_pkgs/swift-identified-collections",
+    "external/swift_pkgs/swift-log",
+    "external/swift_pkgs/xctest-dynamic-overlay",
+    "protos",
+    "pulp_fiction_ios_app",
+    "pulp_fiction_ios_app/PulpFictionApp",
+    "pulp_fiction_ios_app/PulpFictionApp/Models",
+    "pulp_fiction_ios_app/PulpFictionTests"
+  ]
+}

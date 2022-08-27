@@ -68,3 +68,10 @@ def pulp_fiction_dependencies():
         type = "tar.gz",
         strip_prefix = "jdreaver-rules_terraform-e460bef"
     )
+    TULSI_COMMIT_HASH = "518f18da4948192c72074e07fa1dfe15858d40f4"
+    http_archive(
+        name = "tulsi",
+        url = "https://github.com/bazelbuild/tulsi/archive/518f18da4948192c72074e07fa1dfe15858d40f4.tar.gz",
+        strip_prefix = "tulsi-518f18da4948192c72074e07fa1dfe15858d40f4",
+        sha256 = "92c89fcabfefc313dafea1cbc96c9f68d6f2025f2436ee11f7a4e4eb640fa151",
+    )
