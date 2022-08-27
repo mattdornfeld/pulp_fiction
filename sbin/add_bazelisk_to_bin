@@ -1,0 +1,6 @@
+#!/bin/bash
+FILE_DIRECTORY=$(dirname "$0")
+BAZELISK_SRC_FILE="${FILE_DIRECTORY}/bazelisk-darwin-amd64-1.12.2"
+BAZELISK_DEST_FILE="/usr/local/bin/bazel"
+echo "Copying ${BAZELISK_SRC_FILE} to ${BAZELISK_DEST_FILE}"
+cp "${BAZELISK_SRC_FILE}" ${BAZELISK_DEST_FILE}
