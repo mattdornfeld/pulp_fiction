@@ -1,6 +1,6 @@
 *.idea
 *.ijwb
-*.tulsiproj
+*.tulsiconf-user
 *.xcodeproj
 .DS_Store
 bazel-app
