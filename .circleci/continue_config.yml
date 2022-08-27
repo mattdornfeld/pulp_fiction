@@ -13,6 +13,10 @@ parameters:
     type: boolean
     default: false
 
+  should_build_and_test_ios_app:
+    type: boolean
+    default: false
+
 commands:
   login_to_ecr:
     description: "Login to the ECR Docker registry"
@@ -161,6 +165,17 @@ jobs:
           command: |
               "bazel run //pulp_fiction_backend_service:update_ecs_pulp_fiction_backend_service"
 
+  build_and_test_ios_app:
+    macos:
+      xcode: 13.3.1
+    steps:
+      - checkout
+      - run:
+          name: Build and Test iOS App
+          command: |
+            ./sbin/add_bazelisk_to_bin
+            bazel test //pulp_fiction_ios_app/... --apple_platform_type=ios --test_output=all
+
 workflows:
   build_bazel_ci_image:
     when: << pipeline.parameters.should_build_bazel_ci_image >>
@@ -201,4 +216,13 @@ workflows:
           filters:
             branches:
               only:
+                - master
+
+  build_and_test_ios_app:
+    when: << pipeline.parameters.should_build_and_test_ios_app >>
+    jobs:
+      - build_and_test_ios_app:
+          filters:
+            branches:
+              ignore:
                 - master
