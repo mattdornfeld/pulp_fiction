@@ -4,7 +4,7 @@ build_app:
 	${BAZEL} build :build_app --apple_platform_type=ios
 
 build_protos:
-	${BAZEL} build :build_swift_protos --apple_platform_type=ios
+	${BAZEL} build //protos:pulp_fiction_grpc_stubs_swift --apple_platform_type=ios
 
 build_source:
 	${BAZEL} build :build_source --apple_platform_type=ios
@@ -23,3 +23,6 @@ test_all:
 
 test_unit:
 	${BAZEL} test :test_unit --apple_platform_type=ios --test_output=all
+
+tulsi:
+	${BAZEL} run @tulsi//:tulsi
