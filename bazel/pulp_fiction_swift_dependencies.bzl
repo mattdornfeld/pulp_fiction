@@ -30,7 +30,20 @@ def pulp_fiction_swift_dependencies():
                 name = "Bow",
                 url = "https://github.com/bow-swift/bow.git",
                 exact_version = "0.8.0",
-                products = ["Bow"],
+                products = ["Bow", "BowEffects"],
+            ),
+            spm_pkg(
+                url = "https://github.com/grpc/grpc-swift.git",
+                exact_version = "1.7.3",
+                products = ["GRPC"],
             ),
         ],
     )
+
+#    http_archive(
+#        name = "com_github_grpc_grpc_swift",
+#        urls = ["https://github.com/grpc/grpc-swift/archive/1.7.3.tar.gz"],
+#        sha256 = "833a150bdebb8ec0282fd91761aec0705a9b05645de42619b60fb6b9ec04b786",
+#        strip_prefix = "grpc-swift-1.7.3/",
+#        build_file = "@build_bazel_rules_swift//third_party:com_github_grpc_grpc_swift/BUILD.overlay",
+#    )

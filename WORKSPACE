@@ -17,6 +17,12 @@ load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
 container_deps()
 
 load(
+    "@build_bazel_rules_apple//apple:repositories.bzl",
+    "apple_rules_dependencies",
+)
+apple_rules_dependencies()
+
+load(
     "@build_bazel_rules_swift//swift:repositories.bzl",
     "swift_rules_dependencies",
     )
@@ -27,6 +33,12 @@ load(
     "swift_rules_extra_dependencies",
 )
 swift_rules_extra_dependencies()
+
+load(
+    "@build_bazel_apple_support//lib:repositories.bzl",
+    "apple_support_dependencies",
+)
+apple_support_dependencies()
 
 # The build breaks if the rules_proto http_archive is put into repositories.bzl so it's included here
 load(
@@ -53,18 +65,6 @@ load(
     )
 rules_proto_dependencies()
 rules_proto_toolchains()
-
-load(
-    "@build_bazel_rules_apple//apple:repositories.bzl",
-    "apple_rules_dependencies",
-)
-apple_rules_dependencies()
-
-load(
-    "@build_bazel_apple_support//lib:repositories.bzl",
-    "apple_support_dependencies",
-)
-apple_support_dependencies()
 
 load(
     "//bazel:pulp_fiction_swift_dependencies.bzl",
