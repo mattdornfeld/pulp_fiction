@@ -1,5 +1,5 @@
 load("@build_bazel_rules_apple//apple:ios.bzl", "ios_application", "ios_unit_test")
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library", "swift_proto_library")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 load("@cgrindel_rules_swiftformat//swiftformat:defs.bzl", "swiftformat_pkg", "swiftformat_library", "swiftformat_format", "swiftformat_test")
 
 platform(
@@ -9,21 +9,18 @@ platform(
     ],
 )
 
-swift_proto_library(
-    name = "build_swift_protos",
-    deps = ["//protos:pulp_fiction_proto"],
-)
-
 swift_library(
     name = "build_source",
     srcs = glob([
         "PulpFictionApp/**/*.swift",
     ]),
     deps = [
-        "@swift_pkgs//swift-log:Logging",
         "@swift_pkgs//SQLite.swift:SQLite",
         "@swift_pkgs//swift-composable-architecture:ComposableArchitecture",
-        ":build_swift_protos"
+        "@swift_pkgs//Bow:Bow",
+        "@swift_pkgs//Bow:BowEffects",
+        "//protos:pulp_fiction_grpc_swift",
+        "//protos:pulp_fiction_grpc_stubs_swift"
     ],
     module_name = "PulpFictionApp"
 )

@@ -6,10 +6,16 @@
 //
 
 import Foundation
+import protos_pulp_fiction_grpc_stubs_swift
+import protos_pulp_fiction_grpc_swift
 import protos_pulp_fiction_proto
 import SwiftProtobuf
+
 public typealias Post = PulpFiction_Protos_Post
 public typealias PostMetadata = PulpFiction_Protos_Post.PostMetadata
+public typealias PulpFictionServiceClient = PulpFiction_Protos_PulpFictionClient
+public typealias PulpFictionTestClient = PulpFiction_Protos_PulpFictionTestClient
+public typealias PulpFictionClientProtocol = PulpFiction_Protos_PulpFictionClientProtocol
 
 public struct ImageWithMetadata: Equatable {
     public var imageMetadata: ImageMetadata

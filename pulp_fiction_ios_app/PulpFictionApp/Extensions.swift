@@ -5,6 +5,8 @@
 //  Created by Matthew Dornfeld on 5/22/22.
 //
 
+import Bow
+import BowEffects
 import Foundation
 import Logging
 import UIKit
@@ -104,5 +106,17 @@ public extension Result {
         case .failure:
             return defaultValue
         }
+    }
+}
+
+public extension IO {
+    func mapRight<B>(_ f: @escaping (A) -> B) -> IO<E, B> {
+        return map(f).map { b in b }^
+    }
+}
+
+public extension Either {
+    func mapRight<C>(_ f: (B) -> C) -> Either<A, C> {
+        return bimap({ a in a }, f)
     }
 }
