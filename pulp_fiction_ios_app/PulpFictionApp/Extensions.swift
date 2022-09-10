@@ -120,3 +120,70 @@ public extension Either {
         return bimap({ a in a }, f)
     }
 }
+
+public extension Option {
+    struct EmptyOptional: Error {}
+    
+    func getOrThrow() throws -> A {
+        guard let value = self.toOptional() else {
+            throw EmptyOptional()
+        }
+        
+        return value
+    }
+}
+
+public extension IO {
+    public static func invokeAndConvertError<E: PulpFictionError, A>(_ errorSupplier: @escaping (Error) -> E, _ f: @escaping () throws -> A) -> IO<E, A> {
+        IO<E, A>.invoke {
+            do {
+                return try f()
+            } catch {
+                throw errorSupplier(error)
+            }
+        }
+    }
+}
+
+public extension Post.PostMetadata {
+    func toPostMetadata() -> PostMetadata {
+        PostMetadata(self)
+    }
+}
+
+public extension Post.ImagePost {
+    func toPostData(_ postMetadataProto: Post.PostMetadata) -> ImagePostData {
+        ImagePostData(postMetadataProto, self)
+    }
+}
+
+public extension Post.Comment {
+    func toPostData(_ postMetadataProto: Post.PostMetadata) -> CommentPostData {
+        CommentPostData(postMetadataProto, self)
+    }
+}
+
+public extension Post.UserPost {
+    func toPostData(_ postMetadataProto: Post.PostMetadata) -> UserPostData {
+        UserPostData(postMetadataProto, self)
+    }
+}
+
+public extension Post {
+    func toUnrecognizedPostData() -> UnrecognizedPostData {
+        UnrecognizedPostData(self.metadata)
+    }
+
+    func toPostData() -> PostData {
+        switch self.metadata.postType {
+        case .UNRECOGNIZED(_):
+            return self.toUnrecognizedPostData()
+        case .image:
+            return self.imagePost.toPostData(self.metadata)
+        case .comment:
+            return self.comment.toPostData(self.metadata)
+        case .user:
+            return self.userPost.toPostData(self.metadata)
+        }
+    }
+}
