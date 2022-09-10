@@ -40,11 +40,17 @@
     "ProjectGenerationBazelStartupOptions" : {
       "p" : "$(inherited)"
     },
+    "ProjectPrioritizesSwift" : {
+      "p" : "YES"
+    },
     "TestActionPostActionScript" : {
       "p" : "$(inherited)"
     },
     "TestActionPreActionScript" : {
       "p" : "$(inherited)"
+    },
+    "UseLegacyBuildSystem" : {
+      "p" : "NO"
     }
   },
   "projectName" : "PulpFictionApp",
@@ -60,6 +66,7 @@
     "bazel-out/ios-x86_64-min15.0-applebin_ios-ios_x86_64-dbg-ST-7d4ed54d38ca/bin/external/swift_pkgs/spm_build/x86_64-apple-macosx/release/SQLiteObjc.build",
     "pulp_fiction_ios_app",
     "pulp_fiction_ios_app/PulpFictionApp",
+    "pulp_fiction_ios_app/PulpFictionApp/Configs",
     "pulp_fiction_ios_app/PulpFictionApp/Models",
     "pulp_fiction_ios_app/PulpFictionApp/Types",
     "pulp_fiction_ios_app/PulpFictionApp/Utils",

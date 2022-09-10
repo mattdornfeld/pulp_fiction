@@ -1,4 +1,4 @@
-load("@build_bazel_rules_apple//apple:ios.bzl", "ios_application", "ios_unit_test")
+git load("@build_bazel_rules_apple//apple:ios.bzl", "ios_application", "ios_unit_test")
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 load("@cgrindel_rules_swiftformat//swiftformat:defs.bzl", "swiftformat_pkg", "swiftformat_library", "swiftformat_format", "swiftformat_test")
 
@@ -19,6 +19,7 @@ swift_library(
         "@swift_pkgs//swift-composable-architecture:ComposableArchitecture",
         "@swift_pkgs//Bow:Bow",
         "@swift_pkgs//Bow:BowEffects",
+        "@swift_pkgs//Cache:Cache",
         "//protos:pulp_fiction_grpc_swift",
         "//protos:pulp_fiction_grpc_stubs_swift"
     ],
@@ -31,8 +32,9 @@ swift_library(
         "PulpFictionTests/**/*.swift",
     ]),
     deps = [
-        ":build_source"
+        ":build_source",
     ],
+    module_name = "PulpFictionAppTests",
 )
 
 ios_unit_test(
@@ -41,7 +43,7 @@ ios_unit_test(
         "PulpFictionTests/**/*.swift",
     ]),
     deps = [
-        ":build_tests"
+        ":build_tests",
     ],
     minimum_os_version = "15.0",
     visibility = ["//visibility:public"],
