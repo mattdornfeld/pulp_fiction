@@ -11,17 +11,16 @@ struct ScrollingContentView: View {
     let localImageStore: LocalImageStore
 
     var body: some View {
-        let images = localImageStore
+        let imagesWithMetadata = localImageStore
             .batchGet()
             .getOrElse([])
             .sorted { $0.imageMetadata.createdAt.seconds > $1.imageMetadata.createdAt.seconds }
-            .map { ImageWithCaption(imageWithMetadata: $0) }
             .compactMap { $0 }
 
         ScrollView {
-            VStack(alignment: .leading) {
-                ForEach(0 ..< images.count) {
-                    images[$0]
+            LazyVStack(alignment: .leading) {
+                ForEach(imagesWithMetadata) { imageWithMetadata in
+                    ImageWithCaption(imageWithMetadata)
                 }
             }
         }

@@ -11,18 +11,22 @@ import BowEffects
 import ComposableArchitecture
 import SwiftUI
 
-struct ExternalConnections {
+struct ExternalMessengers {
     let localImageStore: LocalImageStore
     let backendMessenger: BackendMessenger
+    let postDataMessenger: PostDataMessenger
 
-    static func create() -> Result<ExternalConnections, PulpFictionStartupError> {
-        let pulpFictionClientProtocolIO = IO<PulpFictionStartupError, PulpFictionClientProtocol>.var()
+    static func create() -> Result<ExternalMessengers, PulpFictionStartupError> {
+        let backendMessengerIO = IO<PulpFictionStartupError, BackendMessenger>.var()
+        let postDataMessengerIO = IO<PulpFictionStartupError, PostDataMessenger>.var()
 
         return binding(
-            pulpFictionClientProtocolIO <- GrpcUtils.buildTestPulpFictionClientProtocol(),
-            yield: ExternalConnections(
+            backendMessengerIO <- BackendMessenger.create(),
+            postDataMessengerIO <- PostDataMessenger.create(),
+            yield: ExternalMessengers(
                 localImageStore: LocalImageStore()!,
-                backendMessenger: BackendMessenger(pulpFictionClientProtocol: pulpFictionClientProtocolIO.get)
+                backendMessenger: backendMessengerIO.get,
+                postDataMessenger: postDataMessengerIO.get
             )
         )^
             .unsafeRunSyncEither()
@@ -32,7 +36,7 @@ struct ExternalConnections {
 
 @main
 struct PulpFictionApp: App {
-    let externalConnectionsResult = ExternalConnections.create()
+    private let externalMessengersCreateResult = ExternalMessengers.create()
 
     var body: some Scene {
         WindowGroup {
@@ -41,13 +45,13 @@ struct PulpFictionApp: App {
     }
 
     @ViewBuilder private func buildView() -> some View {
-        switch externalConnectionsResult {
-        case let .success(externalConnections):
+        switch externalMessengersCreateResult {
+        case let .success(externalMessengers):
             NavigationView {
                 VStack {
-                    NavigationLink("create", destination: PostCreatorView(localImageStore: externalConnections.localImageStore))
+                    NavigationLink("create", destination: PostCreatorView(localImageStore: externalMessengers.localImageStore))
                     Divider()
-                    NavigationLink("feed", destination: ScrollingContentView(localImageStore: externalConnections.localImageStore))
+                    NavigationLink("feed", destination: ScrollingContentView(localImageStore: externalMessengers.localImageStore))
                 }
             }
         case let .failure(pulpFictionStartupError):

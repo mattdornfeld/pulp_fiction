@@ -27,7 +27,7 @@ struct ImageWithCaption: View {
         image = Image(uiImage: uiImage)
     }
 
-    init?(imageWithMetadata: ImageWithMetadata) {
+    init?(_ imageWithMetadata: ImageWithMetadata) {
         let imageData = Data(
             base64Encoded: imageWithMetadata.imageAsBase64Png,
             options: Data.Base64DecodingOptions.ignoreUnknownCharacters
