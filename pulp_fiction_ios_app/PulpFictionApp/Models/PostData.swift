@@ -21,9 +21,9 @@ public struct PostMetadata: Codable, Equatable, Identifiable {
         case postType
         case postState
     }
-    
+
     public init(_ postId: UUID, _ postCreatorId: UUID, _ postType: Post.PostType, _ postState: Post.PostState) {
-        self.id = postId
+        id = postId
         self.postId = postId
         self.postCreatorId = postCreatorId
         self.postType = postType
@@ -33,7 +33,7 @@ public struct PostMetadata: Codable, Equatable, Identifiable {
     public static func create(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, PostMetadata> {
         let parsePostIdResult = Either<PulpFictionRequestError, UUID>.var()
         let parsePostCreatorIdResult = Either<PulpFictionRequestError, UUID>.var()
-        
+
         return binding(
             parsePostIdResult <- postMetadataProto.postID.toUUID(),
             parsePostCreatorIdResult <- postMetadataProto.postCreatorID.toUUID(),
@@ -50,7 +50,7 @@ public struct PostMetadata: Codable, Equatable, Identifiable {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let postTypeRawValue = try values.decode(Int.self, forKey: .postType)
         let postStateRawValue = try values.decode(Int.self, forKey: .postState)
-        
+
         self.init(
             try UUID(uuidString: values.decode(String.self, forKey: .postId)).getOrThrow(),
             try UUID(uuidString: values.decode(String.self, forKey: .postCreatorId)).getOrThrow(),
@@ -70,12 +70,11 @@ public struct PostMetadata: Codable, Equatable, Identifiable {
 
 public protocol PostData: Codable {
     var postMetadata: PostMetadata { get }
-    
+
     func toPostDataOneOf() -> PostDataOneOf
 }
 
-public protocol PostDataIdentifiable: Identifiable {
-}
+public protocol PostDataIdentifiable: Identifiable {}
 
 public struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
     public let id: UUID
@@ -83,13 +82,13 @@ public struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
     public let imageUrl: String
     public let imageJpg: Data
     public let postMetadata: PostMetadata
-    
+
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.imagePostData(self)
     }
-    
+
     static func create(_ postMetadataProto: Post.PostMetadata, _ imagePostProto: Post.ImagePost) -> Either<PulpFictionRequestError, ImagePostData> {
-        PostMetadata.create(postMetadataProto).mapRight{postMetadata in ImagePostData(postMetadata, imagePostProto)}
+        PostMetadata.create(postMetadataProto).mapRight { postMetadata in ImagePostData(postMetadata, imagePostProto) }
     }
 }
 
@@ -103,7 +102,7 @@ public extension ImagePostData {
             postMetadata: postMetadata
         )
     }
-    
+
     /** Temporary method used for development
      */
     init(_ createImagePostRequestProto: CreatePostRequest.CreateImagePostRequest) {
@@ -126,13 +125,13 @@ public extension ImagePostData {
 public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
     public let id: UUID
     public let postMetadata: PostMetadata
-    
+
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.commentPostData(self)
     }
-    
-    static func create(_ postMetadataProto: Post.PostMetadata, _ commentProto: Post.Comment) -> Either<PulpFictionRequestError, CommentPostData> {
-        PostMetadata.create(postMetadataProto).mapRight{postMetadata in CommentPostData(postMetadata)}
+
+    static func create(_ postMetadataProto: Post.PostMetadata, _: Post.Comment) -> Either<PulpFictionRequestError, CommentPostData> {
+        PostMetadata.create(postMetadataProto).mapRight { postMetadata in CommentPostData(postMetadata) }
     }
 }
 
@@ -145,13 +144,13 @@ public extension CommentPostData {
 public struct UserPostData: PostData, PostDataIdentifiable, Equatable {
     public let id: UUID
     public let postMetadata: PostMetadata
-    
+
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.userPostData(self)
     }
-    
-    static func create(_ postMetadataProto: Post.PostMetadata, _ userPostProto: Post.UserPost) -> Either<PulpFictionRequestError, UserPostData> {
-        PostMetadata.create(postMetadataProto).mapRight{postMetadata in UserPostData(postMetadata)}
+
+    static func create(_ postMetadataProto: Post.PostMetadata, _: Post.UserPost) -> Either<PulpFictionRequestError, UserPostData> {
+        PostMetadata.create(postMetadataProto).mapRight { postMetadata in UserPostData(postMetadata) }
     }
 }
 
@@ -164,13 +163,13 @@ public extension UserPostData {
 public struct UnrecognizedPostData: PostData, PostDataIdentifiable, Equatable {
     public let id: UUID
     public let postMetadata: PostMetadata
-    
+
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.unregonizedPostData(self)
     }
-    
+
     static func create(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, UnrecognizedPostData> {
-        PostMetadata.create(postMetadataProto).mapRight{postMetadata in UnrecognizedPostData(postMetadata)}
+        PostMetadata.create(postMetadataProto).mapRight { postMetadata in UnrecognizedPostData(postMetadata) }
     }
 }
 

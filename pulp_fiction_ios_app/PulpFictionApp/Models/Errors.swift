@@ -7,27 +7,27 @@
 import Bow
 import Foundation
 
-fileprivate extension Error {
+private extension Error {
     private func baseErrorEquals(_ that: Error) -> Bool {
         let this = self
         return (type(of: this) == type(of: that)) &&
-        (this.localizedDescription == that.localizedDescription)
+            (this.localizedDescription == that.localizedDescription)
     }
 
     func equals(_ that: Error) -> Bool {
         let this = self
         switch (this, that) {
-        case (let this as PulpFictionError, let that as PulpFictionError):
+        case let (this as PulpFictionError, that as PulpFictionError):
             return this.causeMaybe.equals(that.causeMaybe) &&
-            this.baseErrorEquals(that)
+                this.baseErrorEquals(that)
         default:
             return this.baseErrorEquals(that)
         }
     }
 }
 
-fileprivate extension Option where A : Error {
-    func equals <B: Error> (_ that: Option<B>) -> Bool {
+private extension Option where A: Error {
+    func equals<B: Error>(_ that: Option<B>) -> Bool {
         let thisCauseMaybe = Option<A>.var()
         let thatCauseMaybe = Option<B>.var()
         return binding(

@@ -14,9 +14,9 @@ public struct EitherView<A: View, B: View>: View {
 
     public var body: some View {
         switch state.toEnum() {
-        case .right(let right):
+        case let .right(right):
             right
-        case .left(let left):
+        case let .left(left):
             left
         }
     }

@@ -25,11 +25,11 @@ struct PostCreatorState: Equatable {
     var showingImagePickerView = false
 }
 
-struct PostCreatorErrors {
+enum PostCreatorErrors {
     class ErrorPickingImageFromLibrary: PulpFictionRequestError {}
     class CancelledWithOutPickingImage: ErrorPickingImageFromLibrary {}
     class ErrorPickingImage: ErrorPickingImageFromLibrary {}
-    
+
     class ErrorCreatingPost: PulpFictionRequestError {}
     class ImageNotSelected: PulpFictionRequestError {}
     class ErrorSerializingImage: PulpFictionRequestError {}
@@ -62,7 +62,7 @@ struct PostCreatorEnvironment {
         guard let uiImage = uiImageMaybe else {
             return Effect(error: PostCreatorErrors.ImageNotSelected())
         }
-        
+
         if let serializedImage = uiImage.serializeImage() {
             let createPostRequest = CreatePostRequest
                 .createImagePostRequest("", serializedImage)
@@ -70,7 +70,7 @@ struct PostCreatorEnvironment {
 
             return postDataCache
                 .put(imagePostData)
-                .mapError{cause in PostCreatorErrors.ErrorSavingPostToDatabase()}
+                .mapError { _ in PostCreatorErrors.ErrorSavingPostToDatabase() }
                 .toEffect()
         } else {
             return Effect(error: PostCreatorErrors.ErrorSerializingImage())

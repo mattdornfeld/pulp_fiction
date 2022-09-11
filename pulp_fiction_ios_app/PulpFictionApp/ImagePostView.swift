@@ -17,11 +17,11 @@ public struct ImagePostView: View, Identifiable {
             Text(imagePostData.caption)
         }
     }
-    
+
     public static func create(_ imagePostData: ImagePostData) -> Either<PulpFictionRequestError, ImagePostView> {
-        return imagePostData.imageJpg.toUIImage().mapRight{uiImage in
+        return imagePostData.imageJpg.toUIImage().mapRight { uiImage in
             ImagePostView(id: imagePostData.id, imagePostData: imagePostData, uiImage: uiImage)
-        }.onError{ cause in
+        }.onError { cause in
             logger.error("Error loading post \(imagePostData.postMetadata.postId) because \(cause)")
         }
     }
@@ -31,13 +31,13 @@ struct ImagePostView_Preview: PreviewProvider {
     static var previews: some View {
         let generateImagePostDataResult = Either<PulpFictionRequestError, ImagePostData>.var()
         let createImagePostViewResult = Either<PulpFictionRequestError, ImagePostView>.var()
-        
+
         return binding(
             generateImagePostDataResult <- ImagePostData.generate(),
             createImagePostViewResult <- ImagePostView.create(generateImagePostDataResult.get),
             yield: createImagePostViewResult.get
         )^
-            .mapLeft{cause in EmptyView()}
+            .mapLeft { _ in EmptyView() }
             .toEitherView()
     }
 }

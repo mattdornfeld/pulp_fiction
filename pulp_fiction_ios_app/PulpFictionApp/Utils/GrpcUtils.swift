@@ -13,7 +13,7 @@ import NIOPosix
 
 public enum GrpcUtils {
     public class ErrorConnectingToBackendServer: PulpFictionStartupError {}
-    
+
     private static func buildGrpcChannel() -> IO<PulpFictionStartupError, GRPCChannel> {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         return IO<PulpFictionStartupError, GRPCChannel>.invokeAndConvertError({ cause in ErrorConnectingToBackendServer(cause) }) {

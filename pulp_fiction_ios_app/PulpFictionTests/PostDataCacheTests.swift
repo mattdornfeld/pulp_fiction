@@ -6,28 +6,28 @@
 //
 import Bow
 import BowEffects
-import PulpFictionApp
 import Foundation
+import PulpFictionApp
 import XCTest
 
 class PostDataCacheTests: XCTestCase {
     let postDataCacheMaybe = PostDataCache.create()
         .unsafeRunSyncEither()
-        .mapRight{postDataCache in Option.some(postDataCache)}
+        .mapRight { postDataCache in Option.some(postDataCache) }
         .getOrElse(Option.none())
-    
+
     override func setUpWithError() throws {
         try postDataCacheMaybe
             .getOrThrow()
             .clearCache()
             .unsafeRunSync()
     }
-    
+
     func testPutAndGet() throws {
         let postDataCache = try postDataCacheMaybe.getOrThrow()
         let expectedPostData = try ImagePostData.generate().getOrThrow()
         let postId = expectedPostData.postMetadata.postId
-        
+
         let putResult = IO<PulpFictionRequestError, PostMetadata>.var()
         let getResult = IO<PulpFictionRequestError, Option<PostDataOneOf>>.var()
         let postDataOneOf = try binding(
@@ -37,16 +37,16 @@ class PostDataCacheTests: XCTestCase {
         )^
             .unsafeRunSync()
             .getOrThrow()
-        
+
         XCTAssertEqual(expectedPostData.toPostDataOneOf(), postDataOneOf)
     }
-    
+
     func testPutAllBulkGet() throws {
         let postDataCache = try postDataCacheMaybe.getOrThrow()
         let expectedPostDatas = try [ImagePostData.generate().getOrThrow(), ImagePostData.generate().getOrThrow()]
-        let items = expectedPostDatas.map{postData in (postData.postMetadata.postId, postData)}
-        let postIds = expectedPostDatas.map{postData in postData.postMetadata.postId}
-        
+        let items = expectedPostDatas.map { postData in (postData.postMetadata.postId, postData) }
+        let postIds = expectedPostDatas.map { postData in postData.postMetadata.postId }
+
         let putResult = IO<PulpFictionRequestError, [PostMetadata]>.var()
         let batchGetResult = IO<PulpFictionRequestError, [Option<PostDataOneOf>]>.var()
         let postDataOneOfs = try binding(
@@ -55,8 +55,8 @@ class PostDataCacheTests: XCTestCase {
             yield: batchGetResult.get
         )^
             .unsafeRunSync()
-            .map{postDataOneOfMaybe in try postDataOneOfMaybe.getOrThrow()}
-        
-        XCTAssertEqual(expectedPostDatas.map{expectedPostData in expectedPostData.toPostDataOneOf()}, postDataOneOfs)
+            .map { postDataOneOfMaybe in try postDataOneOfMaybe.getOrThrow() }
+
+        XCTAssertEqual(expectedPostDatas.map { expectedPostData in expectedPostData.toPostDataOneOf() }, postDataOneOfs)
     }
 }
