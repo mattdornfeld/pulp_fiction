@@ -25,7 +25,7 @@ class PostDataCacheTests: XCTestCase {
     
     func testPutAndGet() throws {
         let postDataCache = try postDataCacheMaybe.getOrThrow()
-        let expectedPostData = try ImagePostData.generate()
+        let expectedPostData = try ImagePostData.generate().getOrThrow()
         let postId = expectedPostData.postMetadata.postId
         
         let putResult = IO<PulpFictionRequestError, PostMetadata>.var()
@@ -43,7 +43,7 @@ class PostDataCacheTests: XCTestCase {
     
     func testPutAllBulkGet() throws {
         let postDataCache = try postDataCacheMaybe.getOrThrow()
-        let expectedPostDatas = try [ImagePostData.generate(), ImagePostData.generate()]
+        let expectedPostDatas = try [ImagePostData.generate().getOrThrow(), ImagePostData.generate().getOrThrow()]
         let items = expectedPostDatas.map{postData in (postData.postMetadata.postId, postData)}
         let postIds = expectedPostDatas.map{postData in postData.postMetadata.postId}
         

@@ -5,19 +5,16 @@
 //  Created by Matthew Dornfeld on 9/8/22.
 //
 
-import PulpFictionApp
+import Bow
 import Foundation
 import SwiftProtobuf
 
-struct FakeData {
+public struct FakeData {
     static let caption = "test caption please ignore"
     static let imageUrl = "https://angelfire.com/never_gonna_give_you_up.jpg"
 }
 
-protocol TestDataGenerator {
-}
-
-extension Post.PostMetadata: TestDataGenerator {
+public extension Post.PostMetadata {
     static func generate(_ postType: Post.PostType) -> Post.PostMetadata {
         Post.PostMetadata.with{
             $0.postID = UUID().uuidString
@@ -32,7 +29,7 @@ extension Post.PostMetadata: TestDataGenerator {
     }
 }
 
-extension Post.ImagePost: TestDataGenerator {
+public extension Post.ImagePost {
     static func generate() -> Post.ImagePost {
         Post.ImagePost.with{
             $0.caption = FakeData.caption
@@ -41,7 +38,7 @@ extension Post.ImagePost: TestDataGenerator {
     }
 }
 
-extension Post: TestDataGenerator {
+public extension Post {
     static func generate(_ postType: Post.PostType) -> Post {
         Post.with{
             $0.metadata = Post.PostMetadata.generate(postType)
@@ -54,13 +51,11 @@ extension Post: TestDataGenerator {
     }
 }
 
-extension ImagePostData: TestDataGenerator {
-    static func generate() throws -> ImagePostData {
+public extension ImagePostData {
+    public static func generate() -> Either<PulpFictionRequestError, ImagePostData> {
         let postProto = Post.generate(Post.PostType.image)
-        
         return try postProto
             .imagePost
             .toPostData(postProto.metadata)
-            .getOrThrow()
     }
 }

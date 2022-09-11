@@ -11,6 +11,7 @@ import ComposableArchitecture
 import Foundation
 import Logging
 import UIKit
+import SwiftUI
 
 struct UIImageCompanion {
     static let logger: Logger = .init(label: String(describing: UIImageCompanion.self))
@@ -170,6 +171,11 @@ public extension Either {
         
     }
     
+    enum EitherEnum<A, B> {
+        case left(A)
+        case right(B)
+    }
+    
     func mapRight<C>(_ f: (B) -> C) -> Either<A, C> {
         return bimap({ a in a }, f)
     }
@@ -190,7 +196,17 @@ public extension Either {
         default:
             throw LeftValueNotError()
         }
-        
+    }
+    
+    func toEnum() -> EitherEnum<A, B> {
+        if isLeft {
+            return EitherEnum.left(leftValue)
+        }
+        return EitherEnum.right(rightValue)
+    }
+    
+    func toEitherView() -> EitherView<A, B> where A: View, B: View{
+        EitherView(state: self)
     }
 }
 

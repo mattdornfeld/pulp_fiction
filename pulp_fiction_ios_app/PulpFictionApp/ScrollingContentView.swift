@@ -39,7 +39,7 @@ public struct ScrollingContentView: View {
     public var body: some View {
         let imagesWithCaptions = getImagePostDatas()
             .mapAndFilterErrors{imagePostData in
-                ImageWithCaption.create(imagePostData)
+                ImagePostView.create(imagePostData)
             }
         
         ScrollView {
