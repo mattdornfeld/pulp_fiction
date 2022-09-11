@@ -17,11 +17,6 @@ def pulp_fiction_swift_dependencies():
                 products = ["Logging"],
             ),
             spm_pkg(
-                url = "https://github.com/stephencelis/SQLite.swift.git",
-                exact_version = "0.13.3",
-                products = ["SQLite"],
-            ),
-            spm_pkg(
                 url = "https://github.com/pointfreeco/swift-composable-architecture.git",
                 exact_version = "0.39.1",
                 products = ["ComposableArchitecture"],

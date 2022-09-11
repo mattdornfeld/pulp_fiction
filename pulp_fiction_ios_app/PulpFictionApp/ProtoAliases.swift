@@ -16,6 +16,7 @@ public typealias ImagePost = PulpFiction_Protos_Post.ImagePost
 public typealias PulpFictionServiceClient = PulpFiction_Protos_PulpFictionClient
 public typealias PulpFictionTestClient = PulpFiction_Protos_PulpFictionTestClient
 public typealias PulpFictionClientProtocol = PulpFiction_Protos_PulpFictionClientProtocol
+public typealias CreatePostRequest = PulpFiction_Protos_CreatePostRequest
 
 public struct ImageWithMetadata: Equatable, Identifiable {
     public let id: String

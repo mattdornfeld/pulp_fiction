@@ -12,7 +12,6 @@ import ComposableArchitecture
 import SwiftUI
 
 struct ExternalMessengers {
-    let localImageStore: LocalImageStore
     let backendMessenger: BackendMessenger
     let postDataMessenger: PostDataMessenger
 
@@ -24,7 +23,6 @@ struct ExternalMessengers {
             backendMessengerIO <- BackendMessenger.create(),
             postDataMessengerIO <- PostDataMessenger.create(),
             yield: ExternalMessengers(
-                localImageStore: LocalImageStore()!,
                 backendMessenger: backendMessengerIO.get,
                 postDataMessenger: postDataMessengerIO.get
             )
@@ -49,9 +47,9 @@ struct PulpFictionApp: App {
         case let .success(externalMessengers):
             NavigationView {
                 VStack {
-                    NavigationLink("create", destination: PostCreatorView(localImageStore: externalMessengers.localImageStore))
+                    NavigationLink("create", destination: PostCreatorView(externalMessengers.postDataMessenger.postDataCache))
                     Divider()
-                    NavigationLink("feed", destination: ScrollingContentView(localImageStore: externalMessengers.localImageStore))
+                    NavigationLink("feed", destination: ScrollingContentView(externalMessengers.postDataMessenger.postDataCache))
                 }
             }
         case let .failure(pulpFictionStartupError):

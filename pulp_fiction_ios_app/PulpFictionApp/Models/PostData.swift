@@ -6,8 +6,10 @@
 //
 import Bow
 import Foundation
+import UIKit
 
-public struct PostMetadata: Codable, Equatable {
+public struct PostMetadata: Codable, Equatable, Identifiable {
+    public let id: UUID
     public let postId: UUID
     public let postCreatorId: UUID
     public let postType: Post.PostType
@@ -19,23 +21,35 @@ public struct PostMetadata: Codable, Equatable {
         case postType
         case postState
     }
+    
+    public init(_ postId: UUID, _ postCreatorId: UUID, _ postType: Post.PostType, _ postState: Post.PostState) {
+        self.id = postId
+        self.postId = postId
+        self.postCreatorId = postCreatorId
+        self.postType = postType
+        self.postState = postState
+    }
 
     public init(_ postMetadataProto: Post.PostMetadata) {
-        postId = UUID.fromDatatypeValue(postMetadataProto.postID)
-        postCreatorId = UUID.fromDatatypeValue(postMetadataProto.postCreatorID)
-        postType = postMetadataProto.postType
-        postState = postMetadataProto.postState
+        self.init(
+            UUID(uuidString: postMetadataProto.postID)!,
+            UUID(uuidString: postMetadataProto.postCreatorID)!,
+            postMetadataProto.postType,
+            postMetadataProto.postState
+        )
     }
 
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let postTypeRawValue = try values.decode(Int.self, forKey: .postType)
         let postStateRawValue = try values.decode(Int.self, forKey: .postState)
-
-        postId = try UUID.fromDatatypeValue(values.decode(String.self, forKey: .postId))
-        postCreatorId = try UUID.fromDatatypeValue(values.decode(String.self, forKey: .postCreatorId))
-        postType = Post.PostType(rawValue: postTypeRawValue) ?? Post.PostType.UNRECOGNIZED(postTypeRawValue)
-        postState = Post.PostState(rawValue: postStateRawValue) ?? Post.PostState.UNRECOGNIZED(postStateRawValue)
+        
+        self.init(
+            try UUID(uuidString: values.decode(String.self, forKey: .postId))!,
+            try UUID(uuidString: values.decode(String.self, forKey: .postCreatorId))!,
+            Post.PostType(rawValue: postTypeRawValue) ?? Post.PostType.UNRECOGNIZED(postTypeRawValue),
+            Post.PostState(rawValue: postStateRawValue) ?? Post.PostState.UNRECOGNIZED(postStateRawValue)
+        )
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -53,57 +67,103 @@ public protocol PostData: Codable {
     func toPostDataOneOf() -> PostDataOneOf
 }
 
-public struct ImagePostData: PostData, Equatable {
-    let caption: String
-    let imageUrl: String
-    let image: Data
+public protocol PostDataIdentifiable: Identifiable {
+}
+
+public struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
+    public let id: UUID
+    public let caption: String
+    public let imageUrl: String
+    public let imageJpg: Data
     public let postMetadata: PostMetadata
-    
-    public init(_ postMetadataProto: Post.PostMetadata, _ imagePostProto: Post.ImagePost) {
-        self.caption = imagePostProto.caption
-        self.imageUrl = imagePostProto.imageURL
-        self.image = Data()
-        self.postMetadata = postMetadataProto.toPostMetadata()
-    }
     
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.imagePostData(self)
     }
 }
 
-public struct CommentPostData: PostData, Equatable {
-    public let postMetadata: PostMetadata
-    
-    public init(_ postMetadataProto: Post.PostMetadata, _ imagePostProto: Post.Comment) {
-        self.postMetadata = postMetadataProto.toPostMetadata()
+public extension ImagePostData {
+    init(_ postMetadataProto: Post.PostMetadata, _ imagePostProto: Post.ImagePost) {
+        let postMetadata = postMetadataProto.toPostMetadata()
+        self.init(
+            id: postMetadata.id,
+            caption: imagePostProto.caption,
+            imageUrl: imagePostProto.imageURL,
+            imageJpg: Data(),
+            postMetadata: postMetadata
+        )
     }
+    
+    /** Temporary method used for development
+     */
+    init(_ createImagePostRequestProto: CreatePostRequest.CreateImagePostRequest) {
+        let postMetadata = PostMetadata(
+            UUID(),
+            UUID(),
+            Post.PostType.image,
+            Post.PostState.created
+        )
+        self.init(
+            id: postMetadata.id,
+            caption: createImagePostRequestProto.caption,
+            imageUrl: "",
+            imageJpg: createImagePostRequestProto.imageJpg,
+            postMetadata: postMetadata
+        )
+    }
+}
+
+public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
+    public let id: UUID
+    public let postMetadata: PostMetadata
     
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.commentPostData(self)
     }
 }
 
-public struct UserPostData: PostData, Equatable {
-    public let postMetadata: PostMetadata
-    
-    public init(_ postMetadataProto: Post.PostMetadata, _ imagePostProto: Post.UserPost) {
-        self.postMetadata = postMetadataProto.toPostMetadata()
+public extension CommentPostData {
+    init(_ postMetadata: PostMetadata) {
+        self.init(id: postMetadata.id, postMetadata: postMetadata)
     }
+    
+    init(_ postMetadataProto: Post.PostMetadata, _ commentProto: Post.Comment) {
+        self.init(postMetadataProto.toPostMetadata())
+    }
+}
+
+public struct UserPostData: PostData, PostDataIdentifiable, Equatable {
+    public let id: UUID
+    public let postMetadata: PostMetadata
     
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.userPostData(self)
     }
 }
 
-public struct UnrecognizedPostData: PostData, Equatable {
-    public let postMetadata: PostMetadata
-    
-    public init(_ postMetadataProto: Post.PostMetadata) {
-        self.postMetadata = postMetadataProto.toPostMetadata()
+public extension UserPostData {
+    init(_ postMetadata: PostMetadata) {
+        self.init(id: postMetadata.id, postMetadata: postMetadata)
     }
+    
+    init(_ postMetadataProto: Post.PostMetadata, _ userPostProto: Post.UserPost) {
+        self.init(postMetadataProto.toPostMetadata())
+    }
+}
+
+public struct UnrecognizedPostData: PostData, PostDataIdentifiable, Equatable {
+    public let id: UUID
+    public let postMetadata: PostMetadata
     
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.unregonizedPostData(self)
+    }
+}
+
+public extension UnrecognizedPostData {
+    init(_ postMetadataProto: Post.PostMetadata) {
+        self.postMetadata = postMetadataProto.toPostMetadata()
+        self.id = self.postMetadata.id
     }
 }
 

@@ -2,46 +2,27 @@
 // Created by Matthew Dornfeld on 4/3/22.
 //
 
+import Bow
 import Logging
 import SwiftUI
 
-struct ImageWithCaption: View {
+public struct ImageWithCaption: View, Identifiable {
     private static let logger = Logger(label: String(describing: ImageWithCaption.self))
-    let imageId: String
-    let image: Image
-    let caption: String
-    let createdAt: Date
+    public let id: UUID
+    public let imagePostData: ImagePostData
     private let uiImage: UIImage
-    var body: some View {
+    public var body: some View {
         VStack {
-            image.resizable().scaledToFit()
-            Text(caption)
+            Image(uiImage: uiImage).resizable().scaledToFit()
+            Text(imagePostData.caption)
         }
     }
-
-    init(imageId: String, uiImage: UIImage, caption: String, createdAt: Date) {
-        self.imageId = imageId
-        self.uiImage = uiImage
-        self.caption = caption
-        self.createdAt = createdAt
-        image = Image(uiImage: uiImage)
-    }
-
-    init?(_ imageWithMetadata: ImageWithMetadata) {
-        let imageData = Data(
-            base64Encoded: imageWithMetadata.imageAsBase64Png,
-            options: Data.Base64DecodingOptions.ignoreUnknownCharacters
-        )!
-
-        let imageMetadata = imageWithMetadata.imageMetadata
-        let imageId = imageWithMetadata.imageMetadata.imageID
-        let createdAt = Date(timeIntervalSince1970: Double(imageMetadata.createdAt.seconds))
-
-        if let uiImage = UIImage(data: imageData) {
-            self.init(imageId: imageWithMetadata.imageMetadata.imageID, uiImage: uiImage, caption: imageWithMetadata.caption, createdAt: createdAt)
-        } else {
-            ImageWithCaption.logger.error("Error loading image \(imageId)")
-            return nil
+    
+    public static func create(_ imagePostData: ImagePostData) -> Either<PulpFictionRequestError, ImageWithCaption> {
+        return imagePostData.imageJpg.toUIImage().mapRight{uiImage in
+            ImageWithCaption(id: imagePostData.id, imagePostData: imagePostData, uiImage: uiImage)
+        }.onError{ cause in
+            logger.error("Error loading post \(imagePostData.postMetadata.postId) because \(cause)")
         }
     }
 }

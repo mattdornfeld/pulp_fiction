@@ -28,7 +28,7 @@ class PostDataCacheTests: XCTestCase {
         let expectedPostData = ImagePostData.generate()
         let postId = expectedPostData.postMetadata.postId
         
-        let putResult = IO<PulpFictionRequestError, Void>.var()
+        let putResult = IO<PulpFictionRequestError, PostMetadata>.var()
         let getResult = IO<PulpFictionRequestError, Option<PostDataOneOf>>.var()
         let postDataOneOf = try binding(
             putResult <- postDataCache.put(postId, expectedPostData),
@@ -44,10 +44,10 @@ class PostDataCacheTests: XCTestCase {
     func testPutAllBulkGet() throws {
         let postDataCache = try postDataCacheMaybe.getOrThrow()
         let expectedPostDatas = [ImagePostData.generate(), ImagePostData.generate()]
-        let items = expectedPostDatas.map{postData in (postData.postMetadata.postId, postData.toPostDataOneOf())}
+        let items = expectedPostDatas.map{postData in (postData.postMetadata.postId, postData)}
         let postIds = expectedPostDatas.map{postData in postData.postMetadata.postId}
         
-        let putResult = IO<PulpFictionRequestError, Void>.var()
+        let putResult = IO<PulpFictionRequestError, [PostMetadata]>.var()
         let batchGetResult = IO<PulpFictionRequestError, [Option<PostDataOneOf>]>.var()
         let postDataOneOfs = try binding(
             putResult <- postDataCache.putAll(items),
