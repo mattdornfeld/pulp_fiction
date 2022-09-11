@@ -13,7 +13,7 @@ fileprivate extension Error {
         return (type(of: this) == type(of: that)) &&
         (this.localizedDescription == that.localizedDescription)
     }
-    
+
     func equals(_ that: Error) -> Bool {
         let this = self
         switch (this, that) {
@@ -38,7 +38,7 @@ fileprivate extension Option where A : Error {
     }
 }
 
-public class PulpFictionError: Error, Equatable {
+public class PulpFictionError: Error {
     let causeMaybe: Option<Error>
 
     init() {
@@ -48,30 +48,11 @@ public class PulpFictionError: Error, Equatable {
     init(_ cause: Error) {
         causeMaybe = Option.some(cause)
     }
-    
+
     public static func == (lhs: PulpFictionError, rhs: PulpFictionError) -> Bool {
         lhs.equals(rhs)
     }
 }
 
 public class PulpFictionStartupError: PulpFictionError {}
-
 public class PulpFictionRequestError: PulpFictionError {}
-
-public class ErrorConnectingToBackendServer: PulpFictionStartupError {}
-
-public class ErrorInitializingPostCache: PulpFictionStartupError {}
-
-public class ErrorClearingPostCache: PulpFictionStartupError {}
-
-public class PlaceholderError: PulpFictionRequestError {}
-
-public class ErrorAddingItemToPostCache: PulpFictionRequestError {}
-
-public class ErrorRetrievingPostFromCache: PulpFictionRequestError {}
-
-public class UnrecognizedPostType: PulpFictionRequestError {}
-
-public class ErrorDeserializingImage: PulpFictionRequestError {}
-
-public class ErrorParsingUUID: PulpFictionRequestError {}

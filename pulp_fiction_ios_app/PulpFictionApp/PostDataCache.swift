@@ -13,6 +13,15 @@ public class PostDataCache {
     private let cache: Storage<UUID, PostDataOneOf>
     private var postIds: Set<UUID> = Set()
     
+    public class StartupError: PulpFictionStartupError {}
+    public class ErrorInitializingPostCache: StartupError {}
+    public class ErrorClearingPostCache: StartupError {}
+    
+    public class RequestError: PulpFictionRequestError {}
+    public class ErrorListingPostIds: RequestError {}
+    public class ErrorRetrievingPostFromCache: RequestError {}
+    public class ErrorAddingItemToPostCache: RequestError {}
+    
     init(cache: Storage<UUID, PostDataOneOf>) {
         self.cache = cache
         cache.addStorageObserver(self) { observer, storage, change in
@@ -62,7 +71,7 @@ public class PostDataCache {
     }
     
     public func listPostIdsInCache() -> IO<PulpFictionRequestError, [UUID]> {
-        IO<PulpFictionRequestError, Set<UUID>>.invokeAndConvertError({ cause in PlaceholderError(cause) }) { () -> [UUID] in
+        IO<PulpFictionRequestError, Set<UUID>>.invokeAndConvertError({ cause in ErrorListingPostIds(cause) }) { () -> [UUID] in
             Array(self.postIds)
         }
     }

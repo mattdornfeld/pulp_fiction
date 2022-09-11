@@ -28,6 +28,7 @@ extension UIImage {
 }
 
 extension Data {
+    public class ErrorDeserializingImage: PulpFictionRequestError {}
     func toUIImage() -> Either<PulpFictionRequestError, UIImage> {
         guard let imageData = Data(
             base64Encoded: self,
@@ -46,6 +47,8 @@ extension Data {
 }
 
 extension String {
+    public class ErrorParsingUUID: PulpFictionRequestError {}
+    
     func toUUID() -> Either<PulpFictionRequestError, UUID> {
         guard let uuid = UUID(uuidString: self) else {
             return Either.left(ErrorParsingUUID())
@@ -163,7 +166,7 @@ public extension IO {
 }
 
 public extension Either {
-    public struct LeftValueNotError: Error {
+    struct LeftValueNotError: Error {
         
     }
     
