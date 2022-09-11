@@ -73,3 +73,5 @@ public class ErrorRetrievingPostFromCache: PulpFictionRequestError {}
 public class UnrecognizedPostType: PulpFictionRequestError {}
 
 public class ErrorDeserializingImage: PulpFictionRequestError {}
+
+public class ErrorParsingUUID: PulpFictionRequestError {}

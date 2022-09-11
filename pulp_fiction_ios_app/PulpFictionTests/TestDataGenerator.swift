@@ -55,8 +55,12 @@ extension Post: TestDataGenerator {
 }
 
 extension ImagePostData: TestDataGenerator {
-    static func generate() -> ImagePostData {
+    static func generate() throws -> ImagePostData {
         let postProto = Post.generate(Post.PostType.image)
-        return postProto.imagePost.toPostData(postProto.metadata)
+        
+        return try postProto
+            .imagePost
+            .toPostData(postProto.metadata)
+            .getOrThrow()
     }
 }

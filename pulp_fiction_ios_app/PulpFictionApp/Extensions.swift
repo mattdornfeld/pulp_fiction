@@ -45,6 +45,15 @@ extension Data {
     }
 }
 
+extension String {
+    func toUUID() -> Either<PulpFictionRequestError, UUID> {
+        guard let uuid = UUID(uuidString: self) else {
+            return Either.left(ErrorParsingUUID())
+        }
+        return Either.right(uuid)
+    }
+}
+
 public extension Optional {
     struct EmptyOptional: Error {}
 
@@ -154,6 +163,10 @@ public extension IO {
 }
 
 public extension Either {
+    public struct LeftValueNotError: Error {
+        
+    }
+    
     func mapRight<C>(_ f: (B) -> C) -> Either<A, C> {
         return bimap({ a in a }, f)
     }
@@ -161,6 +174,20 @@ public extension Either {
     func onError(_ f: (A) -> Void) -> Either<A, B> {
         self.mapLeft{a in f(a)}
         return self
+    }
+    
+    func getOrThrow() throws -> B {
+        if self.isRight {
+            return self.rightValue
+        }
+        
+        switch self.leftValue {
+        case let a as Error:
+            throw a
+        default:
+            throw LeftValueNotError()
+        }
+        
     }
 }
 
@@ -177,14 +204,14 @@ public extension Option {
 }
 
 public extension Post.PostMetadata {
-    func toPostMetadata() -> PostMetadata {
-        PostMetadata(self)
+    func toPostMetadata() -> Either<PulpFictionRequestError, PostMetadata> {
+        PostMetadata.create(self)
     }
 }
 
 public extension Post.ImagePost {
-    func toPostData(_ postMetadataProto: Post.PostMetadata) -> ImagePostData {
-        ImagePostData(postMetadataProto, self)
+    func toPostData(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, ImagePostData> {
+        ImagePostData.create(postMetadataProto, self)
     }
 }
 
@@ -200,33 +227,14 @@ public extension CreatePostRequest {
 }
 
 public extension Post.Comment {
-    func toPostData(_ postMetadataProto: Post.PostMetadata) -> CommentPostData {
-        CommentPostData(postMetadataProto, self)
+    func toPostData(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, CommentPostData> {
+        CommentPostData.create(postMetadataProto, self)
     }
 }
 
 public extension Post.UserPost {
-    func toPostData(_ postMetadataProto: Post.PostMetadata) -> UserPostData {
-        UserPostData(postMetadataProto, self)
-    }
-}
-
-public extension Post {
-    func toUnrecognizedPostData() -> UnrecognizedPostData {
-        UnrecognizedPostData(self.metadata)
-    }
-
-    func toPostData() -> PostData {
-        switch self.metadata.postType {
-        case .UNRECOGNIZED(_):
-            return self.toUnrecognizedPostData()
-        case .image:
-            return self.imagePost.toPostData(self.metadata)
-        case .comment:
-            return self.comment.toPostData(self.metadata)
-        case .user:
-            return self.userPost.toPostData(self.metadata)
-        }
+    func toPostData(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, UserPostData> {
+        UserPostData.create(postMetadataProto, self)
     }
 }
 

@@ -30,13 +30,20 @@ public struct PostMetadata: Codable, Equatable, Identifiable {
         self.postState = postState
     }
 
-    public init(_ postMetadataProto: Post.PostMetadata) {
-        self.init(
-            UUID(uuidString: postMetadataProto.postID)!,
-            UUID(uuidString: postMetadataProto.postCreatorID)!,
-            postMetadataProto.postType,
-            postMetadataProto.postState
-        )
+    public static func create(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, PostMetadata> {
+        let parsePostIdResult = Either<PulpFictionRequestError, UUID>.var()
+        let parsePostCreatorIdResult = Either<PulpFictionRequestError, UUID>.var()
+        
+        return binding(
+            parsePostIdResult <- postMetadataProto.postID.toUUID(),
+            parsePostCreatorIdResult <- postMetadataProto.postCreatorID.toUUID(),
+            yield: PostMetadata(
+                parsePostIdResult.get,
+                parsePostCreatorIdResult.get,
+                postMetadataProto.postType,
+                postMetadataProto.postState
+            )
+        )^
     }
 
     public init(from decoder: Decoder) throws {
@@ -45,8 +52,8 @@ public struct PostMetadata: Codable, Equatable, Identifiable {
         let postStateRawValue = try values.decode(Int.self, forKey: .postState)
         
         self.init(
-            try UUID(uuidString: values.decode(String.self, forKey: .postId))!,
-            try UUID(uuidString: values.decode(String.self, forKey: .postCreatorId))!,
+            try UUID(uuidString: values.decode(String.self, forKey: .postId)).getOrThrow(),
+            try UUID(uuidString: values.decode(String.self, forKey: .postCreatorId)).getOrThrow(),
             Post.PostType(rawValue: postTypeRawValue) ?? Post.PostType.UNRECOGNIZED(postTypeRawValue),
             Post.PostState(rawValue: postStateRawValue) ?? Post.PostState.UNRECOGNIZED(postStateRawValue)
         )
@@ -80,11 +87,14 @@ public struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.imagePostData(self)
     }
+    
+    static func create(_ postMetadataProto: Post.PostMetadata, _ imagePostProto: Post.ImagePost) -> Either<PulpFictionRequestError, ImagePostData> {
+        PostMetadata.create(postMetadataProto).mapRight{postMetadata in ImagePostData(postMetadata, imagePostProto)}
+    }
 }
 
 public extension ImagePostData {
-    init(_ postMetadataProto: Post.PostMetadata, _ imagePostProto: Post.ImagePost) {
-        let postMetadata = postMetadataProto.toPostMetadata()
+    init(_ postMetadata: PostMetadata, _ imagePostProto: Post.ImagePost) {
         self.init(
             id: postMetadata.id,
             caption: imagePostProto.caption,
@@ -120,15 +130,15 @@ public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.commentPostData(self)
     }
+    
+    static func create(_ postMetadataProto: Post.PostMetadata, _ commentProto: Post.Comment) -> Either<PulpFictionRequestError, CommentPostData> {
+        PostMetadata.create(postMetadataProto).mapRight{postMetadata in CommentPostData(postMetadata)}
+    }
 }
 
 public extension CommentPostData {
     init(_ postMetadata: PostMetadata) {
         self.init(id: postMetadata.id, postMetadata: postMetadata)
-    }
-    
-    init(_ postMetadataProto: Post.PostMetadata, _ commentProto: Post.Comment) {
-        self.init(postMetadataProto.toPostMetadata())
     }
 }
 
@@ -139,15 +149,15 @@ public struct UserPostData: PostData, PostDataIdentifiable, Equatable {
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.userPostData(self)
     }
+    
+    static func create(_ postMetadataProto: Post.PostMetadata, _ userPostProto: Post.UserPost) -> Either<PulpFictionRequestError, UserPostData> {
+        PostMetadata.create(postMetadataProto).mapRight{postMetadata in UserPostData(postMetadata)}
+    }
 }
 
 public extension UserPostData {
     init(_ postMetadata: PostMetadata) {
         self.init(id: postMetadata.id, postMetadata: postMetadata)
-    }
-    
-    init(_ postMetadataProto: Post.PostMetadata, _ userPostProto: Post.UserPost) {
-        self.init(postMetadataProto.toPostMetadata())
     }
 }
 
@@ -158,12 +168,15 @@ public struct UnrecognizedPostData: PostData, PostDataIdentifiable, Equatable {
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.unregonizedPostData(self)
     }
+    
+    static func create(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, UnrecognizedPostData> {
+        PostMetadata.create(postMetadataProto).mapRight{postMetadata in UnrecognizedPostData(postMetadata)}
+    }
 }
 
 public extension UnrecognizedPostData {
-    init(_ postMetadataProto: Post.PostMetadata) {
-        self.postMetadata = postMetadataProto.toPostMetadata()
-        self.id = self.postMetadata.id
+    init(_ postMetadata: PostMetadata) {
+        self.init(id: postMetadata.id, postMetadata: postMetadata)
     }
 }
 
