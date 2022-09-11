@@ -6,6 +6,8 @@
 //  Created by Matthew Dornfeld on 3/26/22.
 //
 
+import Bow
+import BowEffects
 import ComposableArchitecture
 import Logging
 import PhotosUI
@@ -23,29 +25,32 @@ struct PostCreatorState: Equatable {
     var showingImagePickerView = false
 }
 
-enum ErrorPickingImageFromLibrary: Error {
-    case cancelledWithOutPickingImage
-    case errorPickingImage
+enum PostCreatorErrors {
+    class ErrorPickingImageFromLibrary: PulpFictionRequestError {}
+    class CancelledWithOutPickingImage: ErrorPickingImageFromLibrary {}
+    class ErrorPickingImage: ErrorPickingImageFromLibrary {}
+
+    class ErrorCreatingPost: PulpFictionRequestError {}
+    class ImageNotSelected: PulpFictionRequestError {}
+    class ErrorSerializingImage: PulpFictionRequestError {}
+    class ErrorSavingPostToDatabase: PulpFictionRequestError {}
 }
 
-enum ErrorCreatingPost: Error {
-    case imageNotSelected
-    case errorSerializingImage
-    case errorSavingPostToDatabase
-}
+typealias Effect = ComposableArchitecture.Effect
+typealias Store = ComposableArchitecture.Store
 
 struct PostCreatorEnvironment {
     let mainQueue: AnySchedulerOf<DispatchQueue>
-    let localImageStore: LocalImageStore
+    let postDataCache: PostDataCache
 
-    func processImagePickedFromPhotoAlbum(_ result: Result<ImagePicker.PhotoAlbumImage, ErrorPickingImageFromLibrary>) -> Effect<UIImage, ErrorPickingImageFromLibrary> {
+    func processImagePickedFromPhotoAlbum(_ result: Result<ImagePicker.PhotoAlbumImage, PulpFictionRequestError>) -> Effect<UIImage, PulpFictionRequestError> {
         switch result {
         case let .success(photoAlbumImage):
 
             if let uiImage = photoAlbumImage as? UIImage {
                 return Effect(value: uiImage)
             } else {
-                return Effect(error: ErrorPickingImageFromLibrary.errorPickingImage)
+                return Effect(error: PostCreatorErrors.ErrorPickingImage())
             }
 
         case let .failure(error):
@@ -53,23 +58,22 @@ struct PostCreatorEnvironment {
         }
     }
 
-    func createPost(_ uiImageMaybe: UIImage?) -> Effect<ImageMetadata, ErrorCreatingPost> {
+    func createPost(_ uiImageMaybe: UIImage?) -> ComposableArchitecture.Effect<PostMetadata, PulpFictionRequestError> {
         guard let uiImage = uiImageMaybe else {
-            return Effect(error: ErrorCreatingPost.imageNotSelected)
+            return Effect(error: PostCreatorErrors.ImageNotSelected())
         }
 
         if let serializedImage = uiImage.serializeImage() {
-            let imageId = UUID().uuidString
-            let imageWithMetadata = ImageWithMetadata(imageId, serializedImage)
+            let createPostRequest = CreatePostRequest
+                .createImagePostRequest("", serializedImage)
+            let imagePostData = ImagePostData(createPostRequest.createImagePostRequest)
 
-            switch localImageStore.put(imageWithMetadata) {
-            case .success:
-                return Effect(value: imageWithMetadata.imageMetadata)
-            case .failure:
-                return Effect(error: ErrorCreatingPost.errorSavingPostToDatabase)
-            }
+            return postDataCache
+                .put(imagePostData)
+                .mapError { _ in PostCreatorErrors.ErrorSavingPostToDatabase() }
+                .toEffect()
         } else {
-            return Effect(error: ErrorCreatingPost.errorSerializingImage)
+            return Effect(error: PostCreatorErrors.ErrorSerializingImage())
         }
     }
 }
@@ -77,11 +81,11 @@ struct PostCreatorEnvironment {
 enum PostCreatorAction {
     case showImagePicker
     case hideImagePicker
-    case pickImageFromLibrary(Result<ImagePicker.PhotoAlbumImage, ErrorPickingImageFromLibrary>)
-    case pickImageFromLibraryHandleErrors(Result<UIImage, ErrorPickingImageFromLibrary>)
+    case pickImageFromLibrary(Result<ImagePicker.PhotoAlbumImage, PulpFictionRequestError>)
+    case pickImageFromLibraryHandleErrors(Result<UIImage, PulpFictionRequestError>)
     case unpickImage
     case createPost
-    case createPostHandleErrors(Result<ImageMetadata, ErrorCreatingPost>)
+    case createPostHandleErrors(Result<PostMetadata, PulpFictionRequestError>)
 }
 
 struct PostCreatorReducer {
@@ -110,10 +114,22 @@ struct PostCreatorReducer {
 
         case let .pickImageFromLibraryHandleErrors(.failure(error)):
             switch error {
-            case .cancelledWithOutPickingImage:
+            case let error as PostCreatorErrors.CancelledWithOutPickingImage:
                 break
-            case .errorPickingImage:
-                logger.error("Error picking image")
+            case let error as PostCreatorErrors.ErrorPickingImageFromLibrary:
+                logger.error(
+                    "Error picking image",
+                    metadata: [
+                        "cause": "\(error)",
+                    ]
+                )
+            default:
+                logger.error(
+                    "Unrecgonized error \(error)",
+                    metadata: [
+                        "cause": "\(error)",
+                    ]
+                )
             }
             return .none
 
@@ -127,18 +143,18 @@ struct PostCreatorReducer {
                 .receive(on: environment.mainQueue)
                 .catchToEffect(PostCreatorAction.createPostHandleErrors)
 
-        case let .createPostHandleErrors(.success(imageMetadata)):
+        case let .createPostHandleErrors(.success(postMetadata)):
             logger.info(
                 "Created post",
                 metadata: [
-                    "imageId": "\(imageMetadata.imageID)",
+                    "imageId": "\(postMetadata.postId)",
                 ]
             )
             return .none
 
         case let .createPostHandleErrors(.failure(error)):
             switch error {
-            case .imageNotSelected:
+            case let error as PostCreatorErrors.ImageNotSelected:
                 break
             default:
                 logger.error(
@@ -174,7 +190,7 @@ struct ImagePicker: UIViewControllerRepresentable {
 
             guard let provider = results.first?.itemProvider else {
                 DispatchQueue.main.async {
-                    self.parent.viewStore.send(.pickImageFromLibrary(.failure(ErrorPickingImageFromLibrary.cancelledWithOutPickingImage)))
+                    self.parent.viewStore.send(.pickImageFromLibrary(.failure(PostCreatorErrors.CancelledWithOutPickingImage())))
                 }
                 return
             }
@@ -182,9 +198,9 @@ struct ImagePicker: UIViewControllerRepresentable {
             if provider.canLoadObject(ofClass: UIImage.self) {
                 provider.loadObject(ofClass: UIImage.self) { photoAlbumImageMaybe, _ in
 
-                    let result: Result<PhotoAlbumImage, ErrorPickingImageFromLibrary> = photoAlbumImageMaybe
+                    let result: Result<PhotoAlbumImage, PulpFictionRequestError> = photoAlbumImageMaybe
                         .map { photoAlbumImage in .success(photoAlbumImage)
-                        } ?? .failure(ErrorPickingImageFromLibrary.cancelledWithOutPickingImage)
+                        } ?? .failure(PostCreatorErrors.CancelledWithOutPickingImage())
 
                     DispatchQueue.main.async {
                         self.parent.viewStore.send(.pickImageFromLibrary(result))
@@ -218,13 +234,13 @@ struct PostCreatorView: View {
         self.store = store
     }
 
-    init(localImageStore: LocalImageStore) {
+    init(_ postDataCache: PostDataCache) {
         self.init(store: Store(
             initialState: PostCreatorState(),
             reducer: PostCreatorReducer.reducer,
             environment: PostCreatorEnvironment(
                 mainQueue: .main,
-                localImageStore: localImageStore
+                postDataCache: postDataCache
             )
         ))
     }

@@ -1,7 +1,12 @@
 {
   "configDefaults" : {
     "optionSet" : {
-
+      "ProjectPrioritizesSwift" : {
+        "p" : "YES"
+      },
+      "UseLegacyBuildSystem" : {
+        "p" : "NO"
+      }
     }
   },
   "packages" : [

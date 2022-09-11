@@ -12,17 +12,20 @@ import protos_pulp_fiction_proto
 import SwiftProtobuf
 
 public typealias Post = PulpFiction_Protos_Post
-public typealias PostMetadata = PulpFiction_Protos_Post.PostMetadata
+public typealias ImagePost = PulpFiction_Protos_Post.ImagePost
 public typealias PulpFictionServiceClient = PulpFiction_Protos_PulpFictionClient
 public typealias PulpFictionTestClient = PulpFiction_Protos_PulpFictionTestClient
 public typealias PulpFictionClientProtocol = PulpFiction_Protos_PulpFictionClientProtocol
+public typealias CreatePostRequest = PulpFiction_Protos_CreatePostRequest
 
-public struct ImageWithMetadata: Equatable {
+public struct ImageWithMetadata: Equatable, Identifiable {
+    public let id: String
     public var imageMetadata: ImageMetadata
     public var imageAsBase64Png: Data
     public var caption: String
 
     init(_ imageId: String, _ imageAsBase64Png: Data, _ createdAt: SwiftProtobuf.Google_Protobuf_Timestamp) {
+        id = imageId
         imageMetadata = ImageMetadata(imageId, createdAt)
         caption = ""
         self.imageAsBase64Png = imageAsBase64Png

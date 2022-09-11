@@ -7,8 +7,10 @@
 
 import Bow
 import BowEffects
+import ComposableArchitecture
 import Foundation
 import Logging
+import SwiftUI
 import UIKit
 
 struct UIImageCompanion {
@@ -23,6 +25,35 @@ extension UIImage {
         }
 
         return imageData.base64EncodedData()
+    }
+}
+
+extension Data {
+    public class ErrorDeserializingImage: PulpFictionRequestError {}
+    func toUIImage() -> Either<PulpFictionRequestError, UIImage> {
+        guard let imageData = Data(
+            base64Encoded: self,
+            options: Data.Base64DecodingOptions.ignoreUnknownCharacters
+        ) else {
+            return Either.left(ErrorDeserializingImage())
+        }
+
+        if let uiImage = UIImage(data: imageData) {
+            return Either.right(uiImage)
+        } else {
+            return Either.left(ErrorDeserializingImage())
+        }
+    }
+}
+
+extension String {
+    public class ErrorParsingUUID: PulpFictionRequestError {}
+
+    func toUUID() -> Either<PulpFictionRequestError, UUID> {
+        guard let uuid = UUID(uuidString: self) else {
+            return Either.left(ErrorParsingUUID())
+        }
+        return Either.right(uuid)
     }
 }
 
@@ -113,10 +144,133 @@ public extension IO {
     func mapRight<B>(_ f: @escaping (A) -> B) -> IO<E, B> {
         return map(f).map { b in b }^
     }
+
+    static func invokeAndConvertError<E: PulpFictionError, A>(_ errorSupplier: @escaping (Error) -> E, _ f: @escaping () throws -> A) -> IO<E, A> {
+        IO<E, A>.invoke {
+            do {
+                return try f()
+            } catch {
+                throw errorSupplier(error)
+            }
+        }
+    }
+
+    func toEffect() -> ComposableArchitecture.Effect<A, E> {
+        return unsafeRunSyncEither()
+            .fold(
+                { error in ComposableArchitecture.Effect(error: error) },
+                { value in ComposableArchitecture.Effect(value: value) }
+            )
+    }
 }
 
 public extension Either {
+    struct LeftValueNotError: Error {}
+
+    enum EitherEnum<A, B> {
+        case left(A)
+        case right(B)
+    }
+
     func mapRight<C>(_ f: (B) -> C) -> Either<A, C> {
         return bimap({ a in a }, f)
+    }
+
+    func onError(_ f: (A) -> Void) -> Either<A, B> {
+        mapLeft { a in f(a) }
+        return self
+    }
+
+    func getOrThrow() throws -> B {
+        if isRight {
+            return rightValue
+        }
+
+        switch leftValue {
+        case let a as Error:
+            throw a
+        default:
+            throw LeftValueNotError()
+        }
+    }
+
+    func toEnum() -> EitherEnum<A, B> {
+        if isLeft {
+            return EitherEnum.left(leftValue)
+        }
+        return EitherEnum.right(rightValue)
+    }
+
+    func toEitherView() -> EitherView<A, B> where A: View, B: View {
+        EitherView(state: self)
+    }
+}
+
+public extension Option {
+    struct EmptyOptional: Error {}
+
+    func getOrThrow() throws -> A {
+        guard let value = toOptional() else {
+            throw EmptyOptional()
+        }
+
+        return value
+    }
+}
+
+public extension Post.PostMetadata {
+    func toPostMetadata() -> Either<PulpFictionRequestError, PostMetadata> {
+        PostMetadata.create(self)
+    }
+}
+
+public extension Post.ImagePost {
+    func toPostData(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, ImagePostData> {
+        ImagePostData.create(postMetadataProto, self)
+    }
+}
+
+public extension CreatePostRequest {
+    static func createImagePostRequest(_ caption: String, _ imageJpg: Data) -> CreatePostRequest {
+        CreatePostRequest.with {
+            $0.createImagePostRequest = CreatePostRequest.CreateImagePostRequest.with {
+                $0.caption = caption
+                $0.imageJpg = imageJpg
+            }
+        }
+    }
+}
+
+public extension Post.Comment {
+    func toPostData(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, CommentPostData> {
+        CommentPostData.create(postMetadataProto, self)
+    }
+}
+
+public extension Post.UserPost {
+    func toPostData(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, UserPostData> {
+        UserPostData.create(postMetadataProto, self)
+    }
+}
+
+public extension Array {
+    func flattenOption<A>() -> [A] where Element == Option<A> {
+        map { aMaybe in aMaybe.orNil }
+            .compactMap { $0 }
+    }
+
+    func flattenError<E: Error, A>() -> [A] where Element == Either<E, A> {
+        map { either in either.orNil }
+            .compactMap { $0 }
+    }
+
+    func mapAndFilterEmpties<A>(_ transform: (Element) -> Option<A>) -> [A] {
+        map(transform)
+            .flattenOption()
+    }
+
+    func mapAndFilterErrors<E: Error, A>(_ transform: (Element) -> Either<E, A>) -> [A] {
+        map(transform)
+            .flattenError()
     }
 }

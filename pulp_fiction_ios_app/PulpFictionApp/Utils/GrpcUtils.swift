@@ -12,19 +12,16 @@ import NIOCore
 import NIOPosix
 
 public enum GrpcUtils {
+    public class ErrorConnectingToBackendServer: PulpFictionStartupError {}
+
     private static func buildGrpcChannel() -> IO<PulpFictionStartupError, GRPCChannel> {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-
-        return IO.invoke {
-            do {
-                return try GRPCChannelPool.with(
-                    target: .host("localhost", port: 9000),
-                    transportSecurity: .plaintext,
-                    eventLoopGroup: group
-                )
-            } catch {
-                throw PulpFictionStartupError.errorConnectingToBackendServer
-            }
+        return IO<PulpFictionStartupError, GRPCChannel>.invokeAndConvertError({ cause in ErrorConnectingToBackendServer(cause) }) {
+            try GRPCChannelPool.with(
+                target: .host("localhost", port: 9000),
+                transportSecurity: .plaintext,
+                eventLoopGroup: group
+            )
         }
     }
 

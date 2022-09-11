@@ -15,10 +15,10 @@ swift_library(
         "PulpFictionApp/**/*.swift",
     ]),
     deps = [
-        "@swift_pkgs//SQLite.swift:SQLite",
         "@swift_pkgs//swift-composable-architecture:ComposableArchitecture",
         "@swift_pkgs//Bow:Bow",
         "@swift_pkgs//Bow:BowEffects",
+        "@swift_pkgs//Cache:Cache",
         "//protos:pulp_fiction_grpc_swift",
         "//protos:pulp_fiction_grpc_stubs_swift"
     ],
@@ -31,8 +31,9 @@ swift_library(
         "PulpFictionTests/**/*.swift",
     ]),
     deps = [
-        ":build_source"
+        ":build_source",
     ],
+    module_name = "PulpFictionAppTests",
 )
 
 ios_unit_test(
@@ -41,7 +42,7 @@ ios_unit_test(
         "PulpFictionTests/**/*.swift",
     ]),
     deps = [
-        ":build_tests"
+        ":build_tests",
     ],
     minimum_os_version = "15.0",
     visibility = ["//visibility:public"],
