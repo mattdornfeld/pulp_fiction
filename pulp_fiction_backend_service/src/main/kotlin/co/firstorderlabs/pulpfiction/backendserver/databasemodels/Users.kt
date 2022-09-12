@@ -92,7 +92,7 @@ interface User : Entity<User> {
     }
 
     companion object : Entity.Factory<User>() {
-        private fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
+        fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
             if (dateOfBirth == null) {
                 return Either.Right(none())
             }

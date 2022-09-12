@@ -36,7 +36,8 @@ object DatabaseMetrics {
         createUser,
         getUser,
         login,
-        getPost;
+        getPost,
+        updateUser;
 
         override fun getValue(): String = name
     }

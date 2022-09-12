@@ -9,11 +9,13 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
 import co.firstorderlabs.protos.pulpfiction.createPostResponse
 import co.firstorderlabs.protos.pulpfiction.createUserResponse
 import co.firstorderlabs.protos.pulpfiction.getPostResponse
 import co.firstorderlabs.protos.pulpfiction.getUserResponse
 import co.firstorderlabs.protos.pulpfiction.loginResponse
+import co.firstorderlabs.protos.pulpfiction.updateUserResponse
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.DatabaseOperation
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.logDatabaseMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.EndpointName
@@ -63,6 +65,23 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
 
             createUserResponse {
                 this.userPost = userPost
+            }
+        }
+            .logEndpointMetrics(endpointName)
+            .getResultAndThrowException()
+    }
+
+    override suspend fun updateUser(request: PulpFictionProtos.UpdateUserRequest): PulpFictionProtos.UpdateUserResponse {
+        val endpointName = EndpointName.updateUser
+        return effect<PulpFictionRequestError, UpdateUserResponse> {
+            checkLoginSessionValid(request.loginSession, endpointName).bind()
+            val sensitiveUserMetadata = databaseMessenger
+                .updateUser(request)
+                .logDatabaseMetrics(endpointName, DatabaseOperation.updateUser)
+                .bind()
+
+            updateUserResponse {
+                this.sensitiveUserMetadata = sensitiveUserMetadata
             }
         }
             .logEndpointMetrics(endpointName)
