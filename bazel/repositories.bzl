@@ -15,15 +15,8 @@ def pulp_fiction_dependencies():
     )
 
     http_archive(
-        name = "build_bazel_rules_apple",
-        sha256 = "f5f4084830a7aac2b4c5fb4e9faa0f781fcf1d43e4282a015768e18f3daff603",
-        url = "https://github.com/bazelbuild/rules_apple/releases/download/1.0.0/rules_apple.1.0.0.tar.gz",
-    )
-
-    http_archive(
-        name = "build_bazel_rules_swift",
-        sha256 = "12057b7aa904467284eee640de5e33853e51d8e31aae50b3fb25d2823d51c6b8",
-        url = "https://github.com/bazelbuild/rules_swift/releases/download/1.0.0/rules_swift.1.0.0.tar.gz",
+        name = "com_github_buildbuddy_io_rules_xcodeproj",
+        url = "https://github.com/buildbuddy-io/rules_xcodeproj/releases/download/0.7.1/release.tar.gz",
     )
 
     http_archive(
@@ -59,12 +52,4 @@ def pulp_fiction_dependencies():
         urls = ["https://github.com/jdreaver/rules_terraform/tarball/e460befbb3d3204e132085020e6b565a224b838e"],
         type = "tar.gz",
         strip_prefix = "jdreaver-rules_terraform-e460bef"
-    )
-
-    TULSI_COMMIT_HASH = "518f18da4948192c72074e07fa1dfe15858d40f4"
-    http_archive(
-        name = "tulsi",
-        url = "https://github.com/bazelbuild/tulsi/archive/{}.tar.gz".format(TULSI_COMMIT_HASH),
-        strip_prefix = "tulsi-{}".format(TULSI_COMMIT_HASH),
-        sha256 = "92c89fcabfefc313dafea1cbc96c9f68d6f2025f2436ee11f7a4e4eb640fa151",
     )

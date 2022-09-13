@@ -10,7 +10,7 @@ build_source:
 	${BAZEL} build :build_source --apple_platform_type=ios
 
 build_xcodeproj:
-	${BAZEL} run  -- @tulsi//:tulsi -- --genconfig "${PWD}/PulpFictionApp.tulsiproj:build_and_test" --outputfolder="${PWD}"
+	${BAZEL} run :build_xcodeproj
 
 clean:
 	${BAZEL} clean
@@ -23,6 +23,3 @@ test_all:
 
 test_unit:
 	${BAZEL} test :test_unit --apple_platform_type=ios --test_output=all
-
-tulsi:
-	${BAZEL} run @tulsi//:tulsi

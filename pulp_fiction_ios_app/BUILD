@@ -1,6 +1,7 @@
 load("@build_bazel_rules_apple//apple:ios.bzl", "ios_application", "ios_unit_test")
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 load("@cgrindel_rules_swiftformat//swiftformat:defs.bzl", "swiftformat_pkg", "swiftformat_library", "swiftformat_format", "swiftformat_test")
+load("@com_github_buildbuddy_io_rules_xcodeproj//xcodeproj:xcodeproj.bzl", "xcodeproj")
 
 platform(
     name = "myplatform",
@@ -33,7 +34,7 @@ swift_library(
     deps = [
         ":build_source",
     ],
-    module_name = "PulpFictionAppTests",
+    module_name = "PulpFictionTests",
 )
 
 ios_unit_test(
@@ -50,7 +51,7 @@ ios_unit_test(
 
 ios_application(
     name = "build_app",
-    bundle_name = "pulp_fiction",
+    bundle_name = "PulpFictionApp",
     bundle_id = "co.firstorderlabs.PulpFictionApp",
     families = [
         "iphone",
@@ -59,7 +60,9 @@ ios_application(
     minimum_os_version = "15.0",
     infoplists = [":PulpFictionApp/Info.plist"],
     visibility = ["//visibility:public"],
-    deps = [":build_source"],
+    deps = [
+        ":build_source",
+    ],
 )
 
 swiftformat_format(
@@ -76,4 +79,15 @@ swiftformat_pkg(
         "PulpFictionApp/**/*.swift",
         "PulpFictionTests/**/*.swift",
     ]),
+)
+
+xcodeproj(
+    name = "build_xcodeproj",
+    project_name = "PulpFictionApp",
+    tags = ["manual"],
+    top_level_targets = [
+        ":build_app",
+        ":test_unit",
+    ],
+    build_mode = "xcode",
 )

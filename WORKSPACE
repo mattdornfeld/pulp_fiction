@@ -17,6 +17,18 @@ load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
 container_deps()
 
 load(
+    "@cgrindel_rules_spm//spm:deps.bzl",
+    "spm_rules_dependencies",
+)
+spm_rules_dependencies()
+
+load(
+    "@com_github_buildbuddy_io_rules_xcodeproj//xcodeproj:repositories.bzl",
+    "xcodeproj_rules_dependencies",
+)
+xcodeproj_rules_dependencies()
+
+load(
     "@build_bazel_rules_apple//apple:repositories.bzl",
     "apple_rules_dependencies",
 )
@@ -51,12 +63,6 @@ http_archive(
     strip_prefix = "rules_proto-4.0.0",
     url = "https://github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0.tar.gz",
 )
-
-load(
-    "@cgrindel_rules_spm//spm:deps.bzl",
-    "spm_rules_dependencies",
-)
-spm_rules_dependencies()
 
 load(
     "@rules_proto//proto:repositories.bzl",

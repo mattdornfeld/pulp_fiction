@@ -16,8 +16,8 @@ To execute the tests run
 make test_all
 ```
 ### Tulsi
-This project uses [Tulsi](https://tulsi.bazel.build/docs/gettingstarted.html) as a tool for generating XCode projects from the Bazel `BUILD` file. To generate an `xcodeproj` from the `BUILD` file run
+This project uses [rules_xcodeproj](https://github.com/buildbuddy-io/rules_xcodeproj) as a tool for generating XCode projects from the Bazel `BUILD` file. To generate an `xcodeproj` from the `BUILD` file run
 ```
 make build_xcodeproj
 ```
-This should generate and `xcodeproj` directory and automatically open the XCode IDE. From there you should try building the app, running tests, and opening the app in a simulator from the IDE.
+This should generate and `xcodeproj` directory. From there you open that directory in XCode and should try building the app, running tests, and opening the app in a simulator from the IDE.
