@@ -10,7 +10,7 @@ import SwiftUI
 
 public struct Caption: View {
     public let text: String
-    
+
     public var body: some View {
         Text(text).font(.caption)
     }
@@ -24,7 +24,7 @@ public extension Caption {
 
 public struct BoldCaption: View {
     public let text: String
-    
+
     public var body: some View {
         Text(text).fontWeight(.bold).font(.caption)
     }

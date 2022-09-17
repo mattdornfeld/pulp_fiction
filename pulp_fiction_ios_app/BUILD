@@ -133,6 +133,8 @@ swiftformat_pkg(
     name = "format",
     srcs = glob([
         "PulpFictionApp/**/*.swift",
+        "PulpFictionAppPreview/**/*.swift",
+        "PulpFictionAppSource/**/*.swift",
         "PulpFictionTests/**/*.swift",
     ]),
 )

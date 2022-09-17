@@ -11,7 +11,7 @@ import PulpFictionAppSource
 import SwiftProtobuf
 import UIKit
 
-public struct FakeData {
+public enum FakeData {
     static let caption = "test caption please ignore"
     static let imageUrl = "https://angelfire.com/never_gonna_give_you_up.jpg"
     static let userAvatarJpgName = "Shadowfax"
@@ -21,7 +21,7 @@ public struct FakeData {
 
 public extension UserMetadataProto {
     static func generate() -> UserMetadataProto {
-        UserMetadataProto.with{
+        UserMetadataProto.with {
             $0.userID = UUID().uuidString
             $0.displayName = FakeData.postCreatorDisplayName
             $0.createdAt = Google_Protobuf_Timestamp.with {
@@ -74,10 +74,10 @@ public extension ImagePostData {
     class ErrorBuildingUIImage: PulpFictionRequestError {}
     class ErrorBuildingPostUIImage: ErrorBuildingUIImage {}
     class ErrorBuildingUserAvatarUIImage: ErrorBuildingUIImage {}
-    
+
     static func generate() -> Either<PulpFictionRequestError, ImagePostData> {
         let postProto = Post.generate(Post.PostType.image)
-        
+
         let serializePostImageResult = Either<PulpFictionRequestError, Data>.var()
         let serializeUserAvatarImageResult = Either<PulpFictionRequestError, Data>.var()
         let buildPostMetadataResult = Either<PulpFictionRequestError, PostMetadata>.var()
@@ -85,11 +85,11 @@ public extension ImagePostData {
             serializePostImageResult <- UIImage
                 .fromBundleFile(named: FakeData.imagePostJpgName)
                 .toEither(ErrorBuildingPostUIImage())
-                .flatMap{$0.serializeImage()},
+                .flatMap { $0.serializeImage() },
             serializeUserAvatarImageResult <- UIImage
                 .fromBundleFile(named: FakeData.userAvatarJpgName)
                 .toEither(ErrorBuildingUserAvatarUIImage())
-                .flatMap{$0.serializeImage()},
+                .flatMap { $0.serializeImage() },
             buildPostMetadataResult <- postProto
                 .metadata
                 .toPostMetadata(serializeUserAvatarImageResult.get),

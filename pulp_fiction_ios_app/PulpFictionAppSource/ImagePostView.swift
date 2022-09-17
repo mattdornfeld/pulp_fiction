@@ -12,10 +12,10 @@ public struct ImagePostView: View, Identifiable {
     public let imagePostData: ImagePostData
     private let postUIImage: UIImage
     private let userAvatarUIImage: UIImage
-    
+
     public var body: some View {
-        VStack() {
-            HStack{
+        VStack {
+            HStack {
                 CircularImage(
                     uiImage: userAvatarUIImage,
                     radius: 15,
@@ -42,7 +42,7 @@ public struct ImagePostView: View, Identifiable {
     public static func create(_ imagePostData: ImagePostData) -> Either<PulpFictionRequestError, ImagePostView> {
         let createPostUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
         let createUserAvatarUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
-        
+
         return binding(
             createPostUIImageResult <- imagePostData.imageJpg.toUIImage(),
             createUserAvatarUIImageResult <- imagePostData.postMetadata.postCreatorMetadata.avatarImageJpg.toUIImage(),

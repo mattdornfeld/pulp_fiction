@@ -13,7 +13,7 @@ public struct CircularImage: View {
     let radius: CGFloat
     let borderColor: Color
     let borderWidth: CGFloat
-    
+
     public var body: some View {
         uiImage
             .toImage()

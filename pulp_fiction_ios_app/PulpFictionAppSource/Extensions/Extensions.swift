@@ -18,8 +18,8 @@ struct UIImageCompanion {
 }
 
 public extension UIImage {
-    class ErrorSerializingImage:PulpFictionRequestError {}
-    
+    class ErrorSerializingImage: PulpFictionRequestError {}
+
     func serializeImage() -> Either<PulpFictionRequestError, Data> {
         guard let imageData = pngData() else {
             UIImageCompanion.logger.error("Error converting \(self) to pngData")
@@ -28,18 +28,18 @@ public extension UIImage {
 
         return Either.right(imageData.base64EncodedData())
     }
-    
+
     func toImage() -> Image {
         Image(uiImage: self)
     }
-    
+
     static func fromBundleFile(named: String) -> Option<UIImage> {
-        ResourceConfigs.resourceBundleFileIdentifier.map{ resourceBundleFileIdentifier in
+        ResourceConfigs.resourceBundleFileIdentifier.map { resourceBundleFileIdentifier in
             let bundle = Bundle(identifier: resourceBundleFileIdentifier)
             return UIImage(named: named, in: bundle, with: nil)
         }^
-        .getOrElse(UIImage(named: named))
-        .toOption()
+            .getOrElse(UIImage(named: named))
+            .toOption()
     }
 }
 
@@ -101,7 +101,7 @@ public extension Optional {
         return map { success in Swift.Result.success(success) }
             .getOrElse(Swift.Result.failure(error))
     }
-    
+
     func toEither<E: Error>(_ error: E) -> Either<E, Wrapped> {
         return map { success in Either.right(success) }
             .getOrElse(Either.left(error))
@@ -190,7 +190,7 @@ public extension Post.Comment {
 }
 
 public extension Post.UserPost {
-    func toPostData(_ postMetadata: PostMetadata, _ avatarImageJpg: Data) -> UserPostData {
+    func toPostData(_ postMetadata: PostMetadata, _: Data) -> UserPostData {
         UserPostData(postMetadata)
     }
 }

@@ -14,15 +14,15 @@ public struct UserMetadata: Codable, Equatable, Identifiable {
     public let avatarImageUrl: String
     public let createdAt: Date
     public let avatarImageJpg: Data
-    
+
     static func create(_ userMetadataProto: UserMetadataProto, _ avatarImageJpg: Data) -> Either<PulpFictionRequestError, UserMetadata> {
-        userMetadataProto.userID.toUUID().mapRight{userId in
-            return UserMetadata(
-                id:  userId,
-                userId:  userId,
-                displayName:  userMetadataProto.displayName,
-                avatarImageUrl:  userMetadataProto.avatarImageURL,
-                createdAt:  userMetadataProto.createdAt.date,
+        userMetadataProto.userID.toUUID().mapRight { userId in
+            UserMetadata(
+                id: userId,
+                userId: userId,
+                displayName: userMetadataProto.displayName,
+                avatarImageUrl: userMetadataProto.avatarImageURL,
+                createdAt: userMetadataProto.createdAt.date,
                 avatarImageJpg: avatarImageJpg
             )
         }

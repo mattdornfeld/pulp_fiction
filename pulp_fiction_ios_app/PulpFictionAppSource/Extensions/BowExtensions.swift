@@ -64,9 +64,9 @@ public extension Either {
             throw LeftValueNotError()
         }
     }
-    
+
     func logError() -> Either<A, B> where A: Error {
-        mapLeft{error in print(error)}
+        mapLeft { error in print(error) }
         return self
     }
 
@@ -80,12 +80,12 @@ public extension Either {
     func toEitherView() -> EitherView<A, B> where A: View, B: View {
         EitherView(state: self)
     }
-    
+
     func toEffect() -> ComposableArchitecture.Effect<B, A> where A: Error {
-        return self.fold(
-                { error in ComposableArchitecture.Effect<B, A>(error: error) },
-                { value in ComposableArchitecture.Effect<B, A>(value: value) }
-            )
+        return fold(
+            { error in ComposableArchitecture.Effect<B, A>(error: error) },
+            { value in ComposableArchitecture.Effect<B, A>(value: value) }
+        )
     }
 }
 
@@ -99,7 +99,7 @@ public extension Option {
 
         return value
     }
-    
+
     func toEither<E: Error>(_ error: E) -> Either<E, A> {
         return map { success in Either<E, A>.right(success) }^
             .getOrElse(Either<E, A>.left(error))

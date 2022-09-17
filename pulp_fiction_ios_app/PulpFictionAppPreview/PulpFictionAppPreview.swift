@@ -13,28 +13,28 @@ import SwiftUI
 @main
 struct PulpFictionAppPreview: App {
     let pulpFictionAppViewBuilder = {
-        let externalMessengersCreateResult = ExternalMessengers.create()        
-        
-        externalMessengersCreateResult.onSuccess{externalMessengers in
+        let externalMessengersCreateResult = ExternalMessengers.create()
+
+        externalMessengersCreateResult.onSuccess { externalMessengers in
             let postDataCache = externalMessengers
                 .postDataMessenger
                 .postDataCache
-            
-            ImagePostData.generate().mapRight{ imagePostData in
+
+            ImagePostData.generate().mapRight { imagePostData in
                 postDataCache
                     .put(imagePostData)
                     .unsafeRunSyncEither()
             }
-            
-            ImagePostData.generate().map{ imagePostData in
+
+            ImagePostData.generate().map { imagePostData in
                 postDataCache
                     .put(imagePostData)
                     .unsafeRunSyncEither()
             }
-            
+
 //            print(postDataCache.listPostIdsInCache())
         }
-        
+
         return PulpFictionAppViewBuilder(externalMessengersCreateResult)
     }()
 

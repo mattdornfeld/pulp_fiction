@@ -30,12 +30,12 @@ public struct PostMetadata: Codable, Equatable, Identifiable {
         _ createdAt: Date,
         _ userMetadata: UserMetadata
     ) {
-        self.id = postId
+        id = postId
         self.postId = postId
         self.postType = postType
         self.postState = postState
         self.createdAt = createdAt
-        self.postCreatorMetadata = userMetadata
+        postCreatorMetadata = userMetadata
     }
 
     public static func create(_ postMetadataProto: Post.PostMetadata, _ avatarImageJpg: Data) -> Either<PulpFictionRequestError, PostMetadata> {
@@ -59,7 +59,7 @@ public struct PostMetadata: Codable, Equatable, Identifiable {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let postTypeRawValue = try values.decode(Int.self, forKey: .postType)
         let postStateRawValue = try values.decode(Int.self, forKey: .postState)
-        
+
         self.init(
             try UUID(uuidString: values.decode(String.self, forKey: .postId)).getOrThrow(),
             Post.PostType(rawValue: postTypeRawValue) ?? Post.PostType.UNRECOGNIZED(postTypeRawValue),
@@ -124,7 +124,7 @@ public extension ImagePostData {
             createdAt: Date(),
             avatarImageJpg: Data()
         )
-        
+
         let postMetadata = PostMetadata(
             UUID(),
             Post.PostType.image,

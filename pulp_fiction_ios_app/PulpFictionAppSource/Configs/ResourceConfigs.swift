@@ -11,5 +11,5 @@ import Foundation
 struct ResourceConfigs {
     static let resourceBundleFileIdentifier: Option<String> = getenv("resourceBundleFileIdentifier")
         .toOption()
-        .flatMap{String(utf8String: $0).toOption()}^
+        .flatMap { String(utf8String: $0).toOption() }^
 }

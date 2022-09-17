@@ -27,7 +27,7 @@ struct PostCreatorState: Equatable {
      If true swill show the photo album image picker view
      */
     var showingImagePickerView: Bool = false
-    
+
     mutating func clearState() {
         caption = ""
         postUIImageMaybe = nil
@@ -70,7 +70,7 @@ struct PostCreatorEnvironment {
         guard let uiImage = uiImageMaybe else {
             return Effect(error: PostCreatorErrors.ImageNotSelected())
         }
-        
+
         let serializeImageResult = Either<PulpFictionRequestError, Data>.var()
         let putImageResult = Either<PulpFictionRequestError, PostMetadata>.var()
         return binding(
@@ -156,9 +156,9 @@ struct PostCreatorReducer {
                 .createPost(state.caption, state.postUIImageMaybe)
                 .receive(on: environment.mainQueue)
                 .catchToEffect(PostCreatorAction.createPostHandleErrors)
-            
+
             state.clearState()
-            
+
             return createPostEffect
 
         case let .createPostHandleErrors(.success(postMetadata)):
@@ -184,7 +184,7 @@ struct PostCreatorReducer {
             }
 
             return .none
-            
+
         case let .updateCaption(newCaption):
             state.caption = newCaption
             return .none
@@ -310,12 +310,13 @@ struct PostCreatorView: View {
                     .scaledToFit()
             }
     }
-    
+
     func createCaptionView(viewStore: ViewStore<PostCreatorState, PostCreatorAction>) -> some View {
         TextField(
             "Enter a caption for your post",
             text: viewStore.binding(
-                get: {$0.caption}, send: {PostCreatorAction.updateCaption($0)})
+                get: { $0.caption }, send: { PostCreatorAction.updateCaption($0) }
+            )
         ).disableAutocorrection(true)
     }
 }
