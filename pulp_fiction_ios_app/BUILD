@@ -11,9 +11,9 @@ platform(
 )
 
 swift_library(
-    name = "build_source",
+    name = "build_app_source",
     srcs = glob([
-        "PulpFictionApp/**/*.swift",
+        "PulpFictionAppSource/**/*.swift",
     ]),
     deps = [
         "@swift_pkgs//swift-composable-architecture:ComposableArchitecture",
@@ -23,7 +23,32 @@ swift_library(
         "//protos:pulp_fiction_grpc_swift",
         "//protos:pulp_fiction_grpc_stubs_swift"
     ],
+    module_name = "PulpFictionAppSource"
+)
+
+swift_library(
+    name = "build_app_executable_source",
+    srcs = glob([
+        "PulpFictionApp/**/*.swift",
+    ]),
+    deps = [
+        ":build_app_source"
+    ],
     module_name = "PulpFictionApp"
+)
+
+swift_library(
+    name = "build_app_preview_source",
+    srcs = glob([
+        "PulpFictionAppPreview/**/*.swift",
+    ]),
+    data = glob([
+        "PulpFictionAppPreview/Assets.xcassets/**/*",
+    ]),
+    deps = [
+        ":build_app_source",
+    ],
+    module_name = "PulpFictionAppPreview",
 )
 
 swift_library(
@@ -31,22 +56,13 @@ swift_library(
     srcs = glob([
         "PulpFictionTests/**/*.swift",
     ]),
-    deps = [
-        ":build_source",
-    ],
-    module_name = "PulpFictionTests",
-)
-
-ios_unit_test(
-    name = "test_unit",
     data = glob([
-        "PulpFictionTests/**/*.swift",
+        "PulpFictionAppPreview/Assets.xcassets/**/*",
     ]),
     deps = [
-        ":build_tests",
+        ":build_app_preview_source",
     ],
-    minimum_os_version = "15.0",
-    visibility = ["//visibility:public"],
+    module_name = "PulpFictionTests",
 )
 
 ios_application(
@@ -61,8 +77,48 @@ ios_application(
     infoplists = [":PulpFictionApp/Info.plist"],
     visibility = ["//visibility:public"],
     deps = [
-        ":build_source",
+        ":build_app_executable_source",
     ],
+)
+
+filegroup(
+    name = "preview_app_assets",
+    srcs = glob([
+        "PulpFictionAppPreview/Assets.xcassets/**/*",
+    ]),
+)
+
+ios_application(
+    name = "build_preview_app",
+    bundle_name = "PulpFictionAppPreview",
+    bundle_id = "co.firstorderlabs.PulpFictionAppPreview",
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    resources = [":preview_app_assets"],
+    minimum_os_version = "15.0",
+    infoplists = [":PulpFictionApp/Info.plist"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":build_app_preview_source",
+    ],
+)
+
+ios_unit_test(
+    name = "test_unit",
+    bundle_id = "co.firstorderlabs.PulpFictionTests",
+    data = glob([
+        "PulpFictionTests/**/*.swift",
+    ]),
+    deps = [
+        ":build_tests",
+    ],
+    env = {
+        "resourceBundleFileIdentifier": "co.firstorderlabs.PulpFictionTests",
+    },
+    minimum_os_version = "15.0",
+    visibility = ["//visibility:public"],
 )
 
 swiftformat_format(
@@ -87,6 +143,7 @@ xcodeproj(
     tags = ["manual"],
     top_level_targets = [
         ":build_app",
+        ":build_preview_app",
         ":test_unit",
     ],
     build_mode = "xcode",

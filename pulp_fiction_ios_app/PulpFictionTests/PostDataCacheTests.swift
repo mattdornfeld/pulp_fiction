@@ -7,7 +7,8 @@
 import Bow
 import BowEffects
 import Foundation
-import PulpFictionApp
+import PulpFictionAppPreview
+import PulpFictionAppSource
 import XCTest
 
 class PostDataCacheTests: XCTestCase {
