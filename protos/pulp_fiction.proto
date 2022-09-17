@@ -26,9 +26,9 @@ message Post {
   message PostMetadata {
     string post_id = 1;
     google.protobuf.Timestamp created_at = 2;
-    string post_creator_id = 3;
+    User.UserMetadata post_creator_metadata = 3;
     PostState postState = 4;
-    PostType postType = 7;
+    PostType postType = 5;
   }
 
   message Comment {
