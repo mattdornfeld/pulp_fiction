@@ -83,7 +83,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
                 .bind()
 
             loginResponse {
-                this.loginSession = loginSession.toProto()
+                this.loginSession = loginSession
             }
         }
             .logEndpointMetrics(endpointName)

@@ -17,14 +17,29 @@ struct UIImageCompanion {
     static let logger: Logger = .init(label: String(describing: UIImageCompanion.self))
 }
 
-extension UIImage {
-    func serializeImage() -> Data? {
+public extension UIImage {
+    class ErrorSerializingImage: PulpFictionRequestError {}
+
+    func serializeImage() -> Either<PulpFictionRequestError, Data> {
         guard let imageData = pngData() else {
             UIImageCompanion.logger.error("Error converting \(self) to pngData")
-            return nil
+            return Either.left(ErrorSerializingImage())
         }
 
-        return imageData.base64EncodedData()
+        return Either.right(imageData.base64EncodedData())
+    }
+
+    func toImage() -> Image {
+        Image(uiImage: self)
+    }
+
+    static func fromBundleFile(named: String) -> Option<UIImage> {
+        ResourceConfigs.resourceBundleFileIdentifier.map { resourceBundleFileIdentifier in
+            let bundle = Bundle(identifier: resourceBundleFileIdentifier)
+            return UIImage(named: named, in: bundle, with: nil)
+        }^
+            .getOrElse(UIImage(named: named))
+            .toOption()
     }
 }
 
@@ -82,9 +97,14 @@ public extension Optional {
         return value
     }
 
-    func toResult<T: Error>(_ error: T) -> Swift.Result<Wrapped, T> {
+    func toResult<E: Error>(_ error: E) -> Swift.Result<Wrapped, E> {
         return map { success in Swift.Result.success(success) }
             .getOrElse(Swift.Result.failure(error))
+    }
+
+    func toEither<E: Error>(_ error: E) -> Either<E, Wrapped> {
+        return map { success in Either.right(success) }
+            .getOrElse(Either.left(error))
     }
 }
 
@@ -140,93 +160,15 @@ public extension Result {
     }
 }
 
-public extension IO {
-    func mapRight<B>(_ f: @escaping (A) -> B) -> IO<E, B> {
-        return map(f).map { b in b }^
-    }
-
-    static func invokeAndConvertError<E: PulpFictionError, A>(_ errorSupplier: @escaping (Error) -> E, _ f: @escaping () throws -> A) -> IO<E, A> {
-        IO<E, A>.invoke {
-            do {
-                return try f()
-            } catch {
-                throw errorSupplier(error)
-            }
-        }
-    }
-
-    func toEffect() -> ComposableArchitecture.Effect<A, E> {
-        return unsafeRunSyncEither()
-            .fold(
-                { error in ComposableArchitecture.Effect(error: error) },
-                { value in ComposableArchitecture.Effect(value: value) }
-            )
-    }
-}
-
-public extension Either {
-    struct LeftValueNotError: Error {}
-
-    enum EitherEnum<A, B> {
-        case left(A)
-        case right(B)
-    }
-
-    func mapRight<C>(_ f: (B) -> C) -> Either<A, C> {
-        return bimap({ a in a }, f)
-    }
-
-    func onError(_ f: (A) -> Void) -> Either<A, B> {
-        mapLeft { a in f(a) }
-        return self
-    }
-
-    func getOrThrow() throws -> B {
-        if isRight {
-            return rightValue
-        }
-
-        switch leftValue {
-        case let a as Error:
-            throw a
-        default:
-            throw LeftValueNotError()
-        }
-    }
-
-    func toEnum() -> EitherEnum<A, B> {
-        if isLeft {
-            return EitherEnum.left(leftValue)
-        }
-        return EitherEnum.right(rightValue)
-    }
-
-    func toEitherView() -> EitherView<A, B> where A: View, B: View {
-        EitherView(state: self)
-    }
-}
-
-public extension Option {
-    struct EmptyOptional: Error {}
-
-    func getOrThrow() throws -> A {
-        guard let value = toOptional() else {
-            throw EmptyOptional()
-        }
-
-        return value
-    }
-}
-
 public extension Post.PostMetadata {
-    func toPostMetadata() -> Either<PulpFictionRequestError, PostMetadata> {
-        PostMetadata.create(self)
+    func toPostMetadata(_ avatarImageJpg: Data) -> Either<PulpFictionRequestError, PostMetadata> {
+        PostMetadata.create(self, avatarImageJpg)
     }
 }
 
 public extension Post.ImagePost {
-    func toPostData(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, ImagePostData> {
-        ImagePostData.create(postMetadataProto, self)
+    func toPostData(_ postMetadata: PostMetadata, _ imageJpg: Data) -> ImagePostData {
+        ImagePostData(postMetadata, self, imageJpg)
     }
 }
 
@@ -242,14 +184,14 @@ public extension CreatePostRequest {
 }
 
 public extension Post.Comment {
-    func toPostData(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, CommentPostData> {
-        CommentPostData.create(postMetadataProto, self)
+    func toPostData(_ postMetadata: PostMetadata) -> CommentPostData {
+        CommentPostData(postMetadata)
     }
 }
 
 public extension Post.UserPost {
-    func toPostData(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, UserPostData> {
-        UserPostData.create(postMetadataProto, self)
+    func toPostData(_ postMetadata: PostMetadata, _: Data) -> UserPostData {
+        UserPostData(postMetadata)
     }
 }
 

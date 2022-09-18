@@ -7,10 +7,10 @@ build_protos:
 	${BAZEL} build //protos:pulp_fiction_grpc_stubs_swift --apple_platform_type=ios
 
 build_source:
-	${BAZEL} build :build_source --apple_platform_type=ios
+	${BAZEL} build :build_app_source --apple_platform_type=ios
 
 build_xcodeproj:
-	${BAZEL} run  -- @tulsi//:tulsi -- --genconfig "${PWD}/PulpFictionApp.tulsiproj:build_and_test" --outputfolder="${PWD}"
+	${BAZEL} run :build_xcodeproj
 
 clean:
 	${BAZEL} clean
@@ -18,11 +18,11 @@ clean:
 format:
 	${BAZEL} build :format && ${BAZEL} run :format_update
 
+run_preview_app:
+	${BAZEL} run :build_preview_app --apple_platform_type=ios
+
 test_all:
 	${BAZEL} test ... --apple_platform_type=ios --test_output=all
 
 test_unit:
 	${BAZEL} test :test_unit --apple_platform_type=ios --test_output=all
-
-tulsi:
-	${BAZEL} run @tulsi//:tulsi

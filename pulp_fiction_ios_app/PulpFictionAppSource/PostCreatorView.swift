@@ -20,9 +20,18 @@ struct PostCreatorState: Equatable {
      */
     var postUIImageMaybe: UIImage?
     /**
+     Caption for the post being created
+     */
+    var caption: String = ""
+    /**
      If true swill show the photo album image picker view
      */
-    var showingImagePickerView = false
+    var showingImagePickerView: Bool = false
+
+    mutating func clearState() {
+        caption = ""
+        postUIImageMaybe = nil
+    }
 }
 
 enum PostCreatorErrors {
@@ -32,7 +41,6 @@ enum PostCreatorErrors {
 
     class ErrorCreatingPost: PulpFictionRequestError {}
     class ImageNotSelected: PulpFictionRequestError {}
-    class ErrorSerializingImage: PulpFictionRequestError {}
     class ErrorSavingPostToDatabase: PulpFictionRequestError {}
 }
 
@@ -58,23 +66,28 @@ struct PostCreatorEnvironment {
         }
     }
 
-    func createPost(_ uiImageMaybe: UIImage?) -> ComposableArchitecture.Effect<PostMetadata, PulpFictionRequestError> {
+    func createPost(_ caption: String, _ uiImageMaybe: UIImage?) -> ComposableArchitecture.Effect<PostMetadata, PulpFictionRequestError> {
         guard let uiImage = uiImageMaybe else {
             return Effect(error: PostCreatorErrors.ImageNotSelected())
         }
 
-        if let serializedImage = uiImage.serializeImage() {
-            let createPostRequest = CreatePostRequest
-                .createImagePostRequest("", serializedImage)
-            let imagePostData = ImagePostData(createPostRequest.createImagePostRequest)
+        let serializeImageResult = Either<PulpFictionRequestError, Data>.var()
+        let putImageResult = Either<PulpFictionRequestError, PostMetadata>.var()
+        return binding(
+            serializeImageResult <- uiImage.serializeImage(),
+            putImageResult <- {
+                let serializedImage = serializeImageResult.get
+                let createPostRequest = CreatePostRequest
+                    .createImagePostRequest(caption, serializedImage)
+                let imagePostData = ImagePostData(createPostRequest.createImagePostRequest)
 
-            return postDataCache
-                .put(imagePostData)
-                .mapError { _ in PostCreatorErrors.ErrorSavingPostToDatabase() }
-                .toEffect()
-        } else {
-            return Effect(error: PostCreatorErrors.ErrorSerializingImage())
-        }
+                return postDataCache
+                    .put(imagePostData)
+                    .mapError { _ in PostCreatorErrors.ErrorSavingPostToDatabase() }
+                    .unsafeRunSyncEither()
+            }(),
+            yield: putImageResult.get
+        )^.toEffect()
     }
 }
 
@@ -86,6 +99,7 @@ enum PostCreatorAction {
     case unpickImage
     case createPost
     case createPostHandleErrors(Result<PostMetadata, PulpFictionRequestError>)
+    case updateCaption(String)
 }
 
 struct PostCreatorReducer {
@@ -138,10 +152,14 @@ struct PostCreatorReducer {
             return .none
 
         case .createPost:
-            return environment
-                .createPost(state.postUIImageMaybe)
+            let createPostEffect = environment
+                .createPost(state.caption, state.postUIImageMaybe)
                 .receive(on: environment.mainQueue)
                 .catchToEffect(PostCreatorAction.createPostHandleErrors)
+
+            state.clearState()
+
+            return createPostEffect
 
         case let .createPostHandleErrors(.success(postMetadata)):
             logger.info(
@@ -165,6 +183,10 @@ struct PostCreatorReducer {
                 )
             }
 
+            return .none
+
+        case let .updateCaption(newCaption):
+            state.caption = newCaption
             return .none
         }
     }
@@ -250,6 +272,7 @@ struct PostCreatorView: View {
             NavigationView {
                 VStack {
                     createImageSelectorView(viewStore: viewStore)
+                    createCaptionView(viewStore: viewStore)
                     Button("Create Post") { viewStore.send(.createPost) }
                 }
                 .padding([.horizontal, .bottom])
@@ -286,5 +309,14 @@ struct PostCreatorView: View {
                     .resizable()
                     .scaledToFit()
             }
+    }
+
+    func createCaptionView(viewStore: ViewStore<PostCreatorState, PostCreatorAction>) -> some View {
+        TextField(
+            "Enter a caption for your post",
+            text: viewStore.binding(
+                get: { $0.caption }, send: { PostCreatorAction.updateCaption($0) }
+            )
+        ).disableAutocorrection(true)
     }
 }

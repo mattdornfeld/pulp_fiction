@@ -8,6 +8,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
@@ -38,12 +39,12 @@ interface Post : Entity<Post> {
     var postCreatorId: UUID
     var postType: PostType
 
-    fun toProto(): PostMetadata = postMetadata {
+    fun toProto(postCreatorMetadata: UserMetadata): PostMetadata = postMetadata {
         this.postId = this@Post.postId.toString()
         this.createdAt = this@Post.createdAt.toTimestamp()
         this.postState = this@Post.postState
         this.postType = this@Post.postType
-        this.postCreatorId = this@Post.postCreatorId.toString()
+        this.postCreatorMetadata = postCreatorMetadata
     }
 
     fun toPostId(): PostId = PostId { this.postId = this@Post.postId }

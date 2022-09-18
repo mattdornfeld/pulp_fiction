@@ -38,14 +38,14 @@ private extension Option where A: Error {
     }
 }
 
-public class PulpFictionError: Error {
+open class PulpFictionError: Error {
     let causeMaybe: Option<Error>
 
-    init() {
+    public init() {
         causeMaybe = Option.none()
     }
 
-    init(_ cause: Error) {
+    public init(_ cause: Error) {
         causeMaybe = Option.some(cause)
     }
 
@@ -54,5 +54,5 @@ public class PulpFictionError: Error {
     }
 }
 
-public class PulpFictionStartupError: PulpFictionError {}
-public class PulpFictionRequestError: PulpFictionError {}
+open class PulpFictionStartupError: PulpFictionError {}
+open class PulpFictionRequestError: PulpFictionError {}

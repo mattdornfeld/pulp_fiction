@@ -397,7 +397,7 @@ internal class PulpFictionBackendServiceTest {
             .postMetadata
 
         postMetadata
-            .assertEquals(loginSession.userId) { it.postCreatorId }
+            .assertEquals(loginSession.userMetadata) { it.postCreatorMetadata }
             .assertEquals(PulpFictionProtos.Post.PostState.CREATED) { it.postState }
             .assertTrue { it.createdAt.isWithinLast(100) }
 
@@ -450,7 +450,7 @@ internal class PulpFictionBackendServiceTest {
         val postMetadata = pulpFictionBackendService.createPost(createCommentRequest).postMetadata
 
         postMetadata
-            .assertEquals(loginSession.userId) { it.postCreatorId }
+            .assertEquals(loginSession.userMetadata) { it.postCreatorMetadata }
             .assertTrue { postMetadata.createdAt.isWithinLast(100) }
             .assertEquals(PulpFictionProtos.Post.PostState.CREATED) { it.postState }
 

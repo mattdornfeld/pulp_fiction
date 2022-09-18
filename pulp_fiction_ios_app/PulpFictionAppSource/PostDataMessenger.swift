@@ -8,8 +8,8 @@ import Bow
 import BowEffects
 import Foundation
 
-struct PostDataMessenger {
-    let postDataCache: PostDataCache
+public struct PostDataMessenger {
+    public let postDataCache: PostDataCache
 
     static func create() -> IO<PulpFictionStartupError, PostDataMessenger> {
         let postDataCacheIO = IO<PulpFictionStartupError, PostDataCache>.var()

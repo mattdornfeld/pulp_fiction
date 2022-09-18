@@ -5,6 +5,7 @@ import arrow.core.continuations.either
 import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
@@ -35,13 +36,14 @@ interface LoginSession : Entity<LoginSession> {
     var deviceId: String
     var sessionToken: UUID
 
-    fun toProto(): PulpFictionProtos.LoginResponse.LoginSession {
+    fun toProto(userMetadata: UserMetadata): PulpFictionProtos.LoginResponse.LoginSession {
         val loginSession = this
         return loginSession {
             this.userId = loginSession.userId.toString()
             this.createdAt = loginSession.createdAt.toTimestamp()
             this.deviceId = loginSession.deviceId
             this.sessionToken = loginSession.sessionToken.toString()
+            this.userMetadata = userMetadata
         }
     }
 

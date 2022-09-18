@@ -27,16 +27,4 @@ public enum PulpFictionUtils {
     public static func generateRandomInt64() -> Int64 {
         Int64.random(in: Int64.min ... Int64.max)
     }
-
-    public static func buildImageWithMetadata(serializedImage: Data) -> ImageWithMetadata {
-        return buildImageWithMetadata(
-            imageId: UUID().uuidString,
-            createdAt: getCurrentProtobufTimestamp(),
-            serializedImage: serializedImage
-        )
-    }
-
-    public static func buildImageWithMetadata(imageId: String, createdAt: Google_Protobuf_Timestamp, serializedImage: Data) -> ImageWithMetadata {
-        return ImageWithMetadata(imageId, serializedImage, createdAt)
-    }
 }
