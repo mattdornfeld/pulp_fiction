@@ -15,7 +15,11 @@ To execute the tests run
 ```
 make test_all
 ```
-### Tulsi
+To run a preview version of the app, in a simulator, populated with test data run
+```
+make run_preview_app
+```
+### Using XCode
 This project uses [rules_xcodeproj](https://github.com/buildbuddy-io/rules_xcodeproj) as a tool for generating XCode projects from the Bazel `BUILD` file. To generate an `xcodeproj` from the `BUILD` file run
 ```
 make build_xcodeproj
