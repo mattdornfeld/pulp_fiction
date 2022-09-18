@@ -165,6 +165,7 @@ maven_install(
         "io.arrow-kt:arrow-fx-coroutines-jvm:" + ARROW_VERSION,
         "io.github.serpro69:kotlin-faker:1.11.0",
         "io.grpc:grpc-kotlin-stub:1.3.0",
+        "io.grpc:grpc-api:" + GRPC_VERSION,
         "io.grpc:grpc-netty-shaded:" + GRPC_VERSION,
         "io.grpc:grpc-protobuf:" + GRPC_VERSION,
         "io.grpc:grpc-stub:" + GRPC_VERSION,

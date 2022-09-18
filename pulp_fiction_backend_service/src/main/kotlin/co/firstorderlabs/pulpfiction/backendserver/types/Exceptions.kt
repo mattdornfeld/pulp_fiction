@@ -2,6 +2,7 @@ package co.firstorderlabs.pulpfiction.backendserver.types
 
 import io.grpc.Status
 import io.grpc.StatusException
+import java.util.UUID
 
 sealed class PulpFictionError(msgMaybe: String?, causeMaybe: Throwable?) : Throwable(msgMaybe, causeMaybe) {
     constructor(msg: String) : this(msg, null)
@@ -61,6 +62,8 @@ class S3DownloadError(cause: Throwable) : PulpFictionRequestError(cause) {
 }
 
 class UserNotFoundError(userId: String) : PulpFictionRequestError("User $userId not found.") {
+    constructor(userId: UUID) : this(userId.toString())
+
     override fun toStatusException(): StatusException =
         StatusException(Status.NOT_FOUND.withCause(this))
 }
