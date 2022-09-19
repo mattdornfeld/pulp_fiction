@@ -4,6 +4,7 @@ import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.getOrElse
 import arrow.core.toOption
+import co.firstorderlabs.protos.pulpfiction.PostKt.interactionAggregates
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
@@ -26,6 +27,8 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostId
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregate
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User.Companion.getDateOfBirth
@@ -35,6 +38,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postIds
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postInteractionAggregates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostDatum
@@ -50,6 +54,7 @@ import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseUrl
 import co.firstorderlabs.pulpfiction.backendserver.types.FunctionalityNotImplementedError
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
+import co.firstorderlabs.pulpfiction.backendserver.types.PostNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
@@ -224,7 +229,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             database.imagePostData.add(imagePostDatum)
             post {
                 this.metadata = post.toProto(postCreatorMetadata)
-                this.imagePost = imagePostDatum.toProto()
+                this.imagePost = imagePostDatum.toProto(interactionAggregates {})
             }
         }
 
@@ -270,6 +275,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             effectWithDatabaseError {
                 database.postIds.add(postId)
                 database.posts.add(post)
+                database.postInteractionAggregates.add(PostInteractionAggregate.init(post.postId))
             }.bind()
 
             createPostData(post, request)
@@ -293,7 +299,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     private suspend fun <A> getPostData(
         postId: UUID,
         table: PostData<A>
-    ): Effect<PulpFictionRequestError, A> where A : PostDatum, A : Entity<A> = database.transactionToEffectCatchErrors {
+    ): Effect<PulpFictionRequestError, A> where A : PostDatum, A : Entity<A> = effect {
         database
             .from(table)
             .select()
@@ -301,7 +307,15 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .orderBy(table.createdAt.desc())
             .limit(1)
             .map { table.createEntity(it) }
-            .first()
+            .firstOrOption()
+            .getOrElse { shift(PostNotFoundError()) }
+    }
+
+    private suspend fun getPostInteractionAggregates(postId: UUID): Effect<PulpFictionRequestError, PulpFictionProtos.Post.InteractionAggregates> = effect {
+        database.postInteractionAggregates.find { PostInteractionAggregates.postId eq postId }
+            .toOption()
+            .map { it.toProto() }
+            .getOrElse { shift(PostNotFoundError()) }
     }
 
     suspend fun getPost(
@@ -314,7 +328,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .orderBy(Posts.createdAt.desc())
             .limit(1)
             .map { Posts.createEntity(it) }
-            .first()
+            .firstOrOption()
+            .getOrElse { shift(PostNotFoundError()) }
 
         val userMetadata = getPublicUserMetadata(post.postCreatorId.toString()).bind()
 
@@ -328,9 +343,10 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                         .toProto()
                 }
                 PulpFictionProtos.Post.PostType.IMAGE -> {
+                    val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
                     this.imagePost = getPostData(postId, ImagePostData)
                         .bind()
-                        .toProto()
+                        .toProto(postInteractionAggregates)
                 }
                 PulpFictionProtos.Post.PostType.USER -> {
                     this.userPost = getPostData(postId, UserPostData)

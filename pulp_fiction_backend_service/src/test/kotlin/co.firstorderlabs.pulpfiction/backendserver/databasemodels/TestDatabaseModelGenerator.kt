@@ -82,4 +82,11 @@ object TestDatabaseModelGenerator {
         this.followerId = followerId
         this.createdAt = nowTruncated()
     }
+
+    fun PostLike.Companion.generateRandom(userId: UUID, postId: UUID): PostLike = PostLike {
+        this.postId = postId
+        this.postLikerUserId = userId
+        this.postLikeType = generateRandomEnumValue()
+        this.likedAt = generateRandomInstant()
+    }
 }

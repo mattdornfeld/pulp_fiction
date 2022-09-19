@@ -10,6 +10,8 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostId
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLike
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.TestDatabaseModelGenerator.generateRandom
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
@@ -21,6 +23,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postIds
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
@@ -181,5 +184,22 @@ internal class MigrateDatabaseTest {
         val userPostData = database.from(UserPostData).select().map { UserPostData.createEntity(it) }
 
         Assertions.assertEquals(userPostDatum, userPostData.first())
+    }
+
+    @Test
+    fun testWriteToPostLikesTable() {
+        val post = Post.generateRandom()
+        val user = User.generateRandom(post.postCreatorId)
+        val postId = post.toPostId()
+        val postLike = PostLike.generateRandom(user.userId, post.postId)
+        database.useTransaction {
+            database.users.add(user)
+            database.postIds.add(postId)
+            database.posts.add(post)
+            database.postLikes.add(postLike)
+        }
+        val postlikes = database.from(PostLikes).select().map { PostLikes.createEntity(it) }
+
+        Assertions.assertEquals(postLike, postlikes.first())
     }
 }

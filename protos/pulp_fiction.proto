@@ -31,6 +31,12 @@ message Post {
     PostType postType = 5;
   }
 
+  message InteractionAggregates {
+    int64 numLikes = 1;
+    int64 numDislikes = 2;
+    int64 numChildComments = 3;
+  }
+
   message Comment {
     string body = 1;
     string parent_post_id = 2;
@@ -39,6 +45,7 @@ message Post {
   message ImagePost {
     string image_url = 1;
     string caption = 2;
+    InteractionAggregates interactionAggregates = 3;
   }
 
   message UserPost {

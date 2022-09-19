@@ -1,6 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.Either
+import co.firstorderlabs.protos.pulpfiction.PostKt.interactionAggregates
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
@@ -411,6 +412,7 @@ internal class PulpFictionBackendServiceTest {
         post
             .assertEquals(postMetadata) { it.metadata }
             .assertEquals(createPostRequest.createImagePostRequest.caption) { it.imagePost.caption }
+            .assertEquals(interactionAggregates {}) { it.imagePost.interactionAggregates }
 
         s3Messenger
             .getObject(post.imagePost.imageUrl)
