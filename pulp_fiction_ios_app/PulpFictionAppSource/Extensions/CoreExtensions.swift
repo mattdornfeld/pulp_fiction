@@ -6,42 +6,9 @@
 //
 
 import Bow
-import BowEffects
-import ComposableArchitecture
 import Foundation
 import Logging
 import SwiftUI
-import UIKit
-
-struct UIImageCompanion {
-    static let logger: Logger = .init(label: String(describing: UIImageCompanion.self))
-}
-
-public extension UIImage {
-    class ErrorSerializingImage: PulpFictionRequestError {}
-
-    func serializeImage() -> Either<PulpFictionRequestError, Data> {
-        guard let imageData = pngData() else {
-            UIImageCompanion.logger.error("Error converting \(self) to pngData")
-            return Either.left(ErrorSerializingImage())
-        }
-
-        return Either.right(imageData.base64EncodedData())
-    }
-
-    func toImage() -> Image {
-        Image(uiImage: self)
-    }
-
-    static func fromBundleFile(named: String) -> Option<UIImage> {
-        ResourceConfigs.resourceBundleFileIdentifier.map { resourceBundleFileIdentifier in
-            let bundle = Bundle(identifier: resourceBundleFileIdentifier)
-            return UIImage(named: named, in: bundle, with: nil)
-        }^
-            .getOrElse(UIImage(named: named))
-            .toOption()
-    }
-}
 
 extension Data {
     public class ErrorDeserializingImage: PulpFictionRequestError {}
@@ -160,41 +127,6 @@ public extension Result {
     }
 }
 
-public extension Post.PostMetadata {
-    func toPostMetadata(_ avatarImageJpg: Data) -> Either<PulpFictionRequestError, PostMetadata> {
-        PostMetadata.create(self, avatarImageJpg)
-    }
-}
-
-public extension Post.ImagePost {
-    func toPostData(_ postMetadata: PostMetadata, _ imageJpg: Data) -> ImagePostData {
-        ImagePostData(postMetadata, self, imageJpg)
-    }
-}
-
-public extension CreatePostRequest {
-    static func createImagePostRequest(_ caption: String, _ imageJpg: Data) -> CreatePostRequest {
-        CreatePostRequest.with {
-            $0.createImagePostRequest = CreatePostRequest.CreateImagePostRequest.with {
-                $0.caption = caption
-                $0.imageJpg = imageJpg
-            }
-        }
-    }
-}
-
-public extension Post.Comment {
-    func toPostData(_ postMetadata: PostMetadata) -> CommentPostData {
-        CommentPostData(postMetadata)
-    }
-}
-
-public extension Post.UserPost {
-    func toPostData(_ postMetadata: PostMetadata, _: Data) -> UserPostData {
-        UserPostData(postMetadata)
-    }
-}
-
 public extension Array {
     func flattenOption<A>() -> [A] where Element == Option<A> {
         map { aMaybe in aMaybe.orNil }
@@ -214,5 +146,30 @@ public extension Array {
     func mapAndFilterErrors<E: Error, A>(_ transform: (Element) -> Either<E, A>) -> [A] {
         map(transform)
             .flattenError()
+    }
+}
+
+public extension Int64 {
+    private enum Companion {
+        static let thousand = 1000.0
+        static let million = thousand * thousand
+        static let billion = thousand * million
+    }
+
+    func formatAsStringForView() -> String {
+        let doubleValue = Double(self)
+        let magnitude = abs(doubleValue)
+        if magnitude < Companion.thousand {
+            return formatted()
+        } else if magnitude < Companion.million {
+            return String(format: "%.1fK", locale: Locale.current, doubleValue / Companion.thousand)
+                .replacingOccurrences(of: ".0", with: "")
+        } else if magnitude < Companion.billion {
+            return String(format: "%.1fM", locale: Locale.current, doubleValue / Companion.million)
+                .replacingOccurrences(of: ".0", with: "")
+        } else {
+            return String(format: "%.1fB", locale: Locale.current, doubleValue / Companion.billion)
+                .replacingOccurrences(of: ".0", with: "")
+        }
     }
 }

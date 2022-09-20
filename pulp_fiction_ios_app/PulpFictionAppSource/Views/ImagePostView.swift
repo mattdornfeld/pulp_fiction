@@ -15,25 +15,40 @@ public struct ImagePostView: View, Identifiable {
 
     public var body: some View {
         VStack {
-            HStack {
-                CircularImage(
-                    uiImage: userAvatarUIImage,
-                    radius: 15,
-                    borderColor: .red,
-                    borderWidth: 1
-                ).padding(.leading, 5)
-                BoldCaption(imagePostData.postMetadata.postCreatorMetadata.displayName)
+            HStack(alignment: .bottom) {
+                HStack {
+                    CircularImage(
+                        uiImage: userAvatarUIImage,
+                        radius: 15,
+                        borderColor: .red,
+                        borderWidth: 1
+                    ).padding(.leading, 5)
+                    BoldCaption(imagePostData.postMetadata.postCreatorMetadata.displayName)
+                }
                 Spacer()
+                Symbol(symbolName: "ellipsis")
+                    .padding(.trailing, 10)
+                    .padding(.bottom, 4)
             }
             postUIImage.toImage().resizable().scaledToFit()
             HStack {
                 VStack(alignment: .leading) {
                     HStack {
+                        SymbolWithCaption(
+                            symbolName: "arrow.up",
+                            symbolCaption: imagePostData.postInteractionAggregates.getNetLikes().formatAsStringForView()
+                        )
+                        SymbolWithCaption(
+                            symbolName: "text.bubble",
+                            symbolCaption: imagePostData.postInteractionAggregates.numChildComments.formatAsStringForView()
+                        )
+                    }.padding(.bottom, 1)
+                    HStack {
                         BoldCaption(imagePostData.postMetadata.postCreatorMetadata.displayName)
                         Caption(imagePostData.caption)
                     }
                     Caption(imagePostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
-                }
+                }.padding(.leading, 4)
                 Spacer()
             }
         }

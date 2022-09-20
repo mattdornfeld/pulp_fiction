@@ -48,11 +48,22 @@ public extension Post.PostMetadata {
     }
 }
 
+public extension Post.InteractionAggregates {
+    static func generate() -> Post.InteractionAggregates {
+        Post.InteractionAggregates.with {
+            $0.numLikes = Int64.random(in: 0 ..< 10000)
+            $0.numDislikes = Int64.random(in: 0 ..< 10000)
+            $0.numChildComments = Int64.random(in: 0 ..< 10000)
+        }
+    }
+}
+
 public extension Post.ImagePost {
     static func generate() -> Post.ImagePost {
         Post.ImagePost.with {
             $0.caption = FakeData.caption
             $0.imageURL = FakeData.imageUrl
+            $0.interactionAggregates = Post.InteractionAggregates.generate()
         }
     }
 }

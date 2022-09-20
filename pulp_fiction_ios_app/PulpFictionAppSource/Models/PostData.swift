@@ -86,20 +86,27 @@ public protocol PostData: Codable {
 
 public protocol PostDataIdentifiable: Identifiable {}
 
+public struct PostInteractionAggregates: Codable, Equatable {
+    public let numLikes: Int64
+    public let numDislikes: Int64
+    public let numChildComments: Int64
+
+    func getNetLikes() -> Int64 {
+        numLikes - numDislikes
+    }
+}
+
 public struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
     public let id: UUID
     public let caption: String
     public let imageUrl: String
     public let imageJpg: Data
     public let postMetadata: PostMetadata
+    public let postInteractionAggregates: PostInteractionAggregates
 
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.imagePostData(self)
     }
-
-//    static func create(_ postMetadata: PostMetadata, _ imagePostProto: Post.ImagePost, _ imageJpg: Data) -> Either<PulpFictionRequestError, ImagePostData> {
-//        PostMetadata.create(postMetadataProto).mapRight { postMetadata in ImagePostData(postMetadata, imagePostProto, imageJpg) }
-//    }
 }
 
 public extension ImagePostData {
@@ -109,7 +116,8 @@ public extension ImagePostData {
             caption: imagePostProto.caption,
             imageUrl: imagePostProto.imageURL,
             imageJpg: imageJpg,
-            postMetadata: postMetadata
+            postMetadata: postMetadata,
+            postInteractionAggregates: imagePostProto.interactionAggregates.toPostInteractionAggregates()
         )
     }
 
@@ -137,7 +145,8 @@ public extension ImagePostData {
             caption: createImagePostRequestProto.caption,
             imageUrl: "",
             imageJpg: createImagePostRequestProto.imageJpg,
-            postMetadata: postMetadata
+            postMetadata: postMetadata,
+            postInteractionAggregates: PostInteractionAggregates(numLikes: 0, numDislikes: 0, numChildComments: 0)
         )
     }
 }
@@ -149,10 +158,6 @@ public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.commentPostData(self)
     }
-
-//    static func create(_ postMetadata: PostMetadata, _: Post.Comment) -> Either<PulpFictionRequestError, CommentPostData> {
-//        PostMetadata.create(postMetadataProto, avatarImageJpg).mapRight { postMetadata in CommentPostData(postMetadata) }
-//    }
 }
 
 public extension CommentPostData {
@@ -168,10 +173,6 @@ public struct UserPostData: PostData, PostDataIdentifiable, Equatable {
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.userPostData(self)
     }
-
-//    static func create(_ postMetadataProto: Post.PostMetadata, _: Post.UserPost) -> Either<PulpFictionRequestError, UserPostData> {
-//        PostMetadata.create(postMetadataProto).mapRight { postMetadata in UserPostData(postMetadata) }
-//    }
 }
 
 public extension UserPostData {
