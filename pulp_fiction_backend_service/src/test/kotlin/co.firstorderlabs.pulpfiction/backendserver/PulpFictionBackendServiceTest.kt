@@ -11,6 +11,9 @@ import co.firstorderlabs.protos.pulpfiction.getUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.buildGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetPostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateEmailRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdatePhoneNumberRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserInfoRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
@@ -474,5 +477,43 @@ internal class PulpFictionBackendServiceTest {
 
         PostType.COMMENT
             .assertCreatePostDataMetricsCorrect(1.0)
+    }
+
+    @Test
+    fun testUpdateUser(): Unit = runBlocking {
+        val loginSession = createUserAndLogin().first
+
+        val updateUserInfoProto = generateRandomUpdateUserInfoRequest(loginSession)
+        val updatePhoneNumberProto = generateRandomUpdatePhoneNumberRequest(loginSession)
+        val updateEmailProto = generateRandomUpdateEmailRequest(loginSession)
+        val updateUserProtos = listOf(updateUserInfoProto, updatePhoneNumberProto, updateEmailProto)
+
+        val finalResponse = updateUserProtos.map { updateUserRequest ->
+            pulpFictionBackendService.updateUser(updateUserRequest)
+        }.last()
+
+        finalResponse.assertEquals(
+            tupleOf(
+                updateUserInfoProto.updateUserInfo.newDisplayName,
+                updateUserInfoProto.updateUserInfo.newDateOfBirth,
+                updateEmailProto.updateEmail.newEmail,
+                updatePhoneNumberProto.updatePhoneNumber.newPhoneNumber,
+            )
+        ) {
+            tupleOf(
+                it.sensitiveUserMetadata.nonSensitiveUserMetadata.displayName,
+                it.sensitiveUserMetadata.dateOfBirth,
+                it.sensitiveUserMetadata.phoneNumber,
+                it.sensitiveUserMetadata.email
+            )
+        }
+
+        EndpointName.updateUser.assertEndpointMetricsCorrect(3.0)
+
+        Tuple2(
+            EndpointName.updateUser,
+            DatabaseMetrics.DatabaseOperation.updateUser
+        )
+            .assertDatabaseMetricsCorrect(3.0)
     }
 }

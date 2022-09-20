@@ -72,26 +72,30 @@ object TestProtoModelGenerator {
         this.avatarJpg = random.nextByteString(100)
     }
 
-    fun generateRandomUpdateUserInfoRequest(): UpdateUserRequest = updateUserRequest {
+    fun generateRandomUpdateUserInfoRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
+        this.loginSession = loginSession
         this.updateUserInfo = updateUserInfo {
             this.newDisplayName = faker.name.firstName()
             this.newDateOfBirth = faker.person.birthDate(31).toYearMonthDay()
         }
     }
 
-    fun generateRandomUpdateEmailRequest(): UpdateUserRequest = updateUserRequest {
+    fun generateRandomUpdateEmailRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
+        this.loginSession = loginSession
         this.updateEmail = updateEmail {
             this.newEmail = faker.internet.email()
         }
     }
 
-    fun generateRandomUpdatePhoneNumberRequest(): UpdateUserRequest = updateUserRequest {
+    fun generateRandomUpdatePhoneNumberRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
+        this.loginSession = loginSession
         this.updatePhoneNumber = updatePhoneNumber {
             this.newPhoneNumber = faker.internet.email()
         }
     }
 
-    fun generateRandomUpdatePassword(currentPassword: String): UpdateUserRequest = updateUserRequest {
+    fun generateRandomUpdatePasswordRequest(loginSession: LoginSession, currentPassword: String): UpdateUserRequest = updateUserRequest {
+        this.loginSession = loginSession
         this.updatePassword = updatePassword {
             this.oldPassword = currentPassword
             this.newPassword = faker.unique.toString()
