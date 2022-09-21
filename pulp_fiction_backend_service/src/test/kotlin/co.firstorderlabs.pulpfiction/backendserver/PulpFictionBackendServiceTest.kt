@@ -502,8 +502,8 @@ internal class PulpFictionBackendServiceTest {
             tupleOf(
                 updateUserInfoProto.updateUserInfo.newDisplayName,
                 updateUserInfoProto.updateUserInfo.newDateOfBirth,
-                updateEmailProto.updateEmail.newEmail,
                 updatePhoneNumberProto.updatePhoneNumber.newPhoneNumber,
+                updateEmailProto.updateEmail.newEmail,
             )
         ) {
             tupleOf(
@@ -575,6 +575,6 @@ internal class PulpFictionBackendServiceTest {
             EndpointName.updateUser,
             DatabaseMetrics.DatabaseOperation.updateUser
         )
-            .assertDatabaseMetricsCorrect(0.0)
+            .assertDatabaseMetricsCorrect(1.0)
     }
 }

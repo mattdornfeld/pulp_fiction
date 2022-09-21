@@ -90,7 +90,7 @@ object TestProtoModelGenerator {
     fun generateRandomUpdatePhoneNumberRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
         this.loginSession = loginSession
         this.updatePhoneNumber = updatePhoneNumber {
-            this.newPhoneNumber = faker.internet.email()
+            this.newPhoneNumber = faker.phoneNumber.cellPhone()
         }
     }
 

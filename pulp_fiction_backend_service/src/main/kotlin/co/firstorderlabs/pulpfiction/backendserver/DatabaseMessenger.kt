@@ -354,8 +354,15 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     user.email = request.updateEmail.newEmail
                 }
                 request.hasUpdatePassword() -> {
-                    Password.check(request.updatePassword.oldPassword, user.hashedPassword).withBcrypt()
-                    user.hashedPassword = Password.hash(request.updatePassword.newPassword).withBcrypt().result
+                    val authenticated = Password.check(
+                        request.updatePassword.oldPassword,
+                        user.hashedPassword
+                    ).withBcrypt()
+                    if (!authenticated) {
+                        shift(InvalidUserPasswordError())
+                    } else {
+                        user.hashedPassword = Password.hash(request.updatePassword.newPassword).withBcrypt().result
+                    }
                 }
                 request.hasUpdatePhoneNumber() -> {
                     user.phoneNumber = request.updatePhoneNumber.newPhoneNumber
