@@ -5,16 +5,32 @@
 //
 //
 
+import Bow
+import BowEffects
 import PulpFictionAppSource
 import SwiftUI
 
 @main
 struct PulpFictionApp: App {
-    let pulpFictionAppViewBuilder = PulpFictionAppViewBuilder(ExternalMessengers.create())
+    let pulpFictionAppViewBuilder = PulpFictionAppViewBuilder(createExternalMessengers())
 
     public var body: some Scene {
         WindowGroup {
             pulpFictionAppViewBuilder.buildView()
         }
+    }
+
+    private static func createExternalMessengers() -> Either<PulpFictionStartupError, ExternalMessengers> {
+        let createPulpFictionClientProtocolResult = IO<PulpFictionStartupError, PulpFictionClientProtocol>.var()
+        let createPostDataCacheResult = IO<PulpFictionStartupError, PostDataCache>.var()
+
+        return binding(
+            createPulpFictionClientProtocolResult <- GrpcUtils.buildTestPulpFictionClientProtocol(),
+            createPostDataCacheResult <- PostDataCache.create(),
+            yield: ExternalMessengers(
+                pulpFictionClientProtocol: createPulpFictionClientProtocolResult.get,
+                postDataCache: createPostDataCacheResult.get
+            )
+        )^.unsafeRunSyncEither()
     }
 }

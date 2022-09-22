@@ -5,27 +5,24 @@
 //
 //
 
-import Bow
-import BowEffects
-import ComposableArchitecture
+import Foundation
 
 public struct ExternalMessengers {
     public let backendMessenger: BackendMessenger
     public let postDataMessenger: PostDataMessenger
+}
 
-    public static func create() -> Result<ExternalMessengers, PulpFictionStartupError> {
-        let backendMessengerIO = IO<PulpFictionStartupError, BackendMessenger>.var()
-        let postDataMessengerIO = IO<PulpFictionStartupError, PostDataMessenger>.var()
+public extension ExternalMessengers {
+    init(
+        pulpFictionClientProtocol: PulpFictionClientProtocol,
+        postDataCache: PostDataCache
+    ) {
+        let backendMessenger = BackendMessenger(pulpFictionClientProtocol: pulpFictionClientProtocol)
+        let postDataMessenger = PostDataMessenger(postDataCache: postDataCache)
 
-        return binding(
-            backendMessengerIO <- BackendMessenger.create(),
-            postDataMessengerIO <- PostDataMessenger.create(),
-            yield: ExternalMessengers(
-                backendMessenger: backendMessengerIO.get,
-                postDataMessenger: postDataMessengerIO.get
-            )
-        )^
-            .unsafeRunSyncEither()
-            .toResult()
+        self.init(
+            backendMessenger: backendMessenger,
+            postDataMessenger: postDataMessenger
+        )
     }
 }

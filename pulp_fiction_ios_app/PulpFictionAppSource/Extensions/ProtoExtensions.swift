@@ -14,12 +14,6 @@ public extension Post.PostMetadata {
     }
 }
 
-public extension Post.ImagePost {
-    func toPostData(_ postMetadata: PostMetadata, _ imageJpg: Data) -> ImagePostData {
-        ImagePostData(postMetadata, self, imageJpg)
-    }
-}
-
 public extension CreatePostRequest {
     static func createImagePostRequest(_ caption: String, _ imageJpg: Data) -> CreatePostRequest {
         CreatePostRequest.with {
@@ -31,15 +25,42 @@ public extension CreatePostRequest {
     }
 }
 
+public extension Post.ImagePost {
+    func toPostData(_ postMetadata: PostMetadata, _ imageJpg: Data) -> ImagePostData {
+        ImagePostData(postMetadata, self, imageJpg)
+    }
+
+    func toPost(_ postMetadata: Post.PostMetadata) -> Post {
+        Post.with {
+            $0.metadata = postMetadata
+            $0.post = Post.OneOf_Post.imagePost(self)
+        }
+    }
+}
+
 public extension Post.Comment {
     func toPostData(_ postMetadata: PostMetadata) -> CommentPostData {
         CommentPostData(postMetadata)
+    }
+
+    func toPost(_ postMetadata: Post.PostMetadata) -> Post {
+        Post.with {
+            $0.metadata = postMetadata
+            $0.post = Post.OneOf_Post.comment(self)
+        }
     }
 }
 
 public extension Post.UserPost {
     func toPostData(_ postMetadata: PostMetadata, _: Data) -> UserPostData {
         UserPostData(postMetadata)
+    }
+
+    func toPost(_ postMetadata: Post.PostMetadata) -> Post {
+        Post.with {
+            $0.metadata = postMetadata
+            $0.post = Post.OneOf_Post.userPost(self)
+        }
     }
 }
 

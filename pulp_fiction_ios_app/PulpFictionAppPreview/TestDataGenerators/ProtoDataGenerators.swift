@@ -1,8 +1,8 @@
 //
-//  TestDataGenerator.swift
+//  ProtoDataGenerators.swift
 //  PulpFictionApp
 //
-//  Created by Matthew Dornfeld on 9/8/22.
+//  Created by Matthew Dornfeld on 9/21/22.
 //
 
 import Bow
@@ -13,6 +13,7 @@ import UIKit
 
 public enum FakeData {
     static let caption = "test caption please ignore"
+    static let comment = "test comment please ignore"
     static let imageUrl = "https://angelfire.com/never_gonna_give_you_up.jpg"
     static let userAvatarJpgName = "Shadowfax"
     static let imagePostJpgName = "Rickroll"
@@ -29,6 +30,22 @@ public extension UserMetadataProto {
                 $0.nanos = 0
             }
             $0.avatarImageURL = FakeData.imageUrl
+        }
+    }
+}
+
+public extension Post {
+    static func generate(_ postType: Post.PostType) -> Post {
+        let postMetadata = Post.PostMetadata.generate(postType)
+        switch postType {
+        case .image:
+            return Post.ImagePost.generate().toPost(postMetadata)
+        case .comment:
+            return Post.Comment.generate().toPost(postMetadata)
+        case .user:
+            return Post.UserPost.generate().toPost(postMetadata)
+        case .UNRECOGNIZED:
+            return Post()
         }
     }
 }
@@ -68,45 +85,18 @@ public extension Post.ImagePost {
     }
 }
 
-public extension Post {
-    static func generate(_ postType: Post.PostType) -> Post {
-        Post.with {
-            $0.metadata = Post.PostMetadata.generate(postType)
-            switch postType {
-            case .image:
-                $0.imagePost = Post.ImagePost.generate()
-            default: break
-            }
+public extension Post.Comment {
+    static func generate() -> Post.Comment {
+        Post.Comment.with {
+            $0.body = FakeData.comment
         }
     }
 }
 
-public extension ImagePostData {
-    class ErrorBuildingUIImage: PulpFictionRequestError {}
-    class ErrorBuildingPostUIImage: ErrorBuildingUIImage {}
-    class ErrorBuildingUserAvatarUIImage: ErrorBuildingUIImage {}
-
-    static func generate() -> Either<PulpFictionRequestError, ImagePostData> {
-        let postProto = Post.generate(Post.PostType.image)
-
-        let serializePostImageResult = Either<PulpFictionRequestError, Data>.var()
-        let serializeUserAvatarImageResult = Either<PulpFictionRequestError, Data>.var()
-        let buildPostMetadataResult = Either<PulpFictionRequestError, PostMetadata>.var()
-        return binding(
-            serializePostImageResult <- UIImage
-                .fromBundleFile(named: FakeData.imagePostJpgName)
-                .toEither(ErrorBuildingPostUIImage())
-                .flatMap { $0.serializeImage() },
-            serializeUserAvatarImageResult <- UIImage
-                .fromBundleFile(named: FakeData.userAvatarJpgName)
-                .toEither(ErrorBuildingUserAvatarUIImage())
-                .flatMap { $0.serializeImage() },
-            buildPostMetadataResult <- postProto
-                .metadata
-                .toPostMetadata(serializeUserAvatarImageResult.get),
-            yield: postProto
-                .imagePost
-                .toPostData(buildPostMetadataResult.get, serializePostImageResult.get)
-        )^
+public extension Post.UserPost {
+    static func generate() -> Post.UserPost {
+        Post.UserPost.with {
+            $0.userMetadata = UserMetadataProto.generate()
+        }
     }
 }

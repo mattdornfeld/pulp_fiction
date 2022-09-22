@@ -10,15 +10,4 @@ import Foundation
 
 public struct PostDataMessenger {
     public let postDataCache: PostDataCache
-
-    static func create() -> IO<PulpFictionStartupError, PostDataMessenger> {
-        let postDataCacheIO = IO<PulpFictionStartupError, PostDataCache>.var()
-
-        return binding(
-            postDataCacheIO <- PostDataCache.create(),
-            yield: PostDataMessenger(
-                postDataCache: postDataCacheIO.get
-            )
-        )^
-    }
 }

@@ -6,21 +6,24 @@
 //
 
 import Bow
+import BowEffects
 import Foundation
 import PulpFictionAppSource
 import SwiftUI
 
 @main
 struct PulpFictionAppPreview: App {
-    let pulpFictionAppViewBuilder = {
-        let externalMessengersCreateResult = ExternalMessengers.create()
+    private let pulpFictionAppViewBuilder = PulpFictionAppViewBuilder(createExternalMessengers())
 
-        externalMessengersCreateResult.onSuccess { externalMessengers in
-            let postDataCache = externalMessengers
-                .postDataMessenger
-                .postDataCache
+    public var body: some Scene {
+        WindowGroup {
+            pulpFictionAppViewBuilder.buildView()
+        }
+    }
 
-            ImagePostData.generate().mapRight { imagePostData in
+    private static func creatrAndPopulatePostDataCache() -> IO<PulpFictionStartupError, PostDataCache> {
+        PostDataCache.create().mapRight { postDataCache in
+            ImagePostData.generate().map { imagePostData in
                 postDataCache
                     .put(imagePostData)
                     .unsafeRunSyncEither()
@@ -32,15 +35,19 @@ struct PulpFictionAppPreview: App {
                     .unsafeRunSyncEither()
             }
 
-//            print(postDataCache.listPostIdsInCache())
+            return postDataCache
         }
+    }
 
-        return PulpFictionAppViewBuilder(externalMessengersCreateResult)
-    }()
+    private static func createExternalMessengers() -> Either<PulpFictionStartupError, ExternalMessengers> {
+        let createPostDataCacheResult = IO<PulpFictionStartupError, PostDataCache>.var()
 
-    public var body: some Scene {
-        WindowGroup {
-            pulpFictionAppViewBuilder.buildView()
-        }
+        return binding(
+            createPostDataCacheResult <- creatrAndPopulatePostDataCache(),
+            yield: ExternalMessengers(
+                pulpFictionClientProtocol: PulpFictionTestClientBuilder(numPostsInFeedResponse: PreviewAppConfigs.numPostsInFeedResponse).build(),
+                postDataCache: createPostDataCacheResult.get
+            )
+        )^.unsafeRunSyncEither()
     }
 }
