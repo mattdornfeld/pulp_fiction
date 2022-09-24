@@ -374,9 +374,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     shift(RequestParsingError("UpdateUserRequest received without instructions."))
                 }
             }
-            database.transactionToEffectCatchErrors {
-                user.flushChanges()
-            }.bind()
+            user.flushChanges()
             user.toSensitiveUserMetadataProto()
         }
 
