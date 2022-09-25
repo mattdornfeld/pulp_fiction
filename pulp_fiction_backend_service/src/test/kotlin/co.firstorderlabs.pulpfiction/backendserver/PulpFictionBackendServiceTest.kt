@@ -494,6 +494,10 @@ internal class PulpFictionBackendServiceTest {
             updateEmailProto,
         )
 
+        /* By testing the last response in a sequence of requests,
+        * we can test both the endpoint response
+        * and that the modification of the user row has been correctly resolved
+        * in the database for each modification. */
         val finalResponse = updateUserProtos.map { updateUserRequest ->
             pulpFictionBackendService.updateUser(updateUserRequest)
         }.last()
