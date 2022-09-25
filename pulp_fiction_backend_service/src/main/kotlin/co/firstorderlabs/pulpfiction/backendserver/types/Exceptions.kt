@@ -73,6 +73,11 @@ class InvalidUserPasswordError() : PulpFictionRequestError() {
         StatusException(Status.UNAUTHENTICATED.withCause(this))
 }
 
+class FunctionalityNotImplementedError() : PulpFictionRequestError() {
+    override fun toStatusException(): StatusException =
+        StatusException(Status.UNIMPLEMENTED.withCause(this))
+}
+
 class ServiceStartupError(cause: Throwable) : PulpFictionStartupError(cause)
 
 class IOError(cause: Throwable) : PulpFictionStartupError(cause)

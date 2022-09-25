@@ -66,7 +66,7 @@ interface User : Entity<User> {
         val user = this
         return sensitiveUserMetadata {
             this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto()
-            this.phoneNumber = phoneNumber
+            this.phoneNumber = user.phoneNumber
             if (user.email != null) this.email = user.email!!
             if (user.dateOfBirth != null) this.dateOfBirth = user.dateOfBirth!!.toYearMonthDay()
         }
@@ -92,7 +92,7 @@ interface User : Entity<User> {
     }
 
     companion object : Entity.Factory<User>() {
-        private fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
+        fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
             if (dateOfBirth == null) {
                 return Either.Right(none())
             }

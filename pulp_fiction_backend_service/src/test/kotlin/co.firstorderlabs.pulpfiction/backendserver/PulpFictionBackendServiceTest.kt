@@ -11,6 +11,10 @@ import co.firstorderlabs.protos.pulpfiction.getUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.buildGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetPostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateEmailRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdatePasswordRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdatePhoneNumberRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserInfoRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
@@ -474,5 +478,107 @@ internal class PulpFictionBackendServiceTest {
 
         PostType.COMMENT
             .assertCreatePostDataMetricsCorrect(1.0)
+    }
+
+    @Test
+    fun testSuccessfulUpdateUser(): Unit = runBlocking {
+        val loginSession = createUserAndLogin().first
+
+        val updateUserInfoProto = generateRandomUpdateUserInfoRequest(loginSession)
+        val updatePhoneNumberProto = generateRandomUpdatePhoneNumberRequest(loginSession)
+        val updateEmailProto = generateRandomUpdateEmailRequest(loginSession)
+
+        val updateUserProtos = listOf(
+            updateUserInfoProto,
+            updatePhoneNumberProto,
+            updateEmailProto,
+        )
+
+        /* By testing the last response in a sequence of requests,
+        * we can test both the endpoint response
+        * and that the modification of the user row has been correctly resolved
+        * in the database for each modification. */
+        val finalResponse = updateUserProtos.map { updateUserRequest ->
+            pulpFictionBackendService.updateUser(updateUserRequest)
+        }.last()
+
+        finalResponse.assertEquals(
+            tupleOf(
+                updateUserInfoProto.updateUserInfo.newDisplayName,
+                updateUserInfoProto.updateUserInfo.newDateOfBirth,
+                updatePhoneNumberProto.updatePhoneNumber.newPhoneNumber,
+                updateEmailProto.updateEmail.newEmail,
+            )
+        ) {
+            tupleOf(
+                it.sensitiveUserMetadata.nonSensitiveUserMetadata.displayName,
+                it.sensitiveUserMetadata.dateOfBirth,
+                it.sensitiveUserMetadata.phoneNumber,
+                it.sensitiveUserMetadata.email,
+            )
+        }
+
+        EndpointName.updateUser.assertEndpointMetricsCorrect(3.0)
+
+        Tuple2(
+            EndpointName.updateUser,
+            DatabaseMetrics.DatabaseOperation.updateUser
+        )
+            .assertDatabaseMetricsCorrect(3.0)
+    }
+
+    @Test
+    fun testSuccessfulUpdatePassword(): Unit = runBlocking {
+        val tuple2 = createUserAndLogin()
+        val loginSession = tuple2.first
+        val loginRequest = tuple2.second
+
+        val correctPassword = loginRequest.password
+
+        val updatePasswordProto = generateRandomUpdatePasswordRequest(loginSession, correctPassword)
+        pulpFictionBackendService.updateUser(updatePasswordProto)
+
+        val updatedLoginRequest = TestProtoModelGenerator.generateRandomLoginRequest(
+            loginRequest.userId,
+            updatePasswordProto.updatePassword.newPassword
+        )
+
+        val updatedLoginSession = pulpFictionBackendService.login(updatedLoginRequest).loginSession
+        updatedLoginSession
+            .assertTrue { it.sessionToken.toUUID().isRight() }
+            .assertTrue { it.createdAt.isWithinLast(100) }
+
+        EndpointName.updateUser.assertEndpointMetricsCorrect(1.0)
+
+        Tuple2(
+            EndpointName.updateUser,
+            DatabaseMetrics.DatabaseOperation.updateUser
+        )
+            .assertDatabaseMetricsCorrect(1.0)
+    }
+
+    @Test
+    fun testFailedUpdatePassword(): Unit = runBlocking {
+        val tuple2 = createUserAndLogin()
+        val loginSession = tuple2.first
+        val loginRequest = tuple2.second
+
+        val incorrectPassword = "fail_${loginRequest.password}"
+        val updatePasswordProto = generateRandomUpdatePasswordRequest(loginSession, incorrectPassword)
+
+        Either.catch {
+            pulpFictionBackendService.updateUser(updatePasswordProto)
+        }.assertTrue { it.isLeft() }.mapLeft { error ->
+            error
+                .assertEquals(Status.UNAUTHENTICATED.code) { (it as StatusException).status.code }
+        }
+
+        EndpointName.updateUser.assertEndpointMetricsCorrect(1.0)
+
+        Tuple2(
+            EndpointName.updateUser,
+            DatabaseMetrics.DatabaseOperation.updateUser
+        )
+            .assertDatabaseMetricsCorrect(1.0)
     }
 }

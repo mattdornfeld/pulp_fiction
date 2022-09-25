@@ -12,10 +12,16 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateEmail
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePassword
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePhoneNumber
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateUserInfo
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.createUserRequest
 import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.protos.pulpfiction.loginRequest
+import co.firstorderlabs.protos.pulpfiction.updateUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.testutils.nextByteString
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
@@ -66,9 +72,45 @@ object TestProtoModelGenerator {
         this.avatarJpg = random.nextByteString(100)
     }
 
+    fun generateRandomUpdateUserInfoRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
+        this.loginSession = loginSession
+        this.updateUserInfo = updateUserInfo {
+            this.newDisplayName = faker.name.firstName()
+            this.newDateOfBirth = faker.person.birthDate(31).toYearMonthDay()
+        }
+    }
+
+    fun generateRandomUpdateEmailRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
+        this.loginSession = loginSession
+        this.updateEmail = updateEmail {
+            this.newEmail = faker.internet.email()
+        }
+    }
+
+    fun generateRandomUpdatePhoneNumberRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
+        this.loginSession = loginSession
+        this.updatePhoneNumber = updatePhoneNumber {
+            this.newPhoneNumber = faker.phoneNumber.cellPhone()
+        }
+    }
+
+    fun generateRandomUpdatePasswordRequest(loginSession: LoginSession, currentPassword: String): UpdateUserRequest = updateUserRequest {
+        this.loginSession = loginSession
+        this.updatePassword = updatePassword {
+            this.oldPassword = currentPassword
+            this.newPassword = faker.unique.toString()
+        }
+    }
+
     fun LoginSession.generateRandomCreatePostRequest(): CreatePostRequest = createPostRequest {
         this.loginSession = this@generateRandomCreatePostRequest
         this.createImagePostRequest = generateRandomCreateImagePostRequest()
+    }
+
+    fun CreatePostRequest.withRandomCreateUserPostRequest(): CreatePostRequest {
+        val builder = this.toBuilder()
+        builder.createUserPostRequest = generateRandomCreateUserPostRequest(this.loginSession)
+        return builder.build()
     }
 
     fun CreatePostRequest.withRandomCreateImagePostRequest(): CreatePostRequest {
@@ -80,12 +122,6 @@ object TestProtoModelGenerator {
     fun CreatePostRequest.withRandomCreateCommentRequest(parentPostId: String): CreatePostRequest {
         val builder = this.toBuilder()
         builder.createCommentRequest = generateRandomCreateCommentRequest(parentPostId)
-        return builder.build()
-    }
-
-    fun CreatePostRequest.withRandomCreateUserPostRequest(): CreatePostRequest {
-        val builder = this.toBuilder()
-        builder.createUserPostRequest = generateRandomCreateUserPostRequest(this.loginSession)
         return builder.build()
     }
 

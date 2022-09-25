@@ -12,6 +12,8 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.SensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.post
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
@@ -26,6 +28,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostId
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User.Companion.getDateOfBirth
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
@@ -44,6 +47,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseConnectionError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseUrl
+import co.firstorderlabs.pulpfiction.backendserver.types.FunctionalityNotImplementedError
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
@@ -339,6 +343,44 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             }
         }
     }
+
+    suspend fun updateUser(request: UpdateUserRequest): Effect<PulpFictionRequestError, SensitiveUserMetadata> =
+        effect {
+            val userId = request.loginSession.userId
+            val user = getUserFromUserId(userId).bind()
+
+            when {
+                request.hasUpdateUserInfo() -> {
+                    user.currentDisplayName = request.updateUserInfo.newDisplayName
+                    user.dateOfBirth = getDateOfBirth(request.updateUserInfo.newDateOfBirth).bind().orNull()
+                }
+                request.hasUpdateEmail() -> {
+                    user.email = request.updateEmail.newEmail
+                }
+                request.hasUpdatePassword() -> {
+                    val authenticated = Password.check(
+                        request.updatePassword.oldPassword,
+                        user.hashedPassword
+                    ).withBcrypt()
+                    if (!authenticated) {
+                        shift(InvalidUserPasswordError())
+                    } else {
+                        user.hashedPassword = Password.hash(request.updatePassword.newPassword).withBcrypt().result
+                    }
+                }
+                request.hasUpdatePhoneNumber() -> {
+                    user.phoneNumber = request.updatePhoneNumber.newPhoneNumber
+                }
+                request.hasResetPassword() -> {
+                    shift(FunctionalityNotImplementedError())
+                }
+                else -> {
+                    shift(RequestParsingError("UpdateUserRequest received without instructions."))
+                }
+            }
+            user.flushChanges()
+            user.toSensitiveUserMetadataProto()
+        }
 
     private suspend fun getUserFromUserId(
         userId: String
