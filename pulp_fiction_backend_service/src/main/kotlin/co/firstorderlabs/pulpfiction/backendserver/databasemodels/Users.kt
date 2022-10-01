@@ -9,11 +9,13 @@ import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRe
 import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
+import co.firstorderlabs.protos.pulpfiction.UserKt.sensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.userMetadata
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
+import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
 import com.google.protobuf.ByteString
 import com.password4j.Password
 import org.ktorm.database.Database
@@ -55,25 +57,16 @@ interface User : Entity<User> {
             this.displayName = user.currentDisplayName
             userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
             this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
-            avatarImageS3KeyMaybe.map { this.avatarImageUrl = it }
         }
     }
 
-    fun toSensitiveUserMetadataProto(): SensitiveUserMetadata {
+    fun toSensitiveUserMetadataProto(userPostDatum: UserPostDatum): PulpFictionProtos.User.SensitiveUserMetadata {
         val user = this
         return sensitiveUserMetadata {
-            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto()
+            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto(userPostDatum)
             this.phoneNumber = user.phoneNumber
-            if (user.email != null) this.email = user.email!!
-            if (user.dateOfBirth != null) this.dateOfBirth = user.dateOfBirth!!.toYearMonthDay()
-        }
-    }
-
-    fun toUserProto(includeSensitiveUserMetadata: Boolean = false): PulpFictionProtos.User = user {
-        if (includeSensitiveUserMetadata) {
-            this.sensitiveUserMetadata = toSensitiveUserMetadataProto()
-        } else {
-            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto()
+            user.email?.let { this.email = it }
+            user.dateOfBirth?.let { this.dateOfBirth = it.toYearMonthDay() }
         }
     }
 

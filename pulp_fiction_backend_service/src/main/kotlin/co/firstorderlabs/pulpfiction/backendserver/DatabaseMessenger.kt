@@ -408,7 +408,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 }
             }
             user.flushChanges()
-            user.toSensitiveUserMetadataProto()
+            val userPostDatum = getMostRecentUserPostDatum(user.userId).bind()
+            user.toSensitiveUserMetadataProto(userPostDatum)
         }
 
     private suspend fun getUserFromUserId(
@@ -424,18 +425,19 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, UserMetadata> =
         getPublicUserMetadata(request.userId)
 
+    private suspend fun getMostRecentUserPostDatum(userId: UUID): Effect<PulpFictionRequestError, UserPostDatum> =
+        effect {
+            database.userPostData
+                .filter { it.userId eq userId }
+                .sortedBy { it.updatedAt.desc() }
+                .first()
+        }
+
     suspend fun getPublicUserMetadata(
         userId: String
     ): Effect<PulpFictionRequestError, UserMetadata> = effect {
         val user = getUserFromUserId(userId).bind()
-
-        /* Get Most Recent UserPost */
-        val userPostDatum = database.transactionToEffectCatchErrors {
-            database.userPostData
-                .filter { it.userId eq user.userId }
-                .sortedBy { it.updatedAt.desc() }
-                .first()
-        }.bind()
+        val userPostDatum = getMostRecentUserPostDatum(user.userId).bind()
         user.toNonSensitiveUserMetadataProto(userPostDatum)
     }
 
