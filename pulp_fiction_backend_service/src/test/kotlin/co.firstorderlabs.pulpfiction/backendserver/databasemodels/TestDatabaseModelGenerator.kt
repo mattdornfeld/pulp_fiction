@@ -29,11 +29,16 @@ object TestDatabaseModelGenerator {
     }
 
     fun Post.Companion.generateRandom(): Post = Post {
-        this.postId = UUID.randomUUID()
-        this.postState = generateRandomEnumValue()
         this.createdAt = Instant.EPOCH
         this.postCreatorId = UUID.randomUUID()
+        this.postId = UUID.randomUUID()
         this.postType = generateRandomEnumValue()
+    }
+
+    fun PostUpdate.Companion.generateRandom(): PostUpdate = PostUpdate {
+        this.post = Post.generateRandom()
+        this.postState = generateRandomEnumValue()
+        this.updatedAt = Instant.EPOCH
     }
 
     fun User.Companion.generateRandom(): User = generateRandom(UUID.randomUUID())
@@ -50,21 +55,21 @@ object TestDatabaseModelGenerator {
 
     fun CommentDatum.Companion.generateRandom(postId: UUID, parentPostId: UUID): CommentDatum = CommentDatum {
         this.postId = postId
-        this.createdAt = Instant.EPOCH
+        this.updatedAt = Instant.EPOCH
         this.body = faker.worldOfWarcraft.quotes()
         this.parentPostId = parentPostId
     }
 
     fun ImagePostDatum.Companion.generateRandom(postId: UUID): ImagePostDatum = ImagePostDatum {
         this.postId = postId
-        this.createdAt = Instant.EPOCH
+        this.updatedAt = Instant.EPOCH
         this.imageS3Key = faker.internet.domain()
         this.caption = faker.worldOfWarcraft.quotes()
     }
 
     fun UserPostDatum.Companion.generateRandom(postId: UUID, userId: UUID): UserPostDatum = UserPostDatum {
         this.postId = postId
-        this.createdAt = Instant.EPOCH
+        this.updatedAt = Instant.EPOCH
         this.userId = userId
         this.displayName = displayName
         this.avatarImageS3Key = faker.internet.domain()

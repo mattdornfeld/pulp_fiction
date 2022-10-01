@@ -3,16 +3,10 @@ package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 import arrow.core.Either
 import arrow.core.continuations.either
 import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
-import co.firstorderlabs.protos.pulpfiction.PostKt.postMetadata
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
-import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
@@ -26,37 +20,20 @@ import java.util.UUID
 
 object Posts : Table<Post>("posts") {
     val postId = uuid("post_id").primaryKey().bindTo { it.postId }
-    val createdAt = timestamp("created_at").primaryKey().bindTo { it.createdAt }
-    val postState = enum<PostState>("post_state").bindTo { it.postState }
+    val createdAt = timestamp("created_at").bindTo { it.createdAt }
     val postCreatorId = uuid("post_creator_id").bindTo { it.postCreatorId }
-    val postType = enum<PostType>("post_type").bindTo { it.postType }
+    val postType = enum<PulpFictionProtos.Post.PostType>("post_type").bindTo { it.postType }
 }
 
 interface Post : Entity<Post> {
-    var postId: UUID
-    var createdAt: Instant
-    var postState: PostState
-    var postCreatorId: UUID
-    var postType: PostType
-
-    fun toProto(postCreatorMetadata: UserMetadata): PostMetadata = postMetadata {
-        this.postId = this@Post.postId.toString()
-        this.createdAt = this@Post.createdAt.toTimestamp()
-        this.postState = this@Post.postState
-        this.postType = this@Post.postType
-        this.postCreatorMetadata = postCreatorMetadata
-    }
-
-    fun toPostId(): PostId = PostId { this.postId = this@Post.postId }
-
     companion object : Entity.Factory<Post>() {
-        private fun CreatePostRequest.getPostType(): Either<RequestParsingError, PostType> {
+        private fun PulpFictionProtos.CreatePostRequest.getPostType(): Either<RequestParsingError, PulpFictionProtos.Post.PostType> {
             return if (this.hasCreateCommentRequest()) {
-                Either.Right(PostType.COMMENT)
+                Either.Right(PulpFictionProtos.Post.PostType.COMMENT)
             } else if (this.hasCreateImagePostRequest()) {
-                Either.Right(PostType.IMAGE)
+                Either.Right(PulpFictionProtos.Post.PostType.IMAGE)
             } else if (this.hasCreateUserPostRequest()) {
-                Either.Right(PostType.USER)
+                Either.Right(PulpFictionProtos.Post.PostType.USER)
             } else {
                 Either.Left(
                     RequestParsingError("${this.removeLoginSession()} contains unsupported PostType")
@@ -64,7 +41,7 @@ interface Post : Entity<Post> {
             }
         }
 
-        private fun CreatePostRequest.removeLoginSession(): CreatePostRequest =
+        private fun PulpFictionProtos.CreatePostRequest.removeLoginSession(): PulpFictionProtos.CreatePostRequest =
             this
                 .toBuilder()
                 .setLoginSession(loginSession {})
@@ -72,18 +49,22 @@ interface Post : Entity<Post> {
 
         suspend fun fromRequest(
             postId: UUID,
-            request: CreatePostRequest
+            request: PulpFictionProtos.CreatePostRequest
         ): Either<PulpFictionRequestError, Post> = either {
             val postCreatorId = request.loginSession.userId.toUUID().bind()
             Post {
                 this.postId = postId
                 this.createdAt = nowTruncated()
-                this.postState = PostState.CREATED
                 this.postCreatorId = postCreatorId
                 this.postType = request.getPostType().bind()
             }
         }
     }
+
+    var postId: UUID
+    var createdAt: Instant
+    var postCreatorId: UUID
+    var postType: PulpFictionProtos.Post.PostType
 }
 
 val Database.posts get() = this.sequenceOf(Posts)

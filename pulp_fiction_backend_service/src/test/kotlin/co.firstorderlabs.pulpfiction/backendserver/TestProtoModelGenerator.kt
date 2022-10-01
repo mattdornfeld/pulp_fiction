@@ -131,7 +131,7 @@ object TestProtoModelGenerator {
     }
 
     fun LoginSession.buildGetPostRequest(postMetadata: PostMetadata): PulpFictionProtos.GetPostRequest =
-        buildGetPostRequest(postMetadata.postId)
+        buildGetPostRequest(postMetadata.postUpdateIdentifier.postId)
 
     fun LoginSession.generateRandomGetPostRequest(): PulpFictionProtos.GetPostRequest =
         buildGetPostRequest(UUID.randomUUID().toString())

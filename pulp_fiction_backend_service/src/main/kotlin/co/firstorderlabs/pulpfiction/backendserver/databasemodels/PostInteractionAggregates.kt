@@ -19,7 +19,7 @@ object PostInteractionAggregates : Table<PostInteractionAggregate>("post_interac
 
 interface PostInteractionAggregate : Entity<PostInteractionAggregate> {
     companion object : Entity.Factory<PostInteractionAggregate>() {
-        fun init(postId: UUID): PostInteractionAggregate = PostInteractionAggregate {
+        fun create(postId: UUID): PostInteractionAggregate = PostInteractionAggregate {
             this.postId = postId
             this.numLikes = 0
             this.numDislikes = 0

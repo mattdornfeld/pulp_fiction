@@ -8,7 +8,7 @@ import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withR
 import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs.CONTENT_DATA_S3_BUCKET_NAME
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum.Companion.IMAGE_POSTS_KEY_BASE
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key.Companion.JPG
@@ -76,7 +76,7 @@ class S3MessengerTest {
         val zeroUUID = UUID(0, 0)
         val post = ImagePostDatum {
             this.postId = zeroUUID
-            this.createdAt = Instant.EPOCH
+            this.updatedAt = Instant.EPOCH
             this.imageS3Key = toS3Key()
         }
 
@@ -100,11 +100,12 @@ class S3MessengerTest {
             .bind()
             .assertEquals(objectAsByteString) { it }
 
-        s3Messenger
+        val tags = s3Messenger
             .getObjectTags(referencesS3Key)
             .bind()
             .deserializeJsonToMap()
-            .assertEquals(expectedTags) { it }
+
+        tags.assertEquals(expectedTags) { it }
     }
 
     @Test
@@ -115,15 +116,15 @@ class S3MessengerTest {
             .withRandomCreateImagePostRequest()
 
         runBlockingEffect<PulpFictionRequestError, Unit> {
-            val post = Post.fromRequest(UUID.randomUUID(), createPostRequest).bind()
-            val imagePostDatum = ImagePostDatum.fromRequest(post, createPostRequest.createImagePostRequest)
+            val postUpdate = PostUpdate.fromRequest(UUID.randomUUID(), createPostRequest).bind()
+            val imagePostDatum = ImagePostDatum.fromRequest(postUpdate, createPostRequest.createImagePostRequest)
             uploadObjectAndAssertCorrect(
                 imagePostDatum,
                 createPostRequest.createImagePostRequest.imageJpg,
                 mapOf(
-                    ImagePostDatum.Companion.TagKey.postId.name to post.postId.toString(),
-                    ImagePostDatum.Companion.TagKey.createdAt.name to post.createdAt.toString(),
-                    ImagePostDatum.Companion.TagKey.postType.name to post.postType.name,
+                    ImagePostDatum.Companion.TagKey.postId.name to postUpdate.post.postId.toString(),
+                    ImagePostDatum.Companion.TagKey.createdAt.name to postUpdate.updatedAt.toString(),
+                    ImagePostDatum.Companion.TagKey.postType.name to postUpdate.post.postType.name,
                     ImagePostDatum.Companion.TagKey.fileType.name to JPG,
                 )
             ).bind()
@@ -138,15 +139,15 @@ class S3MessengerTest {
             .withRandomCreateUserPostRequest()
 
         runBlockingEffect<PulpFictionRequestError, Unit> {
-            val post = Post.fromRequest(UUID.randomUUID(), createPostRequest).bind()
-            val userPostDatum = UserPostDatum.fromRequest(post, createPostRequest.createUserPostRequest)
+            val postUpdate = PostUpdate.fromRequest(UUID.randomUUID(), createPostRequest).bind()
+            val userPostDatum = UserPostDatum.fromRequest(postUpdate, createPostRequest.createUserPostRequest)
             uploadObjectAndAssertCorrect(
                 userPostDatum,
                 createPostRequest.createUserPostRequest.avatarJpg,
                 mapOf(
-                    UserPostDatum.Companion.TagKey.postId.name to post.postId.toString(),
-                    UserPostDatum.Companion.TagKey.createdAt.name to post.createdAt.toString(),
-                    UserPostDatum.Companion.TagKey.postType.name to post.postType.name,
+                    UserPostDatum.Companion.TagKey.postId.name to postUpdate.post.postId.toString(),
+                    UserPostDatum.Companion.TagKey.createdAt.name to postUpdate.updatedAt.toString(),
+                    UserPostDatum.Companion.TagKey.postType.name to postUpdate.post.postType.name,
                     UserPostDatum.Companion.TagKey.fileType.name to JPG,
                     UserPostDatum.Companion.TagKey.userId.name to createPostRequest.loginSession.userId.toString()
                 )

@@ -1,7 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
-import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.continuations.either
@@ -9,16 +8,12 @@ import arrow.core.none
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.SensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
-import co.firstorderlabs.protos.pulpfiction.UserKt.sensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.userMetadata
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
-import co.firstorderlabs.protos.pulpfiction.user
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
-import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
 import com.google.protobuf.ByteString
 import com.password4j.Password
 import org.ktorm.database.Database
@@ -52,12 +47,14 @@ interface User : Entity<User> {
     var email: String?
     var dateOfBirth: LocalDate?
 
-    fun toNonSensitiveUserMetadataProto(avatarImageS3KeyMaybe: Option<String> = None): UserMetadata {
+    fun toNonSensitiveUserMetadataProto(userPostDatum: UserPostDatum): UserMetadata {
         val user = this
         return userMetadata {
             this.userId = user.userId.toString()
             this.createdAt = user.createdAt.toTimestamp()
             this.displayName = user.currentDisplayName
+            userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
+            this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
             avatarImageS3KeyMaybe.map { this.avatarImageUrl = it }
         }
     }

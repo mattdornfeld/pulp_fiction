@@ -1,6 +1,8 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels.types
 
 import arrow.core.Either
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import org.ktorm.entity.Entity
 import org.ktorm.schema.Column
@@ -13,13 +15,19 @@ import java.util.UUID
  */
 abstract class PostData<A>(tableName: String) : Table<A>(tableName) where A : PostDatum, A : Entity<A> {
     abstract val postId: Column<UUID>
-    abstract val createdAt: Column<Instant>
+    abstract val updatedAt: Column<Instant>
 }
 
 /**
  * All entities associated with a table model that store post data implement this interface
  */
-interface PostDatum
+interface PostDatum {
+    var postId: UUID
+    var updatedAt: Instant
+
+    fun getPostUpdateIdentifier(): PulpFictionProtos.Post.PostUpdateIdentifier =
+        PostUpdate.getPostUpdateIdentifier(postId, updatedAt)
+}
 
 /**
  * Casts an object that implements PostDatum to the entity type associated with the supplied PostData<A> table. Returns a RequestParsingError if there is a failure.

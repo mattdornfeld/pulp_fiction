@@ -33,50 +33,51 @@ CREATE TABLE followers
 
 CREATE INDEX CONCURRENTLY followers_user_id ON followers (user_id);
 
-CREATE TABLE post_ids
-(
-    post_id UUID PRIMARY KEY
-);
-
 CREATE TABLE posts
 (
+    post_id         UUID PRIMARY KEY,
+    created_at      TIMESTAMP NOT NULL,
+    post_creator_id UUID      NOT NULL REFERENCES users (user_id),
+    post_type       POST_TYPE NOT NULL
+);
+
+CREATE TABLE post_updates
+(
     post_id         UUID       NOT NULL,
-    created_at      TIMESTAMP  NOT NULL,
+    updated_at      TIMESTAMP  NOT NULL,
     post_state      POST_STATE NOT NULL,
-    post_creator_id UUID       NOT NULL REFERENCES users (user_id),
-    post_type       POST_TYPE  NOT NULL,
-    PRIMARY KEY (post_id, created_at),
-    FOREIGN KEY (post_id) REFERENCES post_ids (post_id)
+    PRIMARY KEY (post_id, updated_at),
+    FOREIGN KEY (post_id) REFERENCES posts (post_id)
 );
 
 CREATE TABLE comment_data
 (
     post_id        UUID      NOT NULL,
-    created_at     TIMESTAMP NOT NULL,
+    updated_at     TIMESTAMP NOT NULL,
     body           VARCHAR   NOT NULL,
     parent_post_id UUID      NOT NULL,
-    PRIMARY KEY (post_id, created_at),
-    FOREIGN KEY (post_id, created_at) REFERENCES posts (post_id, created_at),
-    FOREIGN KEY (parent_post_id) REFERENCES post_ids (post_id)
+    PRIMARY KEY (post_id, updated_at),
+    FOREIGN KEY (post_id, updated_at) REFERENCES post_updates (post_id, updated_at),
+    FOREIGN KEY (parent_post_id) REFERENCES posts (post_id)
 );
 
 CREATE TABLE image_post_data
 (
     post_id      UUID      NOT NULL,
-    created_at   TIMESTAMP NOT NULL,
+    updated_at   TIMESTAMP NOT NULL,
     image_s3_key VARCHAR   NOT NULL,
     caption      VARCHAR   NOT NULL,
-    PRIMARY KEY (post_id, created_at),
-    FOREIGN KEY (post_id, created_at) REFERENCES posts (post_id, created_at)
+    PRIMARY KEY (post_id, updated_at),
+    FOREIGN KEY (post_id, updated_at) REFERENCES post_updates (post_id, updated_at)
 );
 
 CREATE TABLE user_post_data
 (
     post_id             UUID      NOT NULL,
-    created_at          TIMESTAMP NOT NULL,
+    updated_at          TIMESTAMP NOT NULL,
     user_id             UUID      NOT NULL REFERENCES users (user_id),
     display_name        VARCHAR   NOT NULL,
     avatar_image_s3_key VARCHAR   NOT NULL,
-    PRIMARY KEY (post_id, created_at),
-    FOREIGN KEY (post_id, created_at) REFERENCES posts (post_id, created_at)
+    PRIMARY KEY (post_id, updated_at),
+    FOREIGN KEY (post_id, updated_at) REFERENCES post_updates (post_id, updated_at)
 );

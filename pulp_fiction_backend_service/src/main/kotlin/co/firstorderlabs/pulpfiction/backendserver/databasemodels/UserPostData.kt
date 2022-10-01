@@ -21,7 +21,7 @@ import java.util.UUID
 
 object UserPostData : PostData<UserPostDatum>("user_post_data") {
     override val postId = uuid("post_id").primaryKey().bindTo { it.postId }
-    override val createdAt = timestamp("created_at").primaryKey().bindTo { it.createdAt }
+    override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val userId = uuid("user_id").bindTo { it.userId }
     val displayName = varchar("display_name").bindTo { it.displayName }
     val avatarImageS3Key = varchar("avatar_image_s3_key").bindTo { it.avatarImageS3Key }
@@ -39,26 +39,26 @@ interface UserPostDatum : Entity<UserPostDatum>, PostDatum, ReferencesS3Key {
             userId,
         }
 
-        fun fromRequest(post: Post, request: CreateUserPostRequest) = UserPostDatum {
-            this.postId = post.postId
-            this.createdAt = post.createdAt
-            this.userId = post.postCreatorId
+        fun fromRequest(postUpdate: PostUpdate, request: CreateUserPostRequest) = UserPostDatum {
+            this.postId = postUpdate.post.postId
+            this.updatedAt = postUpdate.updatedAt
+            this.userId = postUpdate.post.postCreatorId
             this.displayName = request.displayName
             this.avatarImageS3Key = toS3Key()
         }
     }
 
-    var postId: UUID
-    var createdAt: Instant
+    override var postId: UUID
+    override var updatedAt: Instant
     var userId: UUID
     var displayName: String
     var avatarImageS3Key: String?
 
-    override fun toS3Key(): String = "$USER_AVATARS_KEY_BASE/${postId}_$createdAt.$JPG"
+    override fun toS3Key(): String = "$USER_AVATARS_KEY_BASE/${postId}_$updatedAt.$JPG"
 
     override fun toTagging(): Tagging = listOf(
         tag(TagKey.postId.name, this.postId.toString()),
-        tag(TagKey.createdAt.name, this.createdAt.toString()),
+        tag(TagKey.createdAt.name, this.updatedAt.toString()),
         tag(TagKey.postType.name, PulpFictionProtos.Post.PostType.USER.name),
         tag(TagKey.userId.name, this.userId.toString()),
         tag(TagKey.fileType.name, JPG),
@@ -68,9 +68,10 @@ interface UserPostDatum : Entity<UserPostDatum>, PostDatum, ReferencesS3Key {
         val avatarImageS3Key = this@UserPostDatum.avatarImageS3Key
         this.userMetadata = userMetadata {
             this.userId = this@UserPostDatum.userId.toString()
-            this.createdAt = this@UserPostDatum.createdAt.toTimestamp()
+            this.createdAt = this@UserPostDatum.updatedAt.toTimestamp()
             this.displayName = this@UserPostDatum.displayName
-            if (avatarImageS3Key != null) this.avatarImageUrl = avatarImageS3Key
+            avatarImageS3Key?.let { this.avatarImageUrl = it }
+            this.latestUserPostUpdateIdentifier = this@UserPostDatum.getPostUpdateIdentifier()
         }
     }
 }
