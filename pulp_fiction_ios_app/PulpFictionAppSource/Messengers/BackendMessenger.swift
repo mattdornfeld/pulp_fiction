@@ -8,19 +8,26 @@
 import Foundation
 import protos_pulp_fiction_grpc_swift
 
+/// Struct for communicating with backend API
 public struct BackendMessenger {
     let pulpFictionClientProtocol: PulpFictionClientProtocol
     private let loginSession = LoginSession.with { _ in }
 
-    func getGlobalPostFeed() -> PostFeedBuilder.PostFeed {
+    public init(pulpFictionClientProtocol: PulpFictionClientProtocol) {
+        self.pulpFictionClientProtocol = pulpFictionClientProtocol
+    }
+
+    /// Constructs the global post feed based on data returned from backend API
+    /// - Returns: A PostFeed iterator that returns PostProto objects for the global feed
+    func getGlobalPostFeed() -> PostFeed {
         let getFeedRequest = GetFeedRequest.with {
             $0.loginSession = loginSession
             $0.getGlobalFeedRequest = GetFeedRequest.GetGlobalFeedRequest()
         }
 
-        return PostFeedBuilder(
+        return PostFeed(
             pulpFictionClientProtocol: pulpFictionClientProtocol,
             getFeedRequest: getFeedRequest
-        ).makeAsyncIterator()
+        )
     }
 }

@@ -8,5 +8,5 @@
 import Foundation
 
 struct PreviewAppConfigs {
-    static let numPostsInFeedResponse = 10
+    static let numPostsInFeedResponse = 20
 }

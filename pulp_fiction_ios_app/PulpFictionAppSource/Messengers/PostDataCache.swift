@@ -10,8 +10,8 @@ import Cache
 import Foundation
 
 public class PostDataCache {
-    private let cache: Storage<UUID, PostDataOneOf>
-    private var postIds: Set<UUID> = Set()
+    private let cache: Storage<PostUpdateIdentifier, PostDataOneOf>
+    private var postIds: Set<PostUpdateIdentifier> = Set()
 
     public class StartupError: PulpFictionStartupError {}
     public class ErrorInitializingPostCache: StartupError {}
@@ -22,7 +22,7 @@ public class PostDataCache {
     public class ErrorRetrievingPostFromCache: RequestError {}
     public class ErrorAddingItemToPostCache: RequestError {}
 
-    init(cache: Storage<UUID, PostDataOneOf>) {
+    init(cache: Storage<PostUpdateIdentifier, PostDataOneOf>) {
         self.cache = cache
         cache.addStorageObserver(self) { _, _, change in
             switch change {
@@ -40,7 +40,7 @@ public class PostDataCache {
 
     public static func create() -> IO<PulpFictionStartupError, PostDataCache> {
         IO<PulpFictionStartupError, PostDataCache>.invokeAndConvertError({ cause in ErrorInitializingPostCache(cause) }) {
-            let cache = try Storage<UUID, PostDataOneOf>(
+            let cache = try Storage<PostUpdateIdentifier, PostDataOneOf>(
                 diskConfig: CacheConfigs.diskConfig,
                 memoryConfig: CacheConfigs.memoryConfig,
                 transformer: TransformerFactory.forCodable(ofType: PostDataOneOf.self)
@@ -50,18 +50,18 @@ public class PostDataCache {
         }
     }
 
-    private func getUnsafe(_ postId: UUID) throws -> Option<PostDataOneOf> {
-        let postInCache = try cache.existsObject(forKey: postId)
+    private func getUnsafe(_ PostUpdateIdentifier: PostUpdateIdentifier) throws -> Option<PostDataOneOf> {
+        let postInCache = try cache.existsObject(forKey: PostUpdateIdentifier)
         if !postInCache {
             return Option.none()
         }
 
-        let postDataOneOf = try cache.object(forKey: postId)
+        let postDataOneOf = try cache.object(forKey: PostUpdateIdentifier)
         return Option.some(postDataOneOf)
     }
 
-    private func putUnsafe(_ postId: UUID, _ postDataOneOf: PostDataOneOf) throws {
-        try cache.setObject(postDataOneOf, forKey: postId)
+    private func putUnsafe(_ PostUpdateIdentifier: PostUpdateIdentifier, _ postDataOneOf: PostDataOneOf) throws {
+        try cache.setObject(postDataOneOf, forKey: PostUpdateIdentifier)
     }
 
     public func clearCache() -> IO<PulpFictionStartupError, Void> {
@@ -70,42 +70,42 @@ public class PostDataCache {
         }
     }
 
-    public func listPostIdsInCache() -> IO<PulpFictionRequestError, [UUID]> {
-        IO<PulpFictionRequestError, Set<UUID>>.invokeAndConvertError({ cause in ErrorListingPostIds(cause) }) { () -> [UUID] in
+    public func listPostIdsInCache() -> IO<PulpFictionRequestError, [PostUpdateIdentifier]> {
+        IO<PulpFictionRequestError, Set<PostUpdateIdentifier>>.invokeAndConvertError({ cause in ErrorListingPostIds(cause) }) { () -> [PostUpdateIdentifier] in
             Array(self.postIds)
         }
     }
 
-    public func get(_ postId: UUID) -> IO<PulpFictionRequestError, Option<PostDataOneOf>> {
+    public func get(_ PostUpdateIdentifier: PostUpdateIdentifier) -> IO<PulpFictionRequestError, Option<PostDataOneOf>> {
         IO<PulpFictionRequestError, Option<PostDataOneOf>>.invokeAndConvertError({ cause in ErrorRetrievingPostFromCache(cause) }) { () -> Option<PostDataOneOf> in
-            try self.getUnsafe(postId)
+            try self.getUnsafe(PostUpdateIdentifier)
         }
     }
 
-    public func bulkGet(_ postIds: [UUID]) -> IO<PulpFictionRequestError, [Option<PostDataOneOf>]> {
+    public func bulkGet(_ PostUpdateIdentifiers: [PostUpdateIdentifier]) -> IO<PulpFictionRequestError, [Option<PostDataOneOf>]> {
         IO<PulpFictionRequestError, [Option<PostDataOneOf>]>.invokeAndConvertError({ cause in ErrorRetrievingPostFromCache(cause) }) { () -> [Option<PostDataOneOf>] in
-            try postIds.map { postId in
+            try PostUpdateIdentifiers.map { postId in
                 try self.getUnsafe(postId)
             }
         }
     }
 
-    private func put(_ postId: UUID, _ postDataOneOf: PostDataOneOf) -> IO<PulpFictionRequestError, Void> {
+    private func put(_ PostUpdateIdentifier: PostUpdateIdentifier, _ postDataOneOf: PostDataOneOf) -> IO<PulpFictionRequestError, Void> {
         IO<PulpFictionRequestError, Void>.invokeAndConvertError({ cause in ErrorAddingItemToPostCache(cause) }) {
-            try self.putUnsafe(postId, postDataOneOf)
+            try self.putUnsafe(PostUpdateIdentifier, postDataOneOf)
         }
     }
 
-    public func put(_ postId: UUID, _ postData: PostData) -> IO<PulpFictionRequestError, PostMetadata> {
-        put(postId, postData.toPostDataOneOf())
+    public func put(_ PostUpdateIdentifier: PostUpdateIdentifier, _ postData: PostData) -> IO<PulpFictionRequestError, PostMetadata> {
+        put(PostUpdateIdentifier, postData.toPostDataOneOf())
             .mapRight { () in postData.postMetadata }
     }
 
     public func put(_ postData: PostData) -> IO<PulpFictionRequestError, PostMetadata> {
-        put(postData.postMetadata.postId, postData)
+        put(postData.postMetadata.postUpdateIdentifier, postData)
     }
 
-    public func putAll(_ items: [(UUID, PostData)]) -> IO<PulpFictionRequestError, [PostMetadata]> {
+    public func putAll(_ items: [(PostUpdateIdentifier, PostData)]) -> IO<PulpFictionRequestError, [PostMetadata]> {
         IO<PulpFictionRequestError, [PostMetadata]>.invokeAndConvertError({ cause in ErrorAddingItemToPostCache(cause) }) {
             try items.map { item in
                 try self.putUnsafe(item.0, item.1.toPostDataOneOf())

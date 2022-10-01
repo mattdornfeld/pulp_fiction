@@ -21,7 +21,7 @@ struct PulpFictionAppPreview: App {
         }
     }
 
-    private static func creatrAndPopulatePostDataCache() -> IO<PulpFictionStartupError, PostDataCache> {
+    private static func createAndPopulatePostDataCache() -> IO<PulpFictionStartupError, PostDataCache> {
         PostDataCache.create().mapRight { postDataCache in
             ImagePostData.generate().map { imagePostData in
                 postDataCache
@@ -40,13 +40,23 @@ struct PulpFictionAppPreview: App {
     }
 
     private static func createExternalMessengers() -> Either<PulpFictionStartupError, ExternalMessengers> {
-        let createPostDataCacheResult = IO<PulpFictionStartupError, PostDataCache>.var()
+        let createPostDataCacheIO = IO<PulpFictionStartupError, PostDataCache>.var()
+        let fakeImageDataSupplierIO = IO<PulpFictionStartupError, FakeImageDataSupplier>.var()
+
+        let pulpFictionClientProtocol = PulpFictionTestClientBuilder(
+            numPostsInFeedResponse: PreviewAppConfigs.numPostsInFeedResponse
+        ).build()
+        let backendMessenger = BackendMessenger(pulpFictionClientProtocol: pulpFictionClientProtocol)
 
         return binding(
-            createPostDataCacheResult <- creatrAndPopulatePostDataCache(),
+            createPostDataCacheIO <- createAndPopulatePostDataCache(),
+            fakeImageDataSupplierIO <- FakeImageDataSupplier.create(),
             yield: ExternalMessengers(
-                pulpFictionClientProtocol: PulpFictionTestClientBuilder(numPostsInFeedResponse: PreviewAppConfigs.numPostsInFeedResponse).build(),
-                postDataCache: createPostDataCacheResult.get
+                backendMessenger: backendMessenger,
+                postDataMessenger: PostDataMessenger(
+                    postDataCache: createPostDataCacheIO.get,
+                    imageDataSupplier: fakeImageDataSupplierIO.get.imageDataSupplier
+                )
             )
         )^.unsafeRunSyncEither()
     }

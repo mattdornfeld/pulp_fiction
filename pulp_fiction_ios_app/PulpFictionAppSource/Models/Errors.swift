@@ -39,13 +39,26 @@ private extension Option where A: Error {
 }
 
 open class PulpFictionError: Error {
+    let messageMaybe: Option<String>
     let causeMaybe: Option<Error>
 
     public init() {
+        messageMaybe = Option.none()
         causeMaybe = Option.none()
     }
 
     public init(_ cause: Error) {
+        messageMaybe = Option.none()
+        causeMaybe = Option.some(cause)
+    }
+
+    public init(_ message: String) {
+        messageMaybe = Option.some(message)
+        causeMaybe = Option.none()
+    }
+
+    public init(_ message: String, _ cause: Error) {
+        messageMaybe = Option.some(message)
         causeMaybe = Option.some(cause)
     }
 
@@ -54,5 +67,15 @@ open class PulpFictionError: Error {
     }
 }
 
+extension PulpFictionError: LocalizedError {
+    public var errorDescription: String? {
+        String(describing: self)
+            + messageMaybe.map { message in ": " + message }^.getOrElse("")
+            + causeMaybe.map { cause in "\ncause: " + cause.localizedDescription }^.getOrElse("")
+    }
+}
+
 open class PulpFictionStartupError: PulpFictionError {}
 open class PulpFictionRequestError: PulpFictionError {}
+
+class RequestParsingError: PulpFictionRequestError {}

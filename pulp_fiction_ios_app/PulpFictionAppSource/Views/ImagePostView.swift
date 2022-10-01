@@ -8,8 +8,9 @@ import SwiftUI
 
 public struct ImagePostView: View, Identifiable {
     private static let logger = Logger(label: String(describing: ImagePostView.self))
-    public let id: UUID
+    public let id: PostUpdateIdentifier
     public let imagePostData: ImagePostData
+    public let creatorUserPostData: UserPostData
     private let postUIImage: UIImage
     private let userAvatarUIImage: UIImage
 
@@ -23,7 +24,7 @@ public struct ImagePostView: View, Identifiable {
                         borderColor: .red,
                         borderWidth: 1
                     ).padding(.leading, 5)
-                    BoldCaption(imagePostData.postMetadata.postCreatorMetadata.displayName)
+                    BoldCaption(creatorUserPostData.userDisplayName)
                 }
                 Spacer()
                 Symbol(symbolName: "ellipsis")
@@ -44,7 +45,7 @@ public struct ImagePostView: View, Identifiable {
                         )
                     }.padding(.bottom, 1)
                     HStack {
-                        BoldCaption(imagePostData.postMetadata.postCreatorMetadata.displayName)
+                        BoldCaption(creatorUserPostData.userDisplayName)
                         Caption(imagePostData.caption)
                     }
                     Caption(imagePostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
@@ -54,21 +55,22 @@ public struct ImagePostView: View, Identifiable {
         }
     }
 
-    public static func create(_ imagePostData: ImagePostData) -> Either<PulpFictionRequestError, ImagePostView> {
+    public static func create(_ imagePostData: ImagePostData, _ userPostData: UserPostData) -> Either<PulpFictionRequestError, ImagePostView> {
         let createPostUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
         let createUserAvatarUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
 
         return binding(
-            createPostUIImageResult <- imagePostData.imageJpg.toUIImage(),
-            createUserAvatarUIImageResult <- imagePostData.postMetadata.postCreatorMetadata.avatarImageJpg.toUIImage(),
+            createPostUIImageResult <- imagePostData.imagePostContentData.toUIImage(),
+            createUserAvatarUIImageResult <- userPostData.userPostContentData.toUIImage(),
             yield: ImagePostView(
                 id: imagePostData.id,
                 imagePostData: imagePostData,
+                creatorUserPostData: userPostData,
                 postUIImage: createPostUIImageResult.get,
                 userAvatarUIImage: createUserAvatarUIImageResult.get
             )
         )^.onError { cause in
-            logger.error("Error loading post \(imagePostData.postMetadata.postId) because \(cause)")
+            logger.error("Error loading post \(imagePostData.postMetadata.postUpdateIdentifier) because \(cause)")
         }
     }
 }

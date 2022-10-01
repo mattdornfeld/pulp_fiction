@@ -165,7 +165,7 @@ struct PostCreatorReducer {
             logger.info(
                 "Created post",
                 metadata: [
-                    "imageId": "\(postMetadata.postId)",
+                    "postId": "\(postMetadata)",
                 ]
             )
             return .none

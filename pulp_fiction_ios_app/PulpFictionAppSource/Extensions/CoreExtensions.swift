@@ -10,20 +10,14 @@ import Foundation
 import Logging
 import SwiftUI
 
-extension Data {
-    public class ErrorDeserializingImage: PulpFictionRequestError {}
-    func toUIImage() -> Either<PulpFictionRequestError, UIImage> {
-        guard let imageData = Data(
-            base64Encoded: self,
-            options: Data.Base64DecodingOptions.ignoreUnknownCharacters
-        ) else {
-            return Either.left(ErrorDeserializingImage())
-        }
+public extension Data {
+    class ErrorLoadingFileFromURL: PulpFictionRequestError {}
 
-        if let uiImage = UIImage(data: imageData) {
-            return Either.right(uiImage)
-        } else {
-            return Either.left(ErrorDeserializingImage())
+    init(url: URL) throws {
+        do {
+            try self.init(contentsOf: url)
+        } catch {
+            throw ErrorLoadingFileFromURL(error)
         }
     }
 }

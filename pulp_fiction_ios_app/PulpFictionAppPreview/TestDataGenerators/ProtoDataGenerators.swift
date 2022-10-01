@@ -14,7 +14,8 @@ import UIKit
 public enum FakeData {
     static let caption = "test caption please ignore"
     static let comment = "test comment please ignore"
-    static let imageUrl = "https://angelfire.com/never_gonna_give_you_up.jpg"
+    static let imagePostJpgUrl = try! URL(string: "https://firstorderlabs.com/rickroll.jpg").getOrThrow()
+    static let userAvatarJpgUrl = try! URL(string: "https://firstorderlabs.com/shadowfax.jpg").getOrThrow()
     static let userAvatarJpgName = "Shadowfax"
     static let imagePostJpgName = "Rickroll"
     static let postCreatorDisplayName = "ShadowFax"
@@ -29,7 +30,7 @@ public extension UserMetadataProto {
                 $0.seconds = 0
                 $0.nanos = 0
             }
-            $0.avatarImageURL = FakeData.imageUrl
+            $0.avatarImageURL = FakeData.userAvatarJpgUrl.absoluteString
         }
     }
 }
@@ -53,14 +54,16 @@ public extension Post {
 public extension Post.PostMetadata {
     static func generate(_ postType: Post.PostType) -> Post.PostMetadata {
         Post.PostMetadata.with {
-            $0.postID = UUID().uuidString
-            $0.createdAt = Google_Protobuf_Timestamp.with {
-                $0.seconds = 0
-                $0.nanos = 0
+            $0.postUpdateIdentifier = Post.PostUpdateIdentifier.with {
+                $0.postID = UUID().uuidString
+                $0.updatedAt = Google_Protobuf_Timestamp.with {
+                    $0.seconds = 0
+                    $0.nanos = 0
+                }
             }
             $0.postType = postType
             $0.postState = Post.PostState.created
-            $0.postCreatorMetadata = UserMetadataProto.generate()
+            $0.postCreatorID = UUID().uuidString
         }
     }
 }
@@ -79,8 +82,9 @@ public extension Post.ImagePost {
     static func generate() -> Post.ImagePost {
         Post.ImagePost.with {
             $0.caption = FakeData.caption
-            $0.imageURL = FakeData.imageUrl
+            $0.imageURL = FakeData.imagePostJpgUrl.absoluteString
             $0.interactionAggregates = Post.InteractionAggregates.generate()
+            $0.postCreatorLatestUserPost = Post.UserPost.generate().toPost(Post.PostMetadata.generate(Post.PostType.user))
         }
     }
 }
@@ -89,6 +93,7 @@ public extension Post.Comment {
     static func generate() -> Post.Comment {
         Post.Comment.with {
             $0.body = FakeData.comment
+            $0.postCreatorLatestUserPost = Post.UserPost.generate().toPost(Post.PostMetadata.generate(Post.PostType.user))
         }
     }
 }

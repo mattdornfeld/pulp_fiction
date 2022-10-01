@@ -26,6 +26,15 @@ public extension UIImage {
         return Either.right(imageData.base64EncodedData())
     }
 
+    func toContentData() -> Either<PulpFictionRequestError, ContentData> {
+        serializeImage().mapRight { data in
+            ContentData(
+                data: data,
+                contentDataType: ContentData.ContentDataType.jpg
+            )
+        }
+    }
+
     func toImage() -> Image {
         Image(uiImage: self)
     }

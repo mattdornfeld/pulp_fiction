@@ -8,11 +8,13 @@
 import Foundation
 import PulpFictionAppSource
 
+/// PulpFictionTestClientBuilder builds a PulpFictionTestClient
 public struct PulpFictionTestClientBuilder {
+    /// Number of posts that will be included in feed response
     let numPostsInFeedResponse: Int
 
     private func generatePostsForFeed() -> [Post] {
-        (1 ..< numPostsInFeedResponse).map { _ in Post.generate(Post.PostType.image) }
+        (0 ..< numPostsInFeedResponse).map { _ in Post.generate(Post.PostType.image) }
     }
 
     private func generateGetFeedResponse() -> GetFeedResponse {
@@ -21,6 +23,7 @@ public struct PulpFictionTestClientBuilder {
         }
     }
 
+    /// Builds a PulpFictionTestClient
     func build() -> PulpFictionTestClient {
         let pulpFictionTestClient = PulpFictionTestClient()
         pulpFictionTestClient.enqueueGetFeedResponses([generateGetFeedResponse()])

@@ -19,7 +19,10 @@ public struct PulpFictionAppViewBuilder {
                 VStack {
                     NavigationLink("create", destination: PostCreatorView(externalMessengers.postDataMessenger.postDataCache))
                     Divider()
-                    NavigationLink("feed", destination: ScrollingContentView(externalMessengers.postDataMessenger.postDataCache))
+                    NavigationLink("feed", destination: ScrollingContentView(
+                        backendMessenger: externalMessengers.backendMessenger,
+                        postDataMessenger: externalMessengers.postDataMessenger
+                    ))
                 }
             }
         case let .failure(pulpFictionStartupError):

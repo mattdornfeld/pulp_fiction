@@ -21,15 +21,18 @@ struct PulpFictionApp: App {
     }
 
     private static func createExternalMessengers() -> Either<PulpFictionStartupError, ExternalMessengers> {
-        let createPulpFictionClientProtocolResult = IO<PulpFictionStartupError, PulpFictionClientProtocol>.var()
-        let createPostDataCacheResult = IO<PulpFictionStartupError, PostDataCache>.var()
+        let createPulpFictionClientProtocolIO = IO<PulpFictionStartupError, PulpFictionClientProtocol>.var()
+        let createPostDataCacheIO = IO<PulpFictionStartupError, PostDataCache>.var()
 
         return binding(
-            createPulpFictionClientProtocolResult <- GrpcUtils.buildTestPulpFictionClientProtocol(),
-            createPostDataCacheResult <- PostDataCache.create(),
+            createPulpFictionClientProtocolIO <- GrpcUtils.buildPulpFictionClientProtocol(),
+            createPostDataCacheIO <- PostDataCache.create(),
             yield: ExternalMessengers(
-                pulpFictionClientProtocol: createPulpFictionClientProtocolResult.get,
-                postDataCache: createPostDataCacheResult.get
+                backendMessenger: BackendMessenger(pulpFictionClientProtocol: createPulpFictionClientProtocolIO.get),
+                postDataMessenger: PostDataMessenger(
+                    postDataCache: createPostDataCacheIO.get,
+                    imageDataSupplier: { url in try Data(url: url) }
+                )
             )
         )^.unsafeRunSyncEither()
     }

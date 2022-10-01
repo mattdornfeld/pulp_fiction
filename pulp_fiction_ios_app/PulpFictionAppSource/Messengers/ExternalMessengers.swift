@@ -10,19 +10,9 @@ import Foundation
 public struct ExternalMessengers {
     public let backendMessenger: BackendMessenger
     public let postDataMessenger: PostDataMessenger
-}
 
-public extension ExternalMessengers {
-    init(
-        pulpFictionClientProtocol: PulpFictionClientProtocol,
-        postDataCache: PostDataCache
-    ) {
-        let backendMessenger = BackendMessenger(pulpFictionClientProtocol: pulpFictionClientProtocol)
-        let postDataMessenger = PostDataMessenger(postDataCache: postDataCache)
-
-        self.init(
-            backendMessenger: backendMessenger,
-            postDataMessenger: postDataMessenger
-        )
+    public init(backendMessenger: BackendMessenger, postDataMessenger: PostDataMessenger) {
+        self.backendMessenger = backendMessenger
+        self.postDataMessenger = postDataMessenger
     }
 }

@@ -10,48 +10,58 @@ import SwiftUI
 
 public struct ScrollingContentView: View {
     private static let logger = Logger(label: String(describing: ScrollingContentView.self))
-    private let postDataCache: PostDataCache
+    private let backendMessenger: BackendMessenger
+    private let postDataMessenger: PostDataMessenger
 
-    private func getImagePostDatas() -> [ImagePostData] {
-        let listPostIdsInCacheResult = IO<PulpFictionRequestError, [UUID]>.var()
-        let bulkGetResult = IO<PulpFictionRequestError, [Option<PostDataOneOf>]>.var()
+    public init(backendMessenger: BackendMessenger, postDataMessenger: PostDataMessenger) {
+        self.backendMessenger = backendMessenger
+        self.postDataMessenger = postDataMessenger
+    }
 
-        return binding(
-            listPostIdsInCacheResult <- postDataCache.listPostIdsInCache(),
-            bulkGetResult <- postDataCache.bulkGet(listPostIdsInCacheResult.get),
-            yield: bulkGetResult.get
-        )^
-            .unsafeRunSyncEither()
-            .fold(
-                { _ in [] },
-                { postDataOneOfMaybes in postDataOneOfMaybes.flattenOption() }
-            )
-            .mapAndFilterEmpties { postDataOneOf -> Option<ImagePostData> in
-                switch postDataOneOf.toPostData() {
-                case let postData as ImagePostData:
-                    return Option.some(postData)
-                default:
-                    return Option<ImagePostData>.none()
-                }
+    private func getImagePostViews() -> [ImagePostView] {
+        let postProtos = backendMessenger
+            .getGlobalPostFeed()
+            .takeAll()
+
+        let imagePostDataEithers = postProtos
+            .map { postProto in
+                postDataMessenger
+                    .getPostData(postProto)
+                    .unsafeRunSyncEither()
+                    .flatMap { postDataOneOf in postDataOneOf.toImagePostData() }^
+                    .logError("Error retrieving ImagePostData")
             }
+
+        let userPostDataEithers = postProtos.map { postProto in
+            postDataMessenger
+                .getPostData(postProto.imagePost.postCreatorLatestUserPost)
+                .unsafeRunSyncEither()
+                .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^
+                .logError("Error retrieving UserPostData")
+        }
+
+        return zip(imagePostDataEithers, userPostDataEithers).map { t2 in
+            let imagePostDataEither = Either<PulpFictionRequestError, ImagePostData>.var()
+            let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
+            let imagePostViewEither = Either<PulpFictionRequestError, ImagePostView>.var()
+
+            return binding(
+                imagePostDataEither <- t2.0,
+                userPostDataEither <- t2.1,
+                imagePostViewEither <- ImagePostView
+                    .create(imagePostDataEither.get, userPostDataEither.get)
+                    .logError("Error Creating ImagePostView"),
+
+                yield: imagePostViewEither.get
+            )^
+        }.flattenError()
     }
 
     public var body: some View {
-        let imagesWithCaptions = getImagePostDatas()
-            .mapAndFilterErrors { imagePostData in
-                ImagePostView.create(imagePostData)
-            }
-
         ScrollView {
             LazyVStack(alignment: .leading) {
-                ForEach(imagesWithCaptions) { $0 }
+                ForEach(getImagePostViews()) { $0 }
             }
         }
-    }
-}
-
-public extension ScrollingContentView {
-    init(_ postDataCache: PostDataCache) {
-        self.init(postDataCache: postDataCache)
     }
 }
