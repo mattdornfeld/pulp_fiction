@@ -8,9 +8,11 @@ import Bow
 import BowEffects
 import Cache
 import Foundation
+import Logging
 
 public class PostDataCache {
     private let cache: Storage<PostUpdateIdentifier, PostDataOneOf>
+    private let logger = Logger(label: String(describing: PostDataCache.self))
     private var postIds: Set<PostUpdateIdentifier> = Set()
 
     public class StartupError: PulpFictionStartupError {}
@@ -50,18 +52,18 @@ public class PostDataCache {
         }
     }
 
-    private func getUnsafe(_ PostUpdateIdentifier: PostUpdateIdentifier) throws -> Option<PostDataOneOf> {
-        let postInCache = try cache.existsObject(forKey: PostUpdateIdentifier)
+    private func getUnsafe(_ postUpdateIdentifier: PostUpdateIdentifier) throws -> Option<PostDataOneOf> {
+        let postInCache = try cache.existsObject(forKey: postUpdateIdentifier)
         if !postInCache {
             return Option.none()
         }
 
-        let postDataOneOf = try cache.object(forKey: PostUpdateIdentifier)
+        let postDataOneOf = try cache.object(forKey: postUpdateIdentifier)
         return Option.some(postDataOneOf)
     }
 
-    private func putUnsafe(_ PostUpdateIdentifier: PostUpdateIdentifier, _ postDataOneOf: PostDataOneOf) throws {
-        try cache.setObject(postDataOneOf, forKey: PostUpdateIdentifier)
+    private func putUnsafe(_ postUpdateIdentifier: PostUpdateIdentifier, _ postDataOneOf: PostDataOneOf) throws {
+        try cache.setObject(postDataOneOf, forKey: postUpdateIdentifier)
     }
 
     public func clearCache() -> IO<PulpFictionStartupError, Void> {
@@ -76,28 +78,29 @@ public class PostDataCache {
         }
     }
 
-    public func get(_ PostUpdateIdentifier: PostUpdateIdentifier) -> IO<PulpFictionRequestError, Option<PostDataOneOf>> {
-        IO<PulpFictionRequestError, Option<PostDataOneOf>>.invokeAndConvertError({ cause in ErrorRetrievingPostFromCache(cause) }) { () -> Option<PostDataOneOf> in
-            try self.getUnsafe(PostUpdateIdentifier)
+    public func get(_ postUpdateIdentifier: PostUpdateIdentifier) -> IO<PulpFictionRequestError, Option<PostDataOneOf>> {
+        return IO<PulpFictionRequestError, Option<PostDataOneOf>>.invokeAndConvertError({ cause in ErrorRetrievingPostFromCache(cause) }) { () -> Option<PostDataOneOf> in
+            try self.getUnsafe(postUpdateIdentifier)
         }
+        .onSuccess { _ in self.logger.debug("Successfully retrieved \(postUpdateIdentifier) from cache") }
     }
 
-    public func bulkGet(_ PostUpdateIdentifiers: [PostUpdateIdentifier]) -> IO<PulpFictionRequestError, [Option<PostDataOneOf>]> {
+    public func bulkGet(_ postUpdateIdentifiers: [PostUpdateIdentifier]) -> IO<PulpFictionRequestError, [Option<PostDataOneOf>]> {
         IO<PulpFictionRequestError, [Option<PostDataOneOf>]>.invokeAndConvertError({ cause in ErrorRetrievingPostFromCache(cause) }) { () -> [Option<PostDataOneOf>] in
-            try PostUpdateIdentifiers.map { postId in
+            try postUpdateIdentifiers.map { postId in
                 try self.getUnsafe(postId)
             }
         }
     }
 
-    private func put(_ PostUpdateIdentifier: PostUpdateIdentifier, _ postDataOneOf: PostDataOneOf) -> IO<PulpFictionRequestError, Void> {
+    private func put(_ postUpdateIdentifier: PostUpdateIdentifier, _ postDataOneOf: PostDataOneOf) -> IO<PulpFictionRequestError, Void> {
         IO<PulpFictionRequestError, Void>.invokeAndConvertError({ cause in ErrorAddingItemToPostCache(cause) }) {
-            try self.putUnsafe(PostUpdateIdentifier, postDataOneOf)
+            try self.putUnsafe(postUpdateIdentifier, postDataOneOf)
         }
     }
 
-    public func put(_ PostUpdateIdentifier: PostUpdateIdentifier, _ postData: PostData) -> IO<PulpFictionRequestError, PostMetadata> {
-        put(PostUpdateIdentifier, postData.toPostDataOneOf())
+    public func put(_ postUpdateIdentifier: PostUpdateIdentifier, _ postData: PostData) -> IO<PulpFictionRequestError, PostMetadata> {
+        put(postUpdateIdentifier, postData.toPostDataOneOf())
             .mapRight { () in postData.postMetadata }
     }
 

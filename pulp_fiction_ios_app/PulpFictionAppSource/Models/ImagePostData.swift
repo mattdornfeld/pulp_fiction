@@ -37,7 +37,7 @@ public extension ImagePostData {
 
     init(_ createImagePostRequestProto: CreatePostRequest.CreateImagePostRequest) {
         let postMetadata = PostMetadata(
-            PostUpdateIdentifier: PostUpdateIdentifier(postId: UUID(), updatedAt: Date()),
+            postUpdateIdentifier: PostUpdateIdentifier(postId: UUID(), updatedAt: Date()),
             postType: Post.PostType.image,
             postState: Post.PostState.created,
             createdAt: Date.now,

@@ -12,7 +12,7 @@ import PulpFictionAppSource
 import UIKit
 
 /// FakeImageDataSupplier provides a JPG image in Data form for a given URL
-public struct FakeImageDataSupplier {
+public class FakeImageDataSupplier {
     /// Function that returns a JPG image in Data form when passed a URL
     let imageDataSupplier: (URL) throws -> Data
 

@@ -12,6 +12,10 @@ import Foundation
 import Logging
 import SwiftUI
 
+private struct BowExtensionLogger {
+    static let logger: Logger = .init(label: String(describing: BowExtensionLogger.self))
+}
+
 public extension IO {
     func mapRight<B>(_ f: @escaping (A) -> B) -> IO<E, B> {
         return map(f).map { b in b }^
@@ -47,10 +51,28 @@ public extension IO {
         return try unsafeRunSyncEither()
             .getOrThrow()
     }
-}
 
-struct EitherCompanion {
-    static let logger: Logger = .init(label: String(describing: EitherCompanion.self))
+    func logError(_ msg: String) -> IO<E, A> {
+        mapError { cause in
+            BowExtensionLogger.logger.error(
+                Logger.Message(stringLiteral: msg),
+                metadata: [
+                    "cause": "\(cause)",
+                ]
+            )
+            return cause
+        }
+        return self
+    }
+
+    func logSuccess(_ msgSupplier: @escaping (A) -> String) -> IO<E, A> {
+        mapRight { a in
+            BowExtensionLogger.logger.info(
+                Logger.Message(stringLiteral: msgSupplier(a))
+            )
+        }
+        return self
+    }
 }
 
 public extension Either {
@@ -70,6 +92,11 @@ public extension Either {
         return self
     }
 
+    func onSuccess(_ f: (B) -> Void) -> Either<A, B> {
+        mapRight { b in f(b) }
+        return self
+    }
+
     func getOrThrow() throws -> B {
         if isRight {
             return rightValue
@@ -83,9 +110,18 @@ public extension Either {
         }
     }
 
+    func logSuccess(_ msgSupplier: (B) -> String) -> Either<A, B> where A: Error {
+        mapRight { b in
+            BowExtensionLogger.logger.info(
+                Logger.Message(stringLiteral: msgSupplier(b))
+            )
+        }
+        return self
+    }
+
     func logError(_ msg: String) -> Either<A, B> where A: Error {
         mapLeft { cause in
-            EitherCompanion.logger.error(
+            BowExtensionLogger.logger.error(
                 Logger.Message(stringLiteral: msg),
                 metadata: [
                     "cause": "\(cause)",

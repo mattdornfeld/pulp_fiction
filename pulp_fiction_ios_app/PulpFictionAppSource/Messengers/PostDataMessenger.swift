@@ -72,6 +72,7 @@ public struct PostDataMessenger {
                         .toPostDataOneOf()
                 }
         }
+        .logError("Error building ImagePostData")
     }
 
     private func getUserPostData(

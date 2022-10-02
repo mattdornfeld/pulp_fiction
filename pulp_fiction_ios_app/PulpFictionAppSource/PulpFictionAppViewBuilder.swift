@@ -20,8 +20,7 @@ public struct PulpFictionAppViewBuilder {
                     NavigationLink("create", destination: PostCreatorView(externalMessengers.postDataMessenger.postDataCache))
                     Divider()
                     NavigationLink("feed", destination: ScrollingContentView(
-                        backendMessenger: externalMessengers.backendMessenger,
-                        postDataMessenger: externalMessengers.postDataMessenger
+                        postFeedMessenger: externalMessengers.postFeedMessenger
                     ))
                 }
             }
