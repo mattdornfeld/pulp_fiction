@@ -25,11 +25,11 @@ public enum GrpcUtils {
         }
     }
 
-    static func buildTestPulpFictionClientProtocol() -> IO<PulpFictionStartupError, PulpFictionClientProtocol> {
+    public static func buildTestPulpFictionClientProtocol() -> IO<PulpFictionStartupError, PulpFictionClientProtocol> {
         return IO.invoke { PulpFictionTestClient() }
     }
 
-    static func buildPulpFictionClientProtocol() -> IO<PulpFictionStartupError, PulpFictionClientProtocol> {
+    public static func buildPulpFictionClientProtocol() -> IO<PulpFictionStartupError, PulpFictionClientProtocol> {
         return buildGrpcChannel()
             .mapRight { grpcChannel in PulpFictionServiceClient(channel: grpcChannel) }
     }

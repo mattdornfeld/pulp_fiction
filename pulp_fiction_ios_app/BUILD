@@ -16,12 +16,13 @@ swift_library(
         "PulpFictionAppSource/**/*.swift",
     ]),
     deps = [
-        "@swift_pkgs//swift-composable-architecture:ComposableArchitecture",
+        "//protos:pulp_fiction_grpc_stubs_swift",
+        "//protos:pulp_fiction_grpc_swift",
         "@swift_pkgs//Bow:Bow",
         "@swift_pkgs//Bow:BowEffects",
         "@swift_pkgs//Cache:Cache",
-        "//protos:pulp_fiction_grpc_swift",
-        "//protos:pulp_fiction_grpc_stubs_swift"
+        "@swift_pkgs//swift-collections:Collections",
+        "@swift_pkgs//swift-composable-architecture:ComposableArchitecture",
     ],
     module_name = "PulpFictionAppSource"
 )

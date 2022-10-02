@@ -27,13 +27,13 @@ class PostDataCacheTests: XCTestCase {
     func testPutAndGet() throws {
         let postDataCache = try postDataCacheMaybe.getOrThrow()
         let expectedPostData = try ImagePostData.generate().getOrThrow()
-        let postId = expectedPostData.postMetadata.postId
+        let PostUpdateIdentifier = expectedPostData.postMetadata.postUpdateIdentifier
 
         let putResult = IO<PulpFictionRequestError, PostMetadata>.var()
         let getResult = IO<PulpFictionRequestError, Option<PostDataOneOf>>.var()
         let postDataOneOf = try binding(
-            putResult <- postDataCache.put(postId, expectedPostData),
-            getResult <- postDataCache.get(postId),
+            putResult <- postDataCache.put(PostUpdateIdentifier, expectedPostData),
+            getResult <- postDataCache.get(PostUpdateIdentifier),
             yield: getResult.get
         )^
             .unsafeRunSync()
@@ -45,14 +45,14 @@ class PostDataCacheTests: XCTestCase {
     func testPutAllBulkGet() throws {
         let postDataCache = try postDataCacheMaybe.getOrThrow()
         let expectedPostDatas = try [ImagePostData.generate().getOrThrow(), ImagePostData.generate().getOrThrow()]
-        let items = expectedPostDatas.map { postData in (postData.postMetadata.postId, postData) }
-        let postIds = expectedPostDatas.map { postData in postData.postMetadata.postId }
+        let items = expectedPostDatas.map { postData in (postData.postMetadata.postUpdateIdentifier, postData) }
+        let PostUpdateIdentifiers = expectedPostDatas.map { postData in postData.postMetadata.postUpdateIdentifier }
 
         let putResult = IO<PulpFictionRequestError, [PostMetadata]>.var()
         let batchGetResult = IO<PulpFictionRequestError, [Option<PostDataOneOf>]>.var()
         let postDataOneOfs = try binding(
             putResult <- postDataCache.putAll(items),
-            batchGetResult <- postDataCache.bulkGet(postIds),
+            batchGetResult <- postDataCache.bulkGet(PostUpdateIdentifiers),
             yield: batchGetResult.get
         )^
             .unsafeRunSync()

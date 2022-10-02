@@ -20,7 +20,6 @@ public struct CircularImage: View {
             .resizable()
             .frame(width: 2 * radius, height: 2 * radius)
             .clipShape(Circle())
-//            .shadow(radius: radius)
             .overlay(Circle().stroke(borderColor, lineWidth: borderWidth))
     }
 }

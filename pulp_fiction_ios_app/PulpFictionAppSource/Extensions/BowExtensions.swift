@@ -9,6 +9,7 @@ import Bow
 import BowEffects
 import ComposableArchitecture
 import Foundation
+import Logging
 import SwiftUI
 
 public extension IO {
@@ -33,6 +34,23 @@ public extension IO {
                 { value in ComposableArchitecture.Effect(value: value) }
             )
     }
+
+    @discardableResult
+    func onSuccess(_ f: @escaping (A) -> Void) -> IO<E, A> {
+        map { a in
+            f(a)
+            return a
+        }^
+    }
+
+    func getOrThrow() throws -> A {
+        return try unsafeRunSyncEither()
+            .getOrThrow()
+    }
+}
+
+struct EitherCompanion {
+    static let logger: Logger = .init(label: String(describing: EitherCompanion.self))
 }
 
 public extension Either {
@@ -65,8 +83,15 @@ public extension Either {
         }
     }
 
-    func logError() -> Either<A, B> where A: Error {
-        mapLeft { error in print(error) }
+    func logError(_ msg: String) -> Either<A, B> where A: Error {
+        mapLeft { cause in
+            EitherCompanion.logger.error(
+                Logger.Message(stringLiteral: msg),
+                metadata: [
+                    "cause": "\(cause)",
+                ]
+            )
+        }
         return self
     }
 
@@ -87,6 +112,10 @@ public extension Either {
             { value in ComposableArchitecture.Effect<B, A>(value: value) }
         )
     }
+
+    func toIO() -> IO<A, B> where A: Error {
+        IO.invoke { try self.getOrThrow() }
+    }
 }
 
 public extension Option {
@@ -103,5 +132,9 @@ public extension Option {
     func toEither<E: Error>(_ error: E) -> Either<E, A> {
         return map { success in Either<E, A>.right(success) }^
             .getOrElse(Either<E, A>.left(error))
+    }
+
+    func mapRight<B>(_ f: @escaping (A) -> B) -> Option<B> {
+        map { f($0) }^
     }
 }

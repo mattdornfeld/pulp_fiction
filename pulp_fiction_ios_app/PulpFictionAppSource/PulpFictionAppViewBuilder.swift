@@ -5,20 +5,24 @@
 //  Created by Matthew Dornfeld on 9/18/22.
 //
 
+import Bow
 import Foundation
 import SwiftUI
 
 public struct PulpFictionAppViewBuilder {
-    let externalMessengersCreateResult: Result<ExternalMessengers, PulpFictionStartupError>
+    let externalMessengersCreateResult: Either<PulpFictionStartupError, ExternalMessengers>
 
     @ViewBuilder public func buildView() -> some View {
-        switch externalMessengersCreateResult {
+        switch externalMessengersCreateResult.toResult() {
         case let .success(externalMessengers):
             NavigationView {
                 VStack {
                     NavigationLink("create", destination: PostCreatorView(externalMessengers.postDataMessenger.postDataCache))
                     Divider()
-                    NavigationLink("feed", destination: ScrollingContentView(externalMessengers.postDataMessenger.postDataCache))
+                    NavigationLink("feed", destination: ScrollingContentView(
+                        backendMessenger: externalMessengers.backendMessenger,
+                        postDataMessenger: externalMessengers.postDataMessenger
+                    ))
                 }
             }
         case let .failure(pulpFictionStartupError):
@@ -28,7 +32,7 @@ public struct PulpFictionAppViewBuilder {
 }
 
 public extension PulpFictionAppViewBuilder {
-    init(_ externalMessengersCreateResult: Result<ExternalMessengers, PulpFictionStartupError>) {
+    init(_ externalMessengersCreateResult: Either<PulpFictionStartupError, ExternalMessengers>) {
         self.init(externalMessengersCreateResult: externalMessengersCreateResult)
     }
 }

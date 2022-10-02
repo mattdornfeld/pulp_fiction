@@ -23,22 +23,36 @@ message Post {
     USER = 2;
   }
 
-  message PostMetadata {
+  message PostUpdateIdentifier {
     string post_id = 1;
-    google.protobuf.Timestamp created_at = 2;
-    User.UserMetadata post_creator_metadata = 3;
-    PostState postState = 4;
-    PostType postType = 5;
+    google.protobuf.Timestamp updated_at = 2;
+  }
+
+  message PostMetadata {
+    PostUpdateIdentifier post_update_identifier = 1;
+    string post_creator_id = 2;
+    PostState postState = 3;
+    PostType postType = 4;
+    google.protobuf.Timestamp created_at = 5;
+  }
+
+  message InteractionAggregates {
+    int64 numLikes = 1;
+    int64 numDislikes = 2;
+    int64 numChildComments = 3;
   }
 
   message Comment {
     string body = 1;
     string parent_post_id = 2;
+    Post post_creator_latest_user_post = 3;
   }
 
   message ImagePost {
     string image_url = 1;
     string caption = 2;
+    InteractionAggregates interactionAggregates = 3;
+    Post post_creator_latest_user_post = 4;
   }
 
   message UserPost {
@@ -59,6 +73,7 @@ message User {
     string display_name = 2;
     string avatar_image_url = 3;
     google.protobuf.Timestamp created_at = 4;
+    Post.PostUpdateIdentifier latest_user_post_update_identifier = 5;
   }
 
   message SensitiveUserMetadata {
@@ -271,7 +286,7 @@ message UpdatePostResponse {
 service PulpFiction {
   rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {}
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
-  rpc GetFeed (stream GetFeedRequest) returns (stream GetFeedResponse) {}
+  rpc GetFeed (GetFeedRequest) returns (stream GetFeedResponse) {}
   rpc GetPost (GetPostRequest) returns (GetPostResponse) {}
   rpc GetUser (GetUserRequest) returns (GetUserResponse) {}
   rpc Login (LoginRequest) returns (LoginResponse) {}

@@ -1,6 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.Either
+import co.firstorderlabs.protos.pulpfiction.PostKt.interactionAggregates
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
@@ -70,7 +71,12 @@ internal class PulpFictionBackendServiceTest {
         @JvmStatic
         override fun migrateDatabase() = super.migrateDatabase()
 
-        private val pulpFictionBackendService by lazy(LazyThreadSafetyMode.PUBLICATION) { PulpFictionBackendService(database, s3Client) }
+        private val pulpFictionBackendService by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            PulpFictionBackendService(
+                database,
+                s3Client
+            )
+        }
         private val s3Messenger by lazy { S3Messenger(s3Client) }
     }
 
@@ -208,7 +214,12 @@ internal class PulpFictionBackendServiceTest {
             userMetadata
                 .assertTrue { it.userId.toUUID().isRight() }
                 .assertTrue { it.createdAt.isWithinLast(100) }
+                .assertTrue { it.latestUserPostUpdateIdentifier.postId.isNotEmpty() }
+                .assertTrue { it.latestUserPostUpdateIdentifier.hasUpdatedAt() }
+                .assertEquals(post.metadata.postUpdateIdentifier) { it.latestUserPostUpdateIdentifier }
+                .assertEquals(createUserRequest.displayName) { it.displayName }
 
+            // Check the value of avatarImageUrl corresponds to the uploaed image
             val loginRequest =
                 TestProtoModelGenerator.generateRandomLoginRequest(
                     userMetadata.userId,
@@ -219,7 +230,7 @@ internal class PulpFictionBackendServiceTest {
             val userPost = pulpFictionBackendService.getPost(
                 getPostRequest {
                     this.loginSession = loginSession
-                    this.postId = post.metadata.postId
+                    this.postId = post.metadata.postUpdateIdentifier.postId
                 }
             ).post.userPost
 
@@ -230,8 +241,6 @@ internal class PulpFictionBackendServiceTest {
                     "The user avatar stored in s3 should be the one passed in to the CreateUser endpoint",
                     createUserRequest.avatarJpg
                 ) { it }
-
-            // TODO (matt): Check user is retrievable after getUser endpoint implemented
 
             EndpointName.createUser
                 .assertEndpointMetricsCorrect(1.0)
@@ -254,10 +263,10 @@ internal class PulpFictionBackendServiceTest {
     @Test
     fun testGetUser() {
         runBlocking {
-            val tuple2 = createUser()
-            val post = tuple2.first
+            val t2 = createUser()
+            val post = t2.first
             val createdUserMetadata = post.userPost.userMetadata
-            val createUserRequest = tuple2.second
+            val createUserRequest = t2.second
 
             val loginRequest =
                 TestProtoModelGenerator.generateRandomLoginRequest(
@@ -277,6 +286,7 @@ internal class PulpFictionBackendServiceTest {
                 .assertEquals(createdUserMetadata.userId) { it.userId }
                 .assertEquals(createdUserMetadata.displayName) { it.displayName }
                 .assertEquals(createdUserMetadata.avatarImageUrl) { it.avatarImageUrl }
+                .assertEquals(createdUserMetadata.latestUserPostUpdateIdentifier) { it.latestUserPostUpdateIdentifier }
 
             tupleOf(EndpointName.getUser, DatabaseMetrics.DatabaseOperation.getUser)
                 .assertDatabaseMetricsCorrect(1.0)
@@ -401,7 +411,7 @@ internal class PulpFictionBackendServiceTest {
             .postMetadata
 
         postMetadata
-            .assertEquals(loginSession.userMetadata) { it.postCreatorMetadata }
+            .assertEquals(loginSession.userMetadata.userId) { it.postCreatorId }
             .assertEquals(PulpFictionProtos.Post.PostState.CREATED) { it.postState }
             .assertTrue { it.createdAt.isWithinLast(100) }
 
@@ -411,6 +421,7 @@ internal class PulpFictionBackendServiceTest {
         post
             .assertEquals(postMetadata) { it.metadata }
             .assertEquals(createPostRequest.createImagePostRequest.caption) { it.imagePost.caption }
+            .assertEquals(interactionAggregates {}) { it.imagePost.interactionAggregates }
 
         s3Messenger
             .getObject(post.imagePost.imageUrl)
@@ -450,11 +461,11 @@ internal class PulpFictionBackendServiceTest {
 
         val createCommentRequest = loginSession
             .generateRandomCreatePostRequest()
-            .withRandomCreateCommentRequest(imagePostMetadata.postId)
+            .withRandomCreateCommentRequest(imagePostMetadata.postUpdateIdentifier.postId)
         val postMetadata = pulpFictionBackendService.createPost(createCommentRequest).postMetadata
 
         postMetadata
-            .assertEquals(loginSession.userMetadata) { it.postCreatorMetadata }
+            .assertEquals(loginSession.userMetadata.userId) { it.postCreatorId }
             .assertTrue { postMetadata.createdAt.isWithinLast(100) }
             .assertEquals(PulpFictionProtos.Post.PostState.CREATED) { it.postState }
 

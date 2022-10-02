@@ -37,5 +37,10 @@ def pulp_fiction_swift_dependencies():
                 exact_version = "6.0.0",
                 products = ["Cache"],
             ),
+            spm_pkg(
+                url = "https://github.com/apple/swift-collections.git",
+                exact_version = "1.0.3",
+                products = ["Collections"],
+            ),
         ],
     )

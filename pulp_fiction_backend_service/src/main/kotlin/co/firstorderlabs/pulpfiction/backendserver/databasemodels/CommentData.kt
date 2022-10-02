@@ -19,7 +19,7 @@ import java.util.UUID
 
 object CommentData : PostData<CommentDatum>("comment_data") {
     override val postId = uuid("post_id").primaryKey().bindTo { it.postId }
-    override val createdAt = timestamp("created_at").primaryKey().bindTo { it.createdAt }
+    override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val body = varchar("body").bindTo { it.body }
     val parentPostId = uuid("parent_post_id").bindTo { it.parentPostId }
 }
@@ -27,13 +27,13 @@ object CommentData : PostData<CommentDatum>("comment_data") {
 interface CommentDatum : Entity<CommentDatum>, PostDatum {
     companion object : Entity.Factory<CommentDatum>() {
         suspend fun fromRequest(
-            post: Post,
+            postUpdate: PostUpdate,
             request: PulpFictionProtos.CreatePostRequest.CreateCommentRequest
         ): Either<RequestParsingError, CommentDatum> =
             either {
                 CommentDatum {
-                    this.postId = post.postId
-                    this.createdAt = post.createdAt
+                    this.postId = postUpdate.post.postId
+                    this.updatedAt = postUpdate.updatedAt
                     this.body = request.body
                     this.parentPostId = request.parentPostId.toUUID().bind()
                 }
@@ -45,8 +45,8 @@ interface CommentDatum : Entity<CommentDatum>, PostDatum {
         this.parentPostId = this@CommentDatum.parentPostId.toString()
     }
 
-    var postId: UUID
-    var createdAt: Instant
+    override var postId: UUID
+    override var updatedAt: Instant
     var body: String
     var parentPostId: UUID
 }

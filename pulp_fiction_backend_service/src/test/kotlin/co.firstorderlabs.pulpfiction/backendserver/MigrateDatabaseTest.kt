@@ -8,9 +8,10 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostId
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLike
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.TestDatabaseModelGenerator.generateRandom
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
@@ -20,7 +21,8 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postIds
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postLikes
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
@@ -32,6 +34,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.ktorm.dsl.deleteAll
 import org.ktorm.dsl.from
+import org.ktorm.dsl.joinReferencesAndSelect
 import org.ktorm.dsl.map
 import org.ktorm.dsl.select
 import org.ktorm.entity.add
@@ -61,20 +64,19 @@ internal class MigrateDatabaseTest {
 
     @Test
     fun testWriteToPostsTable() {
-        val post = Post.generateRandom()
-        val user = User.generateRandom(post.postCreatorId)
-        val postId = PostId {
-            this.postId = post.postId
-        }
+        val expectedPostUpdate = PostUpdate.generateRandom()
+        val user = User.generateRandom(expectedPostUpdate.post.postCreatorId)
         database.useTransaction {
             database.users.add(user)
-            database.postIds.add(postId)
-            database.posts.add(post)
+            database.posts.add(expectedPostUpdate.post)
+            database.postUpdates.add(expectedPostUpdate)
         }
 
-        val posts = database.from(Posts).select().map { Posts.createEntity(it) }
-        Assertions.assertEquals(1, posts.size)
-        Assertions.assertEquals(post, posts[0])
+        val postUpdates = database.from(PostUpdates).joinReferencesAndSelect().map { PostUpdates.createEntity(it) }
+        println(expectedPostUpdate)
+        println(postUpdates[0])
+        Assertions.assertEquals(1, postUpdates.size)
+        Assertions.assertEquals(expectedPostUpdate, postUpdates[0])
     }
 
     @Test
@@ -89,24 +91,18 @@ internal class MigrateDatabaseTest {
 
     @Test
     fun testWriteToCommentDataTable() {
-        val parentPost = Post.generateRandom()
-        val parentPostUser = User.generateRandom(parentPost.postCreatorId)
-        val commentPost = Post.generateRandom()
-        val commentPostUser = User.generateRandom(commentPost.postCreatorId)
-        val commmentDatum = CommentDatum.generateRandom(commentPost.postId, parentPost.postId)
-        val parentPostId = PostId {
-            this.postId = parentPost.postId
-        }
-        val commentPostId = PostId {
-            this.postId = commentPost.postId
-        }
+        val parentPostUpdate = PostUpdate.generateRandom()
+        val parentPostUser = User.generateRandom(parentPostUpdate.post.postCreatorId)
+        val commentPostUpdate = PostUpdate.generateRandom()
+        val commentPostUser = User.generateRandom(commentPostUpdate.post.postCreatorId)
+        val commmentDatum = CommentDatum.generateRandom(commentPostUpdate.post.postId, parentPostUpdate.post.postId)
         database.useTransaction {
             database.users.add(parentPostUser)
             database.users.add(commentPostUser)
-            database.postIds.add(parentPostId)
-            database.postIds.add(commentPostId)
-            database.posts.add(parentPost)
-            database.posts.add(commentPost)
+            database.posts.add(parentPostUpdate.post)
+            database.posts.add(commentPostUpdate.post)
+            database.postUpdates.add(parentPostUpdate)
+            database.postUpdates.add(commentPostUpdate)
             database.commentData.add(commmentDatum)
         }
 
@@ -117,14 +113,13 @@ internal class MigrateDatabaseTest {
 
     @Test
     fun testWriteToImagePostDataTable() {
-        val post = Post.generateRandom()
-        val postId = post.toPostId()
-        val user = User.generateRandom(post.postCreatorId)
-        val imagePostDatum = ImagePostDatum.generateRandom(post.postId)
+        val postUpdate = PostUpdate.generateRandom()
+        val user = User.generateRandom(postUpdate.post.postCreatorId)
+        val imagePostDatum = ImagePostDatum.generateRandom(postUpdate.post.postId)
         database.useTransaction {
             database.users.add(user)
-            database.postIds.add(postId)
-            database.posts.add(post)
+            database.posts.add(postUpdate.post)
+            database.postUpdates.add(postUpdate)
             database.imagePostData.add(imagePostDatum)
         }
 
@@ -168,18 +163,33 @@ internal class MigrateDatabaseTest {
 
     @Test
     fun testWriteToUserPostDataTable() {
-        val post = Post.generateRandom()
-        val user = User.generateRandom(post.postCreatorId)
-        val postId = post.toPostId()
-        val userPostDatum = UserPostDatum.generateRandom(post.postId, user.userId)
+        val postUpdate = PostUpdate.generateRandom()
+        val user = User.generateRandom(postUpdate.post.postCreatorId)
+        val userPostDatum = UserPostDatum.generateRandom(postUpdate.post.postId, user.userId)
         database.useTransaction {
             database.users.add(user)
-            database.postIds.add(postId)
-            database.posts.add(post)
+            database.posts.add(postUpdate.post)
+            database.postUpdates.add(postUpdate)
             database.userPostData.add(userPostDatum)
         }
         val userPostData = database.from(UserPostData).select().map { UserPostData.createEntity(it) }
 
         Assertions.assertEquals(userPostDatum, userPostData.first())
+    }
+
+    @Test
+    fun testWriteToPostLikesTable() {
+        val postUpdate = PostUpdate.generateRandom()
+        val user = User.generateRandom(postUpdate.post.postCreatorId)
+        val postLike = PostLike.generateRandom(user.userId, postUpdate.post.postId)
+        database.useTransaction {
+            database.users.add(user)
+            database.posts.add(postUpdate.post)
+            database.postUpdates.add(postUpdate)
+            database.postLikes.add(postLike)
+        }
+        val postlikes = database.from(PostLikes).select().map { PostLikes.createEntity(it) }
+
+        Assertions.assertEquals(postLike, postlikes.first())
     }
 }

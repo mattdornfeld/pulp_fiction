@@ -12,6 +12,9 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregates
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
@@ -84,7 +87,18 @@ abstract class S3AndPostgresContainers {
         s3Client
     }
 
-    protected val tables = listOf(CommentData, ImagePostData, UserPostData, Posts, Followers, LoginSessions, Users)
+    protected val tables = listOf(
+        CommentData,
+        ImagePostData,
+        PostLikes,
+        UserPostData,
+        PostUpdates,
+        Followers,
+        LoginSessions,
+        PostInteractionAggregates,
+        Posts,
+        Users
+    )
 
     open fun migrateDatabase() {
         MigrateDatabase(postgreSQLContainer.jdbcUrl, postgreSQLContainer.username, postgreSQLContainer.password)

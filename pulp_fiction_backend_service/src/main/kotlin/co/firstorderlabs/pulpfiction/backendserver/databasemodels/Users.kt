@@ -1,7 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
-import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.continuations.either
@@ -9,12 +8,10 @@ import arrow.core.none
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.SensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.sensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.userMetadata
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
-import co.firstorderlabs.protos.pulpfiction.user
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
@@ -52,31 +49,24 @@ interface User : Entity<User> {
     var email: String?
     var dateOfBirth: LocalDate?
 
-    fun toNonSensitiveUserMetadataProto(avatarImageS3KeyMaybe: Option<String> = None): UserMetadata {
+    fun toNonSensitiveUserMetadataProto(userPostDatum: UserPostDatum): UserMetadata {
         val user = this
         return userMetadata {
             this.userId = user.userId.toString()
             this.createdAt = user.createdAt.toTimestamp()
             this.displayName = user.currentDisplayName
-            avatarImageS3KeyMaybe.map { this.avatarImageUrl = it }
+            userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
+            this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
         }
     }
 
-    fun toSensitiveUserMetadataProto(): SensitiveUserMetadata {
+    fun toSensitiveUserMetadataProto(userPostDatum: UserPostDatum): PulpFictionProtos.User.SensitiveUserMetadata {
         val user = this
         return sensitiveUserMetadata {
-            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto()
+            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto(userPostDatum)
             this.phoneNumber = user.phoneNumber
-            if (user.email != null) this.email = user.email!!
-            if (user.dateOfBirth != null) this.dateOfBirth = user.dateOfBirth!!.toYearMonthDay()
-        }
-    }
-
-    fun toUserProto(includeSensitiveUserMetadata: Boolean = false): PulpFictionProtos.User = user {
-        if (includeSensitiveUserMetadata) {
-            this.sensitiveUserMetadata = toSensitiveUserMetadataProto()
-        } else {
-            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto()
+            user.email?.let { this.email = it }
+            user.dateOfBirth?.let { this.dateOfBirth = it.toYearMonthDay() }
         }
     }
 
