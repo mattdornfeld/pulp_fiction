@@ -8,6 +8,7 @@
 import Bow
 import Foundation
 
+/// Communicates with the backend API, post data cache, and remote post data store to construct post feeds
 public struct PostFeedMessenger {
     private let pulpFictionClientProtocol: PulpFictionClientProtocol
     private let postDataMessenger: PostDataMessenger
@@ -23,13 +24,13 @@ public struct PostFeedMessenger {
 
     /// Constructs the global post feed based on data returned from backend API
     /// - Returns: A PostFeed iterator that returns PostProto objects for the global feed
-    func getGlobalPostFeed() -> PostViewFeed {
+    public func getGlobalPostFeed() -> PostViewFeed {
         let getFeedRequest = GetFeedRequest.with {
             $0.loginSession = loginSession
             $0.getGlobalFeedRequest = GetFeedRequest.GetGlobalFeedRequest()
         }
 
-        let imagePostViewEitherSupplier: (Post) -> Either<PulpFictionRequestError, ImagePostView> = { postProto in
+        let imagePostViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, ImagePostView> = { postViewIndex, postProto in
             let imagePostDataEither = Either<PulpFictionRequestError, ImagePostData>.var()
             let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
             let imagePostViewEither = Either<PulpFictionRequestError, ImagePostView>.var()
@@ -43,7 +44,7 @@ public struct PostFeedMessenger {
                     .getPostData(postProto.imagePost.postCreatorLatestUserPost)
                     .unsafeRunSyncEither(on: .global(qos: .userInteractive))
                     .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
-                imagePostViewEither <- ImagePostView.create(imagePostDataEither.get, userPostDataEither.get),
+                imagePostViewEither <- ImagePostView.create(postViewIndex, imagePostDataEither.get, userPostDataEither.get),
                 yield: imagePostViewEither.get
             )^
         }

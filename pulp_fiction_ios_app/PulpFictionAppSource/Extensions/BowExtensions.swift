@@ -83,15 +83,18 @@ public extension Either {
         case right(B)
     }
 
+    @discardableResult
     func mapRight<C>(_ f: (B) -> C) -> Either<A, C> {
         return bimap({ a in a }, f)
     }
 
+    @discardableResult
     func onError(_ f: (A) -> Void) -> Either<A, B> {
         mapLeft { a in f(a) }
         return self
     }
 
+    @discardableResult
     func onSuccess(_ f: (B) -> Void) -> Either<A, B> {
         mapRight { b in f(b) }
         return self
@@ -119,6 +122,7 @@ public extension Either {
         return self
     }
 
+    @discardableResult
     func logError(_ msg: String) -> Either<A, B> where A: Error {
         mapLeft { cause in
             BowExtensionLogger.logger.error(
@@ -170,7 +174,14 @@ public extension Option {
             .getOrElse(Either<E, A>.left(error))
     }
 
+    @discardableResult
     func mapRight<B>(_ f: @escaping (A) -> B) -> Option<B> {
         map { f($0) }^
+    }
+
+    @discardableResult
+    func ifEmpty(_ f: @escaping () -> Void) -> Option<A> {
+        f()
+        return self
     }
 }

@@ -24,7 +24,7 @@ public struct PulpFictionTestClientBuilder {
     }
 
     /// Builds a PulpFictionTestClient
-    func build() -> PulpFictionTestClient {
+    public func build() -> PulpFictionTestClient {
         let pulpFictionTestClient = PulpFictionTestClient()
         pulpFictionTestClient.enqueueGetFeedResponses([generateGetFeedResponse()])
 

@@ -9,6 +9,7 @@ import Bow
 import Foundation
 import SwiftUI
 
+/// Build the primary view for the app
 public struct PulpFictionAppViewBuilder {
     let externalMessengersCreateResult: Either<PulpFictionStartupError, ExternalMessengers>
 
@@ -19,7 +20,7 @@ public struct PulpFictionAppViewBuilder {
                 VStack {
                     NavigationLink("create", destination: PostCreatorView(externalMessengers.postDataMessenger.postDataCache))
                     Divider()
-                    NavigationLink("feed", destination: ScrollingContentView(
+                    NavigationLink("feed", destination: PostScrollView(
                         postFeedMessenger: externalMessengers.postFeedMessenger
                     ))
                 }

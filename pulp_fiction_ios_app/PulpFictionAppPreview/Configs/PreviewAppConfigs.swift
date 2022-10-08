@@ -8,5 +8,6 @@
 import Foundation
 
 struct PreviewAppConfigs {
-    static let numPostsInFeedResponse = 20
+    /// Number of posts available in the preview app mock service
+    static let numPostsInFeedResponse = 100
 }

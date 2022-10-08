@@ -6,9 +6,10 @@ import Bow
 import Logging
 import SwiftUI
 
-public struct ImagePostView: View, Identifiable {
+/// Renders an image post
+public struct ImagePostView: View, Identifiable, Equatable {
     private static let logger = Logger(label: String(describing: ImagePostView.self))
-    public let id: PostUpdateIdentifier
+    public let id: Int
     public let imagePostData: ImagePostData
     public let creatorUserPostData: UserPostData
     private let postUIImage: UIImage
@@ -55,7 +56,7 @@ public struct ImagePostView: View, Identifiable {
         }
     }
 
-    public static func create(_ imagePostData: ImagePostData, _ userPostData: UserPostData) -> Either<PulpFictionRequestError, ImagePostView> {
+    public static func create(_ postViewIndex: Int, _ imagePostData: ImagePostData, _ userPostData: UserPostData) -> Either<PulpFictionRequestError, ImagePostView> {
         let createPostUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
         let createUserAvatarUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
 
@@ -63,7 +64,7 @@ public struct ImagePostView: View, Identifiable {
             createPostUIImageResult <- imagePostData.imagePostContentData.toUIImage(),
             createUserAvatarUIImageResult <- userPostData.userPostContentData.toUIImage(),
             yield: ImagePostView(
-                id: imagePostData.id,
+                id: postViewIndex,
                 imagePostData: imagePostData,
                 creatorUserPostData: userPostData,
                 postUIImage: createPostUIImageResult.get,
