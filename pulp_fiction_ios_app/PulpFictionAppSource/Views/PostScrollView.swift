@@ -18,6 +18,7 @@ private struct PostScrollState: Equatable {
     var postViewFeedIteratorMaybe: PostViewFeedIterator? = nil
     /// The PostView objects currently available in the scroll
     var postViews: ScrollPostViews = []
+    var feedLoadProgressIndicatorOpacity: Double = 0.0
 
     func shouldLoadMorePosts(_ postViewFeedIterator: PostViewFeedIterator, _ currentPostViewIndex: Int) -> Bool {
         let thresholdIndex = postViews.index(postViews.endIndex, offsetBy: -PostFeedConfigs.numPostViewsLoadedInAdvance)
@@ -60,8 +61,12 @@ private struct PostScrollEnvironment {
 }
 
 private enum PostScrollAction {
+    /// This action is called on view load. It starts the PostViewFeedIterator and begins loading posts into the view.
     case startScroll
+    case refreshScroll
+    /// Loads more posts if necessary. Triggered on scroll.
     case loadMorePostsIfNeeded(ImagePostView)
+    /// Handles errors with loadMorePostsIfNeeded.
     case loadMorePostsIfNeededHandleErrors(Result<Void, PulpFictionRequestError>)
 }
 
@@ -75,6 +80,7 @@ private enum PostScrollReducer {
         state, action, environment in
         switch action {
         case .startScroll:
+            state.postViews = []
             state.postViewFeedIteratorMaybe = {
                 let postViewFeedIterator = environment
                     .postFeedMessenger
@@ -87,7 +93,14 @@ private enum PostScrollReducer {
 
                 return postViewFeedIterator
             }()
+            state.feedLoadProgressIndicatorOpacity = 0.0
             return .none
+
+        case .refreshScroll:
+            state.feedLoadProgressIndicatorOpacity = 1.0
+            return .task {
+                .startScroll
+            }
 
         case let .loadMorePostsIfNeeded(currentPostView):
             return state.postViewFeedIteratorMaybe.map { postViewFeedIterator in
@@ -115,6 +128,9 @@ private enum PostScrollReducer {
 
 public struct PostScrollView: View {
     private let store: Store<PostScrollState, PostScrollAction>
+    private let progressIndicatorScaleFactor: CGFloat = 2.0
+    private let refreshFeedOnScrollUpSensitivity: CGFloat = 10.0
+    @GestureState private var dragOffset: CGFloat = -100
 
     public init(postFeedMessenger: PostFeedMessenger) {
         store = Store(
@@ -130,15 +146,36 @@ public struct PostScrollView: View {
     public var body: some View {
         WithViewStore(self.store) { viewStore in
             ScrollView {
-                LazyVStack(alignment: .leading) {
-                    ForEach(viewStore.state.postViews) { currentPost in
-                        currentPost.onAppear {
-                            viewStore.send(.loadMorePostsIfNeeded(currentPost))
+                VStack(alignment: .center) {
+                    ProgressView()
+                        .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
+                        .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
+
+                    LazyVStack(alignment: .leading) {
+                        ForEach(viewStore.state.postViews) { currentPost in
+                            currentPost.onAppear {
+                                viewStore.send(.loadMorePostsIfNeeded(currentPost))
+                            }
                         }
                     }
+
+                    Caption("You have reached the end\nTry refreshing the feed to see new posts")
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.gray)
+                        .padding()
                 }
             }
             .onAppear { viewStore.send(.startScroll) }
+            .gesture(
+                DragGesture()
+                    .updating($dragOffset) { value, gestureState, _ in
+                        let delta = value.location.y - value.startLocation.y
+                        if delta > refreshFeedOnScrollUpSensitivity {
+                            gestureState = delta
+                            viewStore.send(.refreshScroll)
+                        }
+                    }
+            )
         }
     }
 }
