@@ -35,7 +35,7 @@ public struct PulpFictionTestClientBuilder {
             while true {
                 queue.sync {
                     if !pulpFictionTestClient.hasGetFeedResponsesRemaining {
-                        logger.info("Adding \(numPostsInFeedResponse) posts to GetFeedResponse stub")
+                        logger.debug("Adding \(numPostsInFeedResponse) posts to GetFeedResponse stub")
                         pulpFictionTestClient.enqueueGetFeedResponses([generateGetFeedResponse()])
                     }
                 }

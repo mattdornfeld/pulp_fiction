@@ -7,7 +7,7 @@ import Logging
 import SwiftUI
 
 /// Renders an image post
-public struct ImagePostView: View, Identifiable, Equatable {
+public struct ImagePostView: PostView {
     private static let logger = Logger(label: String(describing: ImagePostView.self))
     public let id: Int
     public let imagePostData: ImagePostData
@@ -71,7 +71,12 @@ public struct ImagePostView: View, Identifiable, Equatable {
                 userAvatarUIImage: createUserAvatarUIImageResult.get
             )
         )^.onError { cause in
-            logger.error("Error loading post \(imagePostData.postMetadata.postUpdateIdentifier) because \(cause)")
+            logger.error(
+                "Error loading post \(imagePostData.postMetadata.postUpdateIdentifier)",
+                metadata: [
+                    "cause": "\(cause)",
+                ]
+            )
         }
     }
 }

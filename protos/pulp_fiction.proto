@@ -46,6 +46,7 @@ message Post {
     string body = 1;
     string parent_post_id = 2;
     Post post_creator_latest_user_post = 3;
+    InteractionAggregates interactionAggregates = 4;
   }
 
   message ImagePost {
