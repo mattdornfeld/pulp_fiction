@@ -148,11 +148,16 @@ message GetFeedRequest {
   message GetFollowedFeedRequest {
   }
 
+  message GetCommentFeedRequest {
+    string post_id = 1;
+  }
+
   LoginResponse.LoginSession loginSession = 1;
   oneof get_feed_request {
     GetUserFeedRequest get_user_feed_request = 2;
     GetGlobalFeedRequest get_global_feed_request = 3;
     GetFollowedFeedRequest get_followed_feed_request = 4;
+    GetCommentFeedRequest get_comment_feed_request = 5;
   }
 }
 

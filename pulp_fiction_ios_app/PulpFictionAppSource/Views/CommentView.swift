@@ -16,40 +16,27 @@ public struct CommentView: PostView {
     public let creatorUserPostData: UserPostData
     public let id: Int
     private let userAvatarUIImage: UIImage
-    
+
     public var body: some View {
-        VStack {
-            HStack(alignment: .bottom) {
-                HStack {
-                    CircularImage(
-                        uiImage: userAvatarUIImage,
-                        radius: 15,
-                        borderColor: .red,
-                        borderWidth: 1
-                    ).padding(.leading, 5)
-                    BoldCaption(creatorUserPostData.userDisplayName)
-                }
+        VStack(alignment: .leading) {
+            HStack(alignment: .bottom, spacing: 5) {
+                BoldCaption(creatorUserPostData.userDisplayName)
+                SymbolWithCaption(
+                    symbolName: "arrow.up",
+                    symbolCaption: commentPostData.postInteractionAggregates.getNetLikes().formatAsStringForView()
+                ).scaleEffect(0.75, anchor: .leading)
                 Spacer()
+                Caption(commentPostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
                 Symbol(symbolName: "ellipsis")
                     .padding(.trailing, 10)
                     .padding(.bottom, 4)
             }
             Caption(commentPostData.body)
-            HStack {
-                VStack(alignment: .leading) {
-                    HStack {
-                        SymbolWithCaption(
-                            symbolName: "arrow.up",
-                            symbolCaption: commentPostData.postInteractionAggregates.getNetLikes().formatAsStringForView()
-                        )
-                    }.padding(.bottom, 1)
-                    Caption(commentPostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
-                }.padding(.leading, 4)
-                Spacer()
-            }
         }
+        .padding(.leading, 5)
+        .padding(.bottom, 5)
     }
-    
+
     public static func create(_ postViewIndex: Int, _ commentPostData: CommentPostData, _ userPostData: UserPostData) -> Either<PulpFictionRequestError, CommentView> {
         let userAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
@@ -59,7 +46,8 @@ public struct CommentView: PostView {
                 commentPostData: commentPostData,
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
-                userAvatarUIImage: userAvatarUIImageEither.get)
+                userAvatarUIImage: userAvatarUIImageEither.get
+            )
         )^.onError { cause in
             logger.error(
                 "Error loading comment \(commentPostData.postMetadata.postUpdateIdentifier)",
@@ -69,5 +57,4 @@ public struct CommentView: PostView {
             )
         }
     }
-
 }

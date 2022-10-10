@@ -24,7 +24,7 @@ public struct PostFeedMessenger {
 
     /// Constructs the global post feed based on data returned from backend API
     /// - Returns: A PostFeed iterator that returns PostProto objects for the global feed
-    public func getGlobalPostFeed() -> PostViewFeed {
+    public func getGlobalPostFeed() -> PostViewFeed<ImagePostView> {
         let getFeedRequest = GetFeedRequest.with {
             $0.loginSession = loginSession
             $0.getGlobalFeedRequest = GetFeedRequest.GetGlobalFeedRequest()
@@ -53,6 +53,40 @@ public struct PostFeedMessenger {
             pulpFictionClientProtocol: pulpFictionClientProtocol,
             getFeedRequest: getFeedRequest,
             postViewEitherSupplier: imagePostViewEitherSupplier
+        )
+    }
+
+    public func getCommentFeed(postId: UUID) -> PostViewFeed<CommentView> {
+        let getFeedRequest = GetFeedRequest.with {
+            $0.loginSession = loginSession
+            $0.getCommentFeedRequest = GetFeedRequest.GetCommentFeedRequest.with {
+                $0.postID = postId.uuidString
+            }
+        }
+
+        let commentViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, CommentView> = { postViewIndex, postProto in
+            let commentPostDataEither = Either<PulpFictionRequestError, CommentPostData>.var()
+            let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
+            let commentViewEither = Either<PulpFictionRequestError, CommentView>.var()
+
+            return binding(
+                commentPostDataEither <- postDataMessenger
+                    .getPostData(postProto)
+                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
+                    .flatMap { postDataOneOf in postDataOneOf.toCommentPostData() }^,
+                userPostDataEither <- postDataMessenger
+                    .getPostData(postProto.comment.postCreatorLatestUserPost)
+                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
+                    .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
+                commentViewEither <- CommentView.create(postViewIndex, commentPostDataEither.get, userPostDataEither.get),
+                yield: commentViewEither.get
+            )^
+        }
+
+        return PostViewFeed(
+            pulpFictionClientProtocol: pulpFictionClientProtocol,
+            getFeedRequest: getFeedRequest,
+            postViewEitherSupplier: commentViewEitherSupplier
         )
     }
 }

@@ -54,7 +54,7 @@ public struct PostDataMessenger {
     ) -> IO<PulpFictionRequestError, PostDataOneOf> {
         let postMetadataIO = Either<PulpFictionRequestError, PostMetadata>.var()
         let commentPostDataIO = Either<PulpFictionRequestError, CommentPostData>.var()
-        
+
         return binding(
             postMetadataIO <- postMetadataProto.toPostMetadata(),
             commentPostDataIO <- CommentPostData.create(postMetadataIO.get, commentPostProto),

@@ -20,7 +20,13 @@ public struct PulpFictionAppViewBuilder {
                 VStack {
                     NavigationLink("create", destination: PostCreatorView(externalMessengers.postDataMessenger.postDataCache))
                     Divider()
-                    NavigationLink("feed", destination: PostScrollView(
+                    NavigationLink("feed", destination: ImagePostScrollView(
+                        postFeedMessenger: externalMessengers.postFeedMessenger
+                    ))
+
+                    Divider()
+                    NavigationLink("comments", destination: CommentScrollView(
+                        postId: UUID(),
                         postFeedMessenger: externalMessengers.postFeedMessenger
                     ))
                 }

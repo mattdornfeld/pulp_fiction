@@ -10,7 +10,7 @@ import PulpFictionAppPreview
 import PulpFictionAppSource
 import XCTest
 
-extension PostViewFeedIterator {
+extension PostViewFeedIterator where A == ImagePostView {
     func takeAll() -> [ImagePostView] {
         var postViews: [ImagePostView] = []
         var postViewMaybe = next()

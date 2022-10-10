@@ -16,13 +16,13 @@ public struct PulpFictionTestClientBuilder {
     private let queue = DispatchQueue(label: "queue.pulpFictionTestClient")
     private let logger: Logger = .init(label: String(describing: PulpFictionTestClientBuilder.self))
 
-    private func generatePostsForFeed() -> [Post] {
-        (0 ..< numPostsInFeedResponse).map { _ in Post.generate(Post.PostType.image) }
+    private func generatePostsForFeed(_ postType: Post.PostType) -> [Post] {
+        (0 ..< numPostsInFeedResponse).map { _ in Post.generate(postType) }
     }
 
     private func generateGetFeedResponse() -> GetFeedResponse {
         GetFeedResponse.with {
-            $0.posts = generatePostsForFeed()
+            $0.posts = generatePostsForFeed(Post.PostType.comment)
         }
     }
 

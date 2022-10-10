@@ -12,22 +12,22 @@ import GRPC
 import Logging
 
 /// Sequence of PostViews
-public class PostViewFeed: Sequence {
+public class PostViewFeed<A: PostView>: Sequence {
     private let pulpFictionClientProtocol: PulpFictionClientProtocol
     private let getFeedRequest: GetFeedRequest
-    private let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, ImagePostView>
+    private let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, A>
 
     public init(
         pulpFictionClientProtocol: PulpFictionClientProtocol,
         getFeedRequest: GetFeedRequest,
-        postViewEitherSupplier: @escaping (Int, Post) -> Either<PulpFictionRequestError, ImagePostView>
+        postViewEitherSupplier: @escaping (Int, Post) -> Either<PulpFictionRequestError, A>
     ) {
         self.pulpFictionClientProtocol = pulpFictionClientProtocol
         self.getFeedRequest = getFeedRequest
         self.postViewEitherSupplier = postViewEitherSupplier
     }
 
-    public func makeIterator() -> PostViewFeedIterator {
+    public func makeIterator() -> PostViewFeedIterator<A> {
         return PostViewFeedIterator(
             pulpFictionClientProtocol: pulpFictionClientProtocol,
             getFeedRequest: getFeedRequest,
@@ -37,21 +37,21 @@ public class PostViewFeed: Sequence {
 }
 
 /// Iterator for PostViewFeed
-public class PostViewFeedIterator: IteratorProtocol, Equatable {
-    public typealias Element = ImagePostView
+public class PostViewFeedIterator<A: PostView>: IteratorProtocol, Equatable {
+    public typealias Element = A
     private let pulpFictionClientProtocol: PulpFictionClientProtocol
     private let getFeedRequest: GetFeedRequest
-    private let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, ImagePostView>
+    private let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, A>
     private let logger: Logger = .init(label: String(describing: PostViewFeedIterator.self))
     private let startedAt: TimeInterval = NSDate().timeIntervalSince1970
-    private var postViews: Queue<ImagePostView>
+    private var postViews: Queue<A>
     public private(set) var currentPostIndex: AtomicCounter = .init()
     public private(set) var isDone: Bool = false
 
     init(
         pulpFictionClientProtocol: PulpFictionClientProtocol,
         getFeedRequest: GetFeedRequest,
-        postViewEitherSupplier: @escaping (Int, Post) -> Either<PulpFictionRequestError, ImagePostView>
+        postViewEitherSupplier: @escaping (Int, Post) -> Either<PulpFictionRequestError, A>
     ) {
         postViews = Queue(maxSize: PostFeedConfigs.postFeedMaxQueueSize)
         self.getFeedRequest = getFeedRequest
@@ -79,7 +79,7 @@ public class PostViewFeedIterator: IteratorProtocol, Equatable {
                     self.postViewEitherSupplier(currentPostIndex, post).mapRight { postView in
                         self.postViews.enqueue(postView)
                     }.onError { cause in
-                        self.logger.debug(
+                        self.logger.error(
                             "Error building PostView",
                             metadata: [
                                 "cause": "\(cause)",
@@ -117,7 +117,7 @@ public class PostViewFeedIterator: IteratorProtocol, Equatable {
         return self
     }
 
-    public func next() -> ImagePostView? {
+    public func next() -> A? {
         if let postView = postViews.dequeue() {
             logger.debug("Dequeueing post")
             return postView

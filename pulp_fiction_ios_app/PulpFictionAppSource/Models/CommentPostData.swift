@@ -19,9 +19,9 @@ public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.commentPostData(self)
     }
-    
+
     public static func create(_ postMetadata: PostMetadata, _ commentProto: Post.Comment) -> Either<PulpFictionRequestError, CommentPostData> {
-        commentProto.parentPostID.toUUID().mapRight{ parentPostId in
+        commentProto.parentPostID.toUUID().mapRight { parentPostId in
             CommentPostData(
                 body: commentProto.body,
                 id: postMetadata.postUpdateIdentifier,
