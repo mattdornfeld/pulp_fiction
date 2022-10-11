@@ -11,13 +11,13 @@ import SwiftProtobuf
 import UIKit
 
 public enum FakeData {
-    static let caption = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-    static let comment = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-    static let imagePostJpgUrl = try! URL(string: "https://firstorderlabs.com/rickroll.jpg").getOrThrow()
-    static let userAvatarJpgUrl = try! URL(string: "https://firstorderlabs.com/shadowfax.jpg").getOrThrow()
-    static let userAvatarJpgName = "Shadowfax"
-    static let imagePostJpgName = "Rickroll"
-    static let postCreatorDisplayName = "ShadowFax"
+    public static let caption = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+    public static let comment = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+    public static let imagePostJpgUrl = try! URL(string: "https://firstorderlabs.com/rickroll.jpg").getOrThrow()
+    public static let userAvatarJpgUrl = try! URL(string: "https://firstorderlabs.com/shadowfax.jpg").getOrThrow()
+    public static let userAvatarJpgName = "Shadowfax"
+    public static let imagePostJpgName = "Rickroll"
+    public static let postCreatorDisplayName = "ShadowFax"
 }
 
 public extension UserMetadataProto {
@@ -90,9 +90,13 @@ public extension Post.ImagePost {
 
 public extension Post.Comment {
     static func generate() -> Post.Comment {
+        generate(parentPostId: UUID())
+    }
+
+    static func generate(parentPostId: UUID) -> Post.Comment {
         Post.Comment.with {
             $0.body = FakeData.comment
-            $0.parentPostID = UUID().uuidString
+            $0.parentPostID = parentPostId.uuidString
             $0.postCreatorLatestUserPost = Post.UserPost.generate().toPost(Post.PostMetadata.generate(Post.PostType.user))
             $0.interactionAggregates = Post.InteractionAggregates.generate()
         }

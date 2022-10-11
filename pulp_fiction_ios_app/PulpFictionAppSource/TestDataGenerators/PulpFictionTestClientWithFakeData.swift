@@ -23,13 +23,20 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         self.numPostsInFeedResponse = numPostsInFeedResponse
     }
 
-    private func generatePostsForFeed(_ postType: Post.PostType) -> [Post] {
-        (0 ..< numPostsInFeedResponse).map { _ in Post.generate(postType) }
+    private func generatePostsForFeed(_ postGenerator: () -> Post) -> [Post] {
+        (0 ..< numPostsInFeedResponse).map { _ in postGenerator() }
     }
 
-    private func generateGetFeedResponse(_ postType: Post.PostType) -> GetFeedResponse {
-        GetFeedResponse.with {
-            $0.posts = generatePostsForFeed(postType)
+    private func generateImagePostsForFeed() -> [Post] {
+        generatePostsForFeed { Post.generate(Post.PostType.image) }
+    }
+
+    private func generateCommentPostsForFeed(_ parentPostId: UUID) -> [Post] {
+        generatePostsForFeed {
+            let postMetadata = Post.PostMetadata.generate(Post.PostType.comment)
+            return Post.Comment
+                .generate(parentPostId: parentPostId)
+                .toPost(postMetadata)
         }
     }
 
@@ -45,20 +52,29 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         )
 
         request.getFeedRequest.map { getFeedRequest in
-            var postType: Post.PostType {
+            var posts: [Post] {
                 switch getFeedRequest {
                 case .getUserFeedRequest:
-                    return Post.PostType.image
+                    return generateImagePostsForFeed()
                 case .getGlobalFeedRequest:
-                    return Post.PostType.image
+                    return generateImagePostsForFeed()
                 case .getFollowedFeedRequest:
-                    return Post.PostType.user
+                    return generateImagePostsForFeed()
                 case .getCommentFeedRequest:
-                    return Post.PostType.comment
+                    let parentPostId = request
+                        .getCommentFeedRequest
+                        .postID
+                        .toUUID()
+                        .getOrElse(UUID())
+                    return generateCommentPostsForFeed(parentPostId)
                 }
             }
 
-            try! stream.sendMessage(generateGetFeedResponse(postType))
+            let getFeedResponse = GetFeedResponse.with {
+                $0.posts = posts
+            }
+
+            try! stream.sendMessage(getFeedResponse)
             try! stream.sendEnd()
         }
 
