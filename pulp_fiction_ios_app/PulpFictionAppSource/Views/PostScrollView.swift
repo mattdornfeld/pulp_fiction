@@ -165,16 +165,7 @@ private struct PostScrollViewBuilder<A: PostView> {
                 }
             }
             .onAppear { viewStore.send(.startScroll) }
-            .gesture(
-                DragGesture()
-                    .updating($dragOffset) { value, gestureState, _ in
-                        let delta = value.location.y - value.startLocation.y
-                        if delta > refreshFeedOnScrollUpSensitivity {
-                            gestureState = delta
-                            viewStore.send(.refreshScroll)
-                        }
-                    }
-            )
+            .onDragUp { viewStore.send(.refreshScroll) }
         }
     }
 }
