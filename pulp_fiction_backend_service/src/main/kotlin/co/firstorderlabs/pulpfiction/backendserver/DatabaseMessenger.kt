@@ -10,6 +10,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateUserPostRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
@@ -21,6 +22,7 @@ import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
@@ -29,6 +31,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractio
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User.Companion.getDateOfBirth
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
@@ -64,7 +67,10 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.getOrThrow
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import com.password4j.Password
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import org.ktorm.database.Database
+import org.ktorm.dsl.Query
 import org.ktorm.dsl.and
 import org.ktorm.dsl.desc
 import org.ktorm.dsl.eq
@@ -74,6 +80,8 @@ import org.ktorm.dsl.joinReferencesAndSelect
 import org.ktorm.dsl.limit
 import org.ktorm.dsl.map
 import org.ktorm.dsl.orderBy
+import org.ktorm.dsl.rightJoin
+import org.ktorm.dsl.leftJoin
 import org.ktorm.dsl.select
 import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
@@ -439,6 +447,58 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         val user = getUserFromUserId(userId).bind()
         val userPostDatum = getMostRecentUserPostDatum(user.userId).bind()
         user.toNonSensitiveUserMetadataProto(userPostDatum)
+    }
+
+    suspend fun getFeed(
+        request: GetFeedRequest
+    ): Effect<PulpFictionRequestError, List<PulpFictionProtos.Post>> = effect {
+        val userId = request.loginSession.userId.toUUID().bind()
+
+        val unsortedPostQuery = getPostsQuery(request, userId)
+        val sortedPostsQuery = unsortedPostQuery
+            .bind()
+            .where { Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE }
+            .orderBy(Posts.createdAt.desc())
+
+        val pagination = 100
+        for (index in 0..sortedPostsQuery.totalRecords step pagination) {
+            sortedPostsQuery.limit(offset=pagination * index, limit=pagination)
+        }
+                /*
+            .map { ImagePostData.createEntity(it) }
+            .toOption()
+            .getOrElse { shift(PostNotFoundError()) }
+        val interactionAggregate = posts.map { getPostInteractionAggregates(it.postId).bind() }
+        posts.zip(interactionAggregate) { postData, postInteractions -> postData.toProto(postInteractions) }
+    */
+    }
+
+    private fun getPostsQuery(
+        request: GetFeedRequest,
+        userId: UUID
+    ): Effect<PulpFictionRequestError, Query> = effect {
+        val postsTable = database
+            .from(Posts)
+            .leftJoin(ImagePostData, on = Posts.postId eq ImagePostData.postId)
+        val columns = listOf(Posts.postId, Posts.postCreatorId) + ImagePostData.columns
+        when {
+            request.hasGetGlobalFeedRequest() -> {
+                postsTable
+                    .select(columns)
+            }
+            request.hasGetUserFeedRequest() -> {
+                postsTable
+                    .select(columns)
+                    .where { Posts.postCreatorId eq userId }
+            }
+            request.hasGetFollowedFeedRequest() -> {
+                database
+                    .from(Followers)
+                    .rightJoin(Posts, on = Followers.userId eq Posts.postCreatorId)
+                    .select(columns)
+            }
+            else -> { shift(RequestParsingError("Feed request received without valid instruction.")) }
+        } 
     }
 
     fun checkUserPasswordValid(

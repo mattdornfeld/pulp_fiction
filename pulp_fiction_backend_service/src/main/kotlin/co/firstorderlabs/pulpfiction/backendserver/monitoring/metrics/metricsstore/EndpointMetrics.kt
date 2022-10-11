@@ -34,6 +34,7 @@ object EndpointMetrics {
         createUser,
         getPost,
         getUser,
+        getFeed,
         login,
         updateUser;
 

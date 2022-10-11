@@ -143,4 +143,21 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             .logEndpointMetrics(endpointName)
             .getResultAndThrowException()
     }
+
+    override suspend fun getFeed(request: PulpFictionProtos.GetFeedRequest): Flow<PulpFictionProtos.GetFeedResponse> {
+        val endpoint = EndpointName.getFeed
+        return effect<PulpFictionRequestError, GetUserResponse> {
+            checkLoginSessionValid(request.loginSession, endpointName).bind()
+
+            val postsFeed = databaseMessenger
+                .getFeed(request)
+                .logDatabaseMetrics(endpointName, DatabaseOperation.getFeed)
+                .bind()
+            getFeedResponse {
+                this.posts = postsFeed
+            }
+        }
+            .logEndpointMetrics(endpointName)
+            .getResultAndThrowException()
+    }
 }
