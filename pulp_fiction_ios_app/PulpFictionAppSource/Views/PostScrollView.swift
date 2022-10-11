@@ -7,9 +7,9 @@ import ComposableArchitecture
 import Logging
 import SwiftUI
 
-fileprivate let logger: Logger = .init(label: String(describing: "PostScrollView"))
+private let logger: Logger = .init(label: String(describing: "PostScrollView"))
 
-fileprivate struct PostScrollState<A: PostView>: Equatable {
+private struct PostScrollState<A: PostView>: Equatable {
     /// The iterator used to retrieve posts from the backend API and data store
     var postViewFeedIteratorMaybe: PostViewFeedIterator<A>? = nil
     /// The PostView objects currently available in the scroll
@@ -51,12 +51,12 @@ fileprivate struct PostScrollState<A: PostView>: Equatable {
     }
 }
 
-fileprivate struct PostScrollEnvironment {
+private struct PostScrollEnvironment {
     let mainQueue: AnySchedulerOf<DispatchQueue>
     let postFeedMessenger: PostFeedMessenger
 }
 
-fileprivate enum PostScrollAction {
+private enum PostScrollAction {
     /// This action is called on view load. It starts the PostViewFeedIterator and begins loading posts into the view.
     case startScroll
     case refreshScroll
@@ -66,11 +66,11 @@ fileprivate enum PostScrollAction {
     case loadMorePostsIfNeededHandleErrors(Result<Void, PulpFictionRequestError>)
 }
 
-fileprivate enum PostScrollErrors {
+private enum PostScrollErrors {
     class PostViewFeedIteratorNotStarted: PulpFictionRequestError {}
 }
 
-fileprivate struct PostScrollReducer<A: PostView> {
+private struct PostScrollReducer<A: PostView> {
     let postViewFeedIteratorSupplier: (PostScrollEnvironment) -> PostViewFeedIterator<A>
 
     func buildReducer() -> Reducer<PostScrollState<A>, PostScrollAction, PostScrollEnvironment> {
@@ -122,7 +122,7 @@ fileprivate struct PostScrollReducer<A: PostView> {
     }
 }
 
-fileprivate struct PostScrollViewBuilder<A: PostView> {
+private struct PostScrollViewBuilder<A: PostView> {
     private let store: Store<PostScrollState<A>, PostScrollAction>
     private let progressIndicatorScaleFactor: CGFloat = 2.0
     private let refreshFeedOnScrollUpSensitivity: CGFloat = 10.0

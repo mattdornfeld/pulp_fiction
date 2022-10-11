@@ -8,7 +8,6 @@
 import Bow
 import BowEffects
 import Foundation
-import PulpFictionAppSource
 import SwiftUI
 
 public extension ImagePostData {

@@ -47,7 +47,7 @@ public struct ImagePostView: PostView {
                     }.padding(.bottom, 1)
                     HStack {
                         BoldCaption(creatorUserPostData.userDisplayName)
-                        Caption(imagePostData.caption)
+                            .append(textView: Caption(imagePostData.caption))
                     }
                     Caption(imagePostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
                 }.padding(.leading, 4)

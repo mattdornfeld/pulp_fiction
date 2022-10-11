@@ -16,9 +16,9 @@ public extension ExternalMessengers {
         let createPostDataCacheIO = IO<PulpFictionStartupError, PostDataCache>.var()
         let fakeImageDataSupplierIO = IO<PulpFictionStartupError, FakeImageDataSupplier>.var()
 
-        let pulpFictionClientProtocol = PulpFictionTestClientBuilder(
+        let pulpFictionClientProtocol = PulpFictionTestClientWithFakeData(
             numPostsInFeedResponse: numPostsInFeedResponse
-        ).build()
+        )
         let backendMessenger = BackendMessenger(pulpFictionClientProtocol: pulpFictionClientProtocol)
 
         return binding(

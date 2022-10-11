@@ -7,7 +7,6 @@
 
 import Bow
 import Foundation
-import PulpFictionAppSource
 import SwiftProtobuf
 import UIKit
 
