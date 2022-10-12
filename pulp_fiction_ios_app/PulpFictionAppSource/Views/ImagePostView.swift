@@ -3,72 +3,130 @@
 //
 
 import Bow
+import ComposableArchitecture
 import Logging
 import SwiftUI
 
+private struct ImagePostViewState: Equatable {
+    var shouldLoadCommentsPage: Bool = false
+}
+
+private struct ImagePostViewEnvironment {
+    let mainQueue: AnySchedulerOf<DispatchQueue>
+}
+
+private enum ImagePostViewAction {
+    case loadCommentsPage
+    case unloadCommentsPage
+}
+
+private enum ImagePostViewReducer {
+    static let reducer = Reducer<ImagePostViewState, ImagePostViewAction, ImagePostViewEnvironment> {
+        state, action, _ in
+        switch action {
+        case .loadCommentsPage:
+            state.shouldLoadCommentsPage = true
+            return .none
+        case .unloadCommentsPage:
+            state.shouldLoadCommentsPage = false
+            return .none
+        }
+    }
+}
+
 /// Renders an image post
 public struct ImagePostView: PostView {
+    private let postFeedMessenger: PostFeedMessenger
+    private let postUIImage: UIImage
+    private let store: Store<ImagePostViewState, ImagePostViewAction> = Store(
+        initialState: ImagePostViewState(),
+        reducer: ImagePostViewReducer.reducer,
+        environment: ImagePostViewEnvironment(mainQueue: .main)
+    )
+    private let userAvatarUIImage: UIImage
     private static let logger = Logger(label: String(describing: ImagePostView.self))
+    public let creatorUserPostData: UserPostData
     public let id: Int
     public let imagePostData: ImagePostData
-    public let creatorUserPostData: UserPostData
-    private let postUIImage: UIImage
-    private let userAvatarUIImage: UIImage
+
+    public static func == (lhs: ImagePostView, rhs: ImagePostView) -> Bool {
+        lhs.postUIImage == rhs.postUIImage
+            && lhs.userAvatarUIImage == rhs.userAvatarUIImage
+            && lhs.creatorUserPostData == rhs.creatorUserPostData
+            && lhs.id == rhs.id
+            && lhs.imagePostData == rhs.imagePostData
+    }
 
     public var body: some View {
-        VStack {
-            HStack(alignment: .bottom) {
-                HStack {
-                    CircularImage(
-                        uiImage: userAvatarUIImage,
-                        radius: 15,
-                        borderColor: .red,
-                        borderWidth: 1
-                    ).padding(.leading, 5)
-                    BoldCaption(creatorUserPostData.userDisplayName)
-                }
-                Spacer()
-                Symbol(symbolName: "ellipsis")
-                    .padding(.trailing, 10)
-                    .padding(.bottom, 4)
-            }
-            postUIImage.toImage().resizable().scaledToFit()
-            HStack {
-                VStack(alignment: .leading) {
+        WithViewStore(store) { viewStore in
+            VStack {
+                HStack(alignment: .bottom) {
                     HStack {
-                        SymbolWithCaption(
-                            symbolName: "arrow.up",
-                            symbolCaption: imagePostData.postInteractionAggregates.getNetLikes().formatAsStringForView()
-                        )
-                        SymbolWithCaption(
-                            symbolName: "text.bubble",
-                            symbolCaption: imagePostData.postInteractionAggregates.numChildComments.formatAsStringForView()
-                        )
-                    }.padding(.bottom, 1)
-                    HStack {
+                        CircularImage(
+                            uiImage: userAvatarUIImage,
+                            radius: 15,
+                            borderColor: .red,
+                            borderWidth: 1
+                        ).padding(.leading, 5)
                         BoldCaption(creatorUserPostData.userDisplayName)
-                            .append(textView: Caption(imagePostData.caption))
                     }
-                    Caption(imagePostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
-                }.padding(.leading, 4)
-                Spacer()
+                    Spacer()
+                    Symbol(symbolName: "ellipsis")
+                        .padding(.trailing, 10)
+                        .padding(.bottom, 4)
+                }
+                postUIImage.toImage().resizable().scaledToFit()
+                HStack {
+                    VStack(alignment: .leading) {
+                        HStack {
+                            SymbolWithCaption(
+                                symbolName: "arrow.up",
+                                symbolCaption: imagePostData.postInteractionAggregates.getNetLikes().formatAsStringForView()
+                            )
+
+                            SymbolWithCaption(
+                                symbolName: "text.bubble",
+                                symbolCaption: imagePostData.postInteractionAggregates.numChildComments.formatAsStringForView()
+                            ).navigateOnTap(
+                                isActive: viewStore.binding(get: \.shouldLoadCommentsPage, send: ImagePostViewAction.unloadCommentsPage),
+                                destination: CommentScrollView(
+                                    postId: imagePostData.postMetadata.id.postId,
+                                    postFeedMessenger: postFeedMessenger
+                                )
+                            ) { viewStore.send(.loadCommentsPage) }
+
+                        }.padding(.bottom, 1)
+                        HStack {
+                            BoldCaption(creatorUserPostData.userDisplayName)
+                                .append(textView: Caption(imagePostData.caption))
+                        }
+                        Caption(imagePostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
+                    }.padding(.leading, 4)
+                    Spacer()
+                }
             }
         }
     }
 
-    public static func create(_ postViewIndex: Int, _ imagePostData: ImagePostData, _ userPostData: UserPostData) -> Either<PulpFictionRequestError, ImagePostView> {
-        let createPostUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
-        let createUserAvatarUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
+    public static func create(
+        postViewIndex: Int,
+        imagePostData: ImagePostData,
+        userPostData: UserPostData,
+        postFeedMessenger: PostFeedMessenger
+    ) -> Either<PulpFictionRequestError, ImagePostView> {
+        let createPostUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
+        let createUserAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
         return binding(
-            createPostUIImageResult <- imagePostData.imagePostContentData.toUIImage(),
-            createUserAvatarUIImageResult <- userPostData.userPostContentData.toUIImage(),
+            createPostUIImageEither <- imagePostData.imagePostContentData.toUIImage(),
+            createUserAvatarUIImageEither <- userPostData.userPostContentData.toUIImage(),
             yield: ImagePostView(
-                id: postViewIndex,
-                imagePostData: imagePostData,
+                postFeedMessenger: postFeedMessenger,
+                postUIImage: createPostUIImageEither.get,
+                userAvatarUIImage: createUserAvatarUIImageEither.get,
                 creatorUserPostData: userPostData,
-                postUIImage: createPostUIImageResult.get,
-                userAvatarUIImage: createUserAvatarUIImageResult.get
+                id: postViewIndex,
+                imagePostData: imagePostData
             )
         )^.onError { cause in
             logger.error(

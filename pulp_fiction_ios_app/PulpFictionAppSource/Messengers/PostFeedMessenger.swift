@@ -44,7 +44,12 @@ public struct PostFeedMessenger {
                     .getPostData(postProto.imagePost.postCreatorLatestUserPost)
                     .unsafeRunSyncEither(on: .global(qos: .userInteractive))
                     .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
-                imagePostViewEither <- ImagePostView.create(postViewIndex, imagePostDataEither.get, userPostDataEither.get),
+                imagePostViewEither <- ImagePostView.create(
+                    postViewIndex: postViewIndex,
+                    imagePostData: imagePostDataEither.get,
+                    userPostData: userPostDataEither.get,
+                    postFeedMessenger: self
+                ),
                 yield: imagePostViewEither.get
             )^
         }

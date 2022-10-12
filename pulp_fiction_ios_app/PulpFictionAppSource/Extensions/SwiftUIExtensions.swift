@@ -48,3 +48,23 @@ public extension UIImage {
             .toOption()
     }
 }
+
+public extension View {
+    /// Navigates to destination when View is tapped
+    /// - Parameters:
+    ///   - isActive: binding that signifies whether NavigationLink is active
+    ///   - destination: destionation View
+    ///   - perform: a function to be executed when View is tapped
+    /// - Returns: a NavigationLink that executes the navigation when View is tapped
+    func navigateOnTap<A: View>(
+        isActive: Binding<Bool>,
+        destination: A,
+        perform: @escaping () -> Void
+    ) -> some View {
+        NavigationLink(
+            destination: destination,
+            isActive: isActive,
+            label: { self.onTapGesture(perform: perform) }
+        )
+    }
+}
