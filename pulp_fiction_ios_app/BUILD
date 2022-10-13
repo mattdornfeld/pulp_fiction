@@ -20,6 +20,7 @@ swift_library(
         "//protos:pulp_fiction_grpc_swift",
         "@swift_pkgs//Bow:Bow",
         "@swift_pkgs//Bow:BowEffects",
+        "@swift_pkgs//Bow:BowOptics",
         "@swift_pkgs//Cache:Cache",
         "@swift_pkgs//swift-collections:Collections",
         "@swift_pkgs//swift-composable-architecture:ComposableArchitecture",

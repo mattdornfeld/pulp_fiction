@@ -142,13 +142,22 @@ private struct PostScrollViewBuilder<A: PostView> {
         )
     }
 
-    @ViewBuilder public func buildView() -> some View {
+    @ViewBuilder internal func buildView() -> some View {
+        buildView(.some(EmptyView()))
+    }
+
+    @ViewBuilder internal func buildView<Content: View>(_ prependToBeginningOfScrollMaybe: Option<Content> = .none()) -> some View {
         WithViewStore(store) { viewStore in
             ScrollView {
                 VStack(alignment: .center) {
                     ProgressView()
                         .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
                         .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
+
+                    prependToBeginningOfScrollMaybe
+                        .toEither()
+                        .mapLeft { _ in EmptyView() }
+                        .toEitherView()
 
                     LazyVStack(alignment: .leading) {
                         ForEach(viewStore.state.postViews) { currentPost in
@@ -189,17 +198,24 @@ public struct ImagePostScrollView: View {
 
 public struct CommentScrollView: View {
     private let postScrollViewBuilder: PostScrollViewBuilder<CommentView>
+    private let imagePostView: ImagePostView
 
-    public init(postId: UUID, postFeedMessenger: PostFeedMessenger) {
+    public init(imagePostView: ImagePostView, postFeedMessenger: PostFeedMessenger) {
         postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { (environment: PostScrollEnvironment) -> PostViewFeedIterator<CommentView> in
             environment
                 .postFeedMessenger
-                .getCommentFeed(postId: postId)
+                .getCommentFeed(postId: imagePostView.imagePostData.postMetadata.postUpdateIdentifier.postId)
                 .makeIterator()
         }
+        self.imagePostView = imagePostView
     }
 
     public var body: some View {
-        postScrollViewBuilder.buildView()
+        postScrollViewBuilder.buildView(.some(
+            VStack {
+                imagePostView
+                Divider()
+            })
+        )
     }
 }

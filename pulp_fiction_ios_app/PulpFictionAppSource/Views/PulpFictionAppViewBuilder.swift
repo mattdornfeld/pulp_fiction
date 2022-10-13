@@ -23,12 +23,6 @@ public struct PulpFictionAppViewBuilder {
                     NavigationLink("feed", destination: ImagePostScrollView(
                         postFeedMessenger: externalMessengers.postFeedMessenger
                     ))
-
-                    Divider()
-                    NavigationLink("comments", destination: CommentScrollView(
-                        postId: UUID(),
-                        postFeedMessenger: externalMessengers.postFeedMessenger
-                    ))
                 }
             }
         case let .failure(pulpFictionStartupError):

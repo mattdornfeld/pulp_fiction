@@ -174,6 +174,10 @@ public extension Option {
             .getOrElse(Either<E, A>.left(error))
     }
 
+    func toEither() -> Either<Error, A> {
+        toEither(EmptyOptional())
+    }
+
     @discardableResult
     func mapRight<B>(_ f: @escaping (A) -> B) -> Option<B> {
         map { f($0) }^

@@ -3,6 +3,7 @@
 //
 
 import Bow
+import BowOptics
 import ComposableArchitecture
 import Logging
 import SwiftUI
@@ -35,19 +36,20 @@ private enum ImagePostViewReducer {
 }
 
 /// Renders an image post
-public struct ImagePostView: PostView {
+public struct ImagePostView: PostView, AutoSetter {
     private let postFeedMessenger: PostFeedMessenger
     private let postUIImage: UIImage
+    private let userAvatarUIImage: UIImage
+    public let creatorUserPostData: UserPostData
+    public let id: Int
+    public let imagePostData: ImagePostData
+    private var isForCommentsScrollView: Bool = false
     private let store: Store<ImagePostViewState, ImagePostViewAction> = Store(
         initialState: ImagePostViewState(),
         reducer: ImagePostViewReducer.reducer,
         environment: ImagePostViewEnvironment(mainQueue: .main)
     )
-    private let userAvatarUIImage: UIImage
     private static let logger = Logger(label: String(describing: ImagePostView.self))
-    public let creatorUserPostData: UserPostData
-    public let id: Int
-    public let imagePostData: ImagePostData
 
     public static func == (lhs: ImagePostView, rhs: ImagePostView) -> Bool {
         lhs.postUIImage == rhs.postUIImage
@@ -55,6 +57,31 @@ public struct ImagePostView: PostView {
             && lhs.creatorUserPostData == rhs.creatorUserPostData
             && lhs.id == rhs.id
             && lhs.imagePostData == rhs.imagePostData
+    }
+
+    private func buildCommentsIcon(_: ViewStore<ImagePostViewState, ImagePostViewAction>) -> some View {
+        SymbolWithCaption(
+            symbolName: "text.bubble",
+            symbolCaption: imagePostData
+                .postInteractionAggregates
+                .numChildComments
+                .formatAsStringForView()
+        )
+    }
+
+    private func buildCommentsIconWithNavigation(_ viewStore: ViewStore<ImagePostViewState, ImagePostViewAction>) -> some View {
+        return buildCommentsIcon(viewStore).navigateOnTap(
+            isActive: viewStore.binding(
+                get: \.shouldLoadCommentsPage,
+                send: ImagePostViewAction.unloadCommentsPage
+            ),
+            destination: CommentScrollView(
+                imagePostView: ImagePostView
+                    .setter(for: \.isForCommentsScrollView)
+                    .set(self, true),
+                postFeedMessenger: postFeedMessenger
+            )
+        ) { viewStore.send(.loadCommentsPage) }
     }
 
     public var body: some View {
@@ -84,16 +111,11 @@ public struct ImagePostView: PostView {
                                 symbolCaption: imagePostData.postInteractionAggregates.getNetLikes().formatAsStringForView()
                             )
 
-                            SymbolWithCaption(
-                                symbolName: "text.bubble",
-                                symbolCaption: imagePostData.postInteractionAggregates.numChildComments.formatAsStringForView()
-                            ).navigateOnTap(
-                                isActive: viewStore.binding(get: \.shouldLoadCommentsPage, send: ImagePostViewAction.unloadCommentsPage),
-                                destination: CommentScrollView(
-                                    postId: imagePostData.postMetadata.id.postId,
-                                    postFeedMessenger: postFeedMessenger
-                                )
-                            ) { viewStore.send(.loadCommentsPage) }
+                            if isForCommentsScrollView {
+                                buildCommentsIcon(viewStore)
+                            } else {
+                                buildCommentsIconWithNavigation(viewStore)
+                            }
 
                         }.padding(.bottom, 1)
                         HStack {
