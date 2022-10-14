@@ -215,6 +215,8 @@ public struct CommentScrollView: View {
             VStack {
                 imagePostView
                 Divider()
+                Caption("\(imagePostView.imagePostData.postInteractionAggregates.numChildComments.formatAsStringForView()) Comments")
+                    .foregroundColor(.gray)
             })
         )
     }

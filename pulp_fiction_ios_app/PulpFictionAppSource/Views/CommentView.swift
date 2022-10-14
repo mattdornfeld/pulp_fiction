@@ -35,6 +35,7 @@ public struct CommentView: PostView {
         }
         .padding(.leading, 5)
         .padding(.bottom, 5)
+        .makeSwipable()
     }
 
     public static func create(_ postViewIndex: Int, _ commentPostData: CommentPostData, _ userPostData: UserPostData) -> Either<PulpFictionRequestError, CommentView> {

@@ -127,6 +127,7 @@ public struct ImagePostView: PostView, AutoSetter {
                     Spacer()
                 }
             }
+            .makeSwipable()
         }
     }
 
