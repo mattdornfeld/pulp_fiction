@@ -39,6 +39,15 @@ private struct PostScrollState<A: PostView>: Equatable {
                     self.postViews.append(postView)
                 }
             }
+
+            logger.debug(
+                "Posts added to scroll",
+                metadata: [
+                    "currentPostViewIndex": "\(currentPostViewIndex)",
+                    "numPostsInScroll": "\(postViews.count)",
+                ]
+            )
+
         } else {
             logger.debug(
                 "Loading more posts from iterator is not needed. Continuing",

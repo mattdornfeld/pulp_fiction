@@ -23,6 +23,12 @@ message Post {
     USER = 2;
   }
 
+  enum PostLike {
+    NEUTRAL = 0;
+    LIKE = 1;
+    DISLIKE = 2;
+  }
+
   message PostUpdateIdentifier {
     string post_id = 1;
     google.protobuf.Timestamp updated_at = 2;
@@ -42,11 +48,16 @@ message Post {
     int64 numChildComments = 3;
   }
 
+  message LoggedInUserPostInteractions {
+    PostLike postLike = 1;
+  }
+
   message Comment {
     string body = 1;
     string parent_post_id = 2;
     Post post_creator_latest_user_post = 3;
     InteractionAggregates interactionAggregates = 4;
+    LoggedInUserPostInteractions loggedInUserPostInteractions = 5;
   }
 
   message ImagePost {
@@ -54,6 +65,7 @@ message Post {
     string caption = 2;
     InteractionAggregates interactionAggregates = 3;
     Post post_creator_latest_user_post = 4;
+    LoggedInUserPostInteractions loggedInUserPostInteractions = 5;
   }
 
   message UserPost {

@@ -6,25 +6,47 @@
 //
 
 import Bow
+import ComposableArchitecture
 import Foundation
 import Logging
 import SwiftUI
 
-public struct CommentView: PostView {
+public struct CommentView: SwipablePostView {
     private static let logger = Logger(label: String(describing: CommentView.self))
     public let commentPostData: CommentPostData
     public let creatorUserPostData: UserPostData
     public let id: Int
     private let userAvatarUIImage: UIImage
+    internal let swipablePostStore: ComposableArchitecture.Store<PostSwipeState, PostSwipeAction>
 
-    public var body: some View {
+    init(
+        commentPostData: CommentPostData,
+        creatorUserPostData: UserPostData,
+        id: Int,
+        userAvatarUIImage: UIImage
+    ) {
+        self.commentPostData = commentPostData
+        self.creatorUserPostData = creatorUserPostData
+        self.id = id
+        self.userAvatarUIImage = userAvatarUIImage
+        swipablePostStore = CommentView.buildStore(
+            postInteractionAggregates: commentPostData.postInteractionAggregates,
+            loggedInUserPostInteractions: commentPostData.loggedInUserPostInteractions
+        )
+    }
+
+    public static func == (lhs: CommentView, rhs: CommentView) -> Bool {
+        lhs.commentPostData == rhs.commentPostData
+            && lhs.creatorUserPostData == rhs.creatorUserPostData
+            && lhs.id == rhs.id
+            && lhs.userAvatarUIImage == rhs.userAvatarUIImage
+    }
+
+    @ViewBuilder func postViewBuilder() -> some View {
         VStack(alignment: .leading) {
             HStack(alignment: .bottom, spacing: 5) {
                 BoldCaption(creatorUserPostData.userDisplayName)
-                SymbolWithCaption(
-                    symbolName: "arrow.up",
-                    symbolCaption: commentPostData.postInteractionAggregates.getNetLikes().formatAsStringForView()
-                ).scaleEffect(0.75, anchor: .leading)
+                buildPostLikeArrowView()
                 Spacer()
                 Caption(commentPostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
                 Symbol(symbolName: "ellipsis")
@@ -35,7 +57,6 @@ public struct CommentView: PostView {
         }
         .padding(.leading, 5)
         .padding(.bottom, 5)
-        .makeSwipable()
     }
 
     public static func create(_ postViewIndex: Int, _ commentPostData: CommentPostData, _ userPostData: UserPostData) -> Either<PulpFictionRequestError, CommentView> {

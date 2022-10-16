@@ -35,8 +35,35 @@ private enum ImagePostViewReducer {
     }
 }
 
+public extension ImagePostView {
+    init(
+        postFeedMessenger: PostFeedMessenger,
+        postUIImage: UIImage,
+        userAvatarUIImage: UIImage,
+        creatorUserPostData: UserPostData,
+        id: Int,
+        imagePostData: ImagePostData
+    ) {
+        self.postFeedMessenger = postFeedMessenger
+        self.postUIImage = postUIImage
+        self.userAvatarUIImage = userAvatarUIImage
+        self.creatorUserPostData = creatorUserPostData
+        self.id = id
+        self.imagePostData = imagePostData
+        store = Store(
+            initialState: ImagePostViewState(),
+            reducer: ImagePostViewReducer.reducer,
+            environment: ImagePostViewEnvironment(mainQueue: .main)
+        )
+        swipablePostStore = ImagePostView.buildStore(
+            postInteractionAggregates: imagePostData.postInteractionAggregates,
+            loggedInUserPostInteractions: imagePostData.loggedInUserPostInteractions
+        )
+    }
+}
+
 /// Renders an image post
-public struct ImagePostView: PostView, AutoSetter {
+public struct ImagePostView: SwipablePostView, AutoSetter {
     private let postFeedMessenger: PostFeedMessenger
     private let postUIImage: UIImage
     private let userAvatarUIImage: UIImage
@@ -44,11 +71,8 @@ public struct ImagePostView: PostView, AutoSetter {
     public let id: Int
     public let imagePostData: ImagePostData
     private var isForCommentsScrollView: Bool = false
-    private let store: Store<ImagePostViewState, ImagePostViewAction> = Store(
-        initialState: ImagePostViewState(),
-        reducer: ImagePostViewReducer.reducer,
-        environment: ImagePostViewEnvironment(mainQueue: .main)
-    )
+    private let store: Store<ImagePostViewState, ImagePostViewAction>
+    internal let swipablePostStore: ComposableArchitecture.Store<PostSwipeState, PostSwipeAction>
     private static let logger = Logger(label: String(describing: ImagePostView.self))
 
     public static func == (lhs: ImagePostView, rhs: ImagePostView) -> Bool {
@@ -84,7 +108,7 @@ public struct ImagePostView: PostView, AutoSetter {
         ) { viewStore.send(.loadCommentsPage) }
     }
 
-    public var body: some View {
+    @ViewBuilder func postViewBuilder() -> some View {
         WithViewStore(store) { viewStore in
             VStack {
                 HStack(alignment: .bottom) {
@@ -106,10 +130,7 @@ public struct ImagePostView: PostView, AutoSetter {
                 HStack {
                     VStack(alignment: .leading) {
                         HStack {
-                            SymbolWithCaption(
-                                symbolName: "arrow.up",
-                                symbolCaption: imagePostData.postInteractionAggregates.getNetLikes().formatAsStringForView()
-                            )
+                            buildPostLikeArrowView()
 
                             if isForCommentsScrollView {
                                 buildCommentsIcon(viewStore)
@@ -127,7 +148,6 @@ public struct ImagePostView: PostView, AutoSetter {
                     Spacer()
                 }
             }
-            .makeSwipable()
         }
     }
 

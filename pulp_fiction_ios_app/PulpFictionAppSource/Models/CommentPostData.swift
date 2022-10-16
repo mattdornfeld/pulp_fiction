@@ -15,6 +15,7 @@ public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
     public let parentPostId: UUID
     public let postMetadata: PostMetadata
     public let postInteractionAggregates: PostInteractionAggregates
+    public let loggedInUserPostInteractions: LoggedInUserPostInteractions
 
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.commentPostData(self)
@@ -27,7 +28,12 @@ public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
                 id: postMetadata.postUpdateIdentifier,
                 parentPostId: parentPostId,
                 postMetadata: postMetadata,
-                postInteractionAggregates: commentProto.interactionAggregates.toPostInteractionAggregates()
+                postInteractionAggregates: commentProto
+                    .interactionAggregates
+                    .toPostInteractionAggregates(),
+                loggedInUserPostInteractions: commentProto
+                    .loggedInUserPostInteractions
+                    .toLoggedInUserPostInteractions()
             )
         }
     }
