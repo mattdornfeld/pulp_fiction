@@ -5,6 +5,7 @@ import arrow.core.continuations.effect
 import arrow.core.getOrElse
 import arrow.core.toOption
 import co.firstorderlabs.protos.pulpfiction.PostKt.interactionAggregates
+import co.firstorderlabs.protos.pulpfiction.PostKt.loggedInUserPostInteractions
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
@@ -27,6 +28,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregates
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
@@ -210,7 +212,10 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             database.commentData.add(commentDatum)
             post {
                 this.metadata = postUpdate.toProto(postCreatorMetadata)
-                this.comment = commentDatum.toProto()
+                this.comment = commentDatum.toProto(
+                    loggedInUserPostInteractions {},
+                    interactionAggregates {}
+                )
             }
         }
 
@@ -230,7 +235,10 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             database.imagePostData.add(imagePostDatum)
             post {
                 this.metadata = postUpdate.toProto(postCreatorMetadata)
-                this.imagePost = imagePostDatum.toProto(interactionAggregates {})
+                this.imagePost = imagePostDatum.toProto(
+                    loggedInUserPostInteractions {},
+                    interactionAggregates {}
+                )
             }
         }
 
@@ -331,6 +339,23 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .getOrElse { shift(PostNotFoundError()) }
         }
 
+    private fun getLoggedInUserPostInteractions(
+        postId: UUID,
+        userId: UUID
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post.LoggedInUserPostInteractions> = effect {
+        val postLike = database.from(PostLikes)
+            .select(PostLikes.postLikeType)
+            .where { (PostLikes.postId eq postId) and (PostLikes.postLikerUserId eq userId) }
+            .map { PostLikes.createEntity(it) }
+            .firstOrOption()
+            .map { it.postLikeType }
+            .getOrElse { PulpFictionProtos.Post.PostLike.NEUTRAL }
+
+        loggedInUserPostInteractions {
+            this.postLike = postLike
+        }
+    }
+
     suspend fun getPost(
         request: GetPostRequest
     ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
@@ -346,20 +371,24 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
         val userMetadata = getPublicUserMetadata(postUpdate.post.postCreatorId.toString()).bind()
 
+        val userId = request.loginSession.userId.toUUID().bind()
         post {
             this.metadata = postUpdate.toProto(userMetadata)
 
             when (postUpdate.post.postType) {
                 PulpFictionProtos.Post.PostType.COMMENT -> {
+                    val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
+                    val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
                     this.comment = getPostData(postId, CommentData)
                         .bind()
-                        .toProto()
+                        .toProto(loggedInUserPostInteractions, postInteractionAggregates)
                 }
                 PulpFictionProtos.Post.PostType.IMAGE -> {
+                    val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
                     val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
                     this.imagePost = getPostData(postId, ImagePostData)
                         .bind()
-                        .toProto(postInteractionAggregates)
+                        .toProto(loggedInUserPostInteractions, postInteractionAggregates)
                 }
                 PulpFictionProtos.Post.PostType.USER -> {
                     this.userPost = getPostData(postId, UserPostData)
