@@ -22,7 +22,6 @@ swift_library(
         "@swift_pkgs//Bow:BowEffects",
         "@swift_pkgs//Bow:BowOptics",
         "@swift_pkgs//Cache:Cache",
-        "@swift_pkgs//swift-collections:Collections",
         "@swift_pkgs//swift-composable-architecture:ComposableArchitecture",
     ],
     module_name = "PulpFictionAppSource"
