@@ -25,14 +25,14 @@ public struct PostMetadata: Codable, Equatable, PostDataIdentifiable {
     }
 
     public init(
-        PostUpdateIdentifier: PostUpdateIdentifier,
+        postUpdateIdentifier: PostUpdateIdentifier,
         postType: Post.PostType,
         postState: Post.PostState,
         createdAt: Date,
         postCreatorUserId: UUID
     ) {
-        id = PostUpdateIdentifier
-        postUpdateIdentifier = PostUpdateIdentifier
+        id = postUpdateIdentifier
+        self.postUpdateIdentifier = postUpdateIdentifier
         self.postType = postType
         self.postState = postState
         self.createdAt = createdAt
@@ -41,14 +41,14 @@ public struct PostMetadata: Codable, Equatable, PostDataIdentifiable {
 
     /// In the prod code path this method should be called instead of the init method since this method handles errors.
     public static func create(_ postMetadataProto: Post.PostMetadata) -> Either<PulpFictionRequestError, PostMetadata> {
-        let PostUpdateIdentifierEither = Either<PulpFictionRequestError, PostUpdateIdentifier>.var()
+        let postUpdateIdentifierEither = Either<PulpFictionRequestError, PostUpdateIdentifier>.var()
         let postCreatorUserIdEither = Either<PulpFictionRequestError, UUID>.var()
 
         return binding(
-            PostUpdateIdentifierEither <- PostUpdateIdentifier.create(postMetadataProto.postUpdateIdentifier),
+            postUpdateIdentifierEither <- PostUpdateIdentifier.create(postMetadataProto.postUpdateIdentifier),
             postCreatorUserIdEither <- postMetadataProto.postCreatorID.toUUID(),
             yield: PostMetadata(
-                PostUpdateIdentifier: PostUpdateIdentifierEither.get,
+                postUpdateIdentifier: postUpdateIdentifierEither.get,
                 postType: postMetadataProto.postType,
                 postState: postMetadataProto.postState,
                 createdAt: postMetadataProto.createdAt.date,
@@ -63,7 +63,7 @@ public struct PostMetadata: Codable, Equatable, PostDataIdentifiable {
         let postStateRawValue = try values.decode(Int.self, forKey: .postState)
 
         self.init(
-            PostUpdateIdentifier: try PostUpdateIdentifier(from: decoder),
+            postUpdateIdentifier: try PostUpdateIdentifier(from: decoder),
             postType: Post.PostType(rawValue: postTypeRawValue) ?? Post.PostType.UNRECOGNIZED(postTypeRawValue),
             postState: Post.PostState(rawValue: postStateRawValue) ?? Post.PostState.UNRECOGNIZED(postStateRawValue),
             createdAt: try values.decode(Date.self, forKey: .createdAt),

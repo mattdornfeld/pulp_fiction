@@ -8,11 +8,29 @@
 import Foundation
 import SwiftUI
 
-public struct Caption: View {
-    public let text: String
+public protocol TextView: View {
+    var text: Text { get }
+}
 
-    public var body: some View {
-        Text(text).font(.caption)
+public extension TextView {
+    func append(textView: any TextView, delimiter: String = " ") -> GenericText {
+        GenericText(text: text + Text(delimiter) + textView.text)
+    }
+
+    var body: some View {
+        self.text
+    }
+}
+
+public struct GenericText: TextView {
+    public let text: Text
+}
+
+public struct Caption: TextView {
+    public let text: Text
+
+    public init(text: String) {
+        self.text = Text(text).font(.caption)
     }
 }
 
@@ -22,11 +40,11 @@ public extension Caption {
     }
 }
 
-public struct BoldCaption: View {
-    public let text: String
+public struct BoldCaption: TextView {
+    public let text: Text
 
-    public var body: some View {
-        Text(text).fontWeight(.bold).font(.caption)
+    public init(text: String) {
+        self.text = Text(text).fontWeight(.bold).font(.caption)
     }
 }
 

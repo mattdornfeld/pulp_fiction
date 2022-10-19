@@ -27,13 +27,24 @@ struct PulpFictionApp: App {
         return binding(
             createPulpFictionClientProtocolIO <- GrpcUtils.buildPulpFictionClientProtocol(),
             createPostDataCacheIO <- PostDataCache.create(),
-            yield: ExternalMessengers(
-                backendMessenger: BackendMessenger(pulpFictionClientProtocol: createPulpFictionClientProtocolIO.get),
-                postDataMessenger: PostDataMessenger(
+            yield: {
+                let postDataMessenger = PostDataMessenger(
                     postDataCache: createPostDataCacheIO.get,
                     imageDataSupplier: { url in try Data(url: url) }
                 )
-            )
+
+                let postFeedMessenger = PostFeedMessenger(
+                    pulpFictionClientProtocol: createPulpFictionClientProtocolIO.get,
+                    postDataMessenger: postDataMessenger
+                )
+
+                return ExternalMessengers(
+                    backendMessenger: BackendMessenger(pulpFictionClientProtocol: createPulpFictionClientProtocolIO.get),
+                    postDataMessenger: postDataMessenger,
+                    postFeedMessenger: postFeedMessenger
+                )
+
+            }()
         )^.unsafeRunSyncEither()
     }
 }

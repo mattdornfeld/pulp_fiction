@@ -25,7 +25,7 @@ def pulp_fiction_swift_dependencies():
                 name = "Bow",
                 url = "https://github.com/bow-swift/bow.git",
                 exact_version = "0.8.0",
-                products = ["Bow", "BowEffects"],
+                products = ["Bow", "BowEffects", "BowOptics"],
             ),
             spm_pkg(
                 url = "https://github.com/grpc/grpc-swift.git",
@@ -36,11 +36,6 @@ def pulp_fiction_swift_dependencies():
                 url = "https://github.com/hyperoslo/Cache",
                 exact_version = "6.0.0",
                 products = ["Cache"],
-            ),
-            spm_pkg(
-                url = "https://github.com/apple/swift-collections.git",
-                exact_version = "1.0.3",
-                products = ["Collections"],
             ),
         ],
     )

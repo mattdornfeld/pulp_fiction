@@ -40,9 +40,14 @@ interface CommentDatum : Entity<CommentDatum>, PostDatum {
             }
     }
 
-    fun toProto(): PulpFictionProtos.Post.Comment = comment {
+    fun toProto(
+        loggedInUserPostInteractions: PulpFictionProtos.Post.LoggedInUserPostInteractions,
+        postInteractionAggregates: PulpFictionProtos.Post.InteractionAggregates
+    ): PulpFictionProtos.Post.Comment = comment {
         this.body = this@CommentDatum.body
         this.parentPostId = this@CommentDatum.parentPostId.toString()
+        this.interactionAggregates = postInteractionAggregates
+        this.loggedInUserPostInteractions = loggedInUserPostInteractions
     }
 
     override var postId: UUID

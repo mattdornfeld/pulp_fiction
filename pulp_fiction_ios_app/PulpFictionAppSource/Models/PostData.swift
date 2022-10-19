@@ -49,6 +49,15 @@ public enum PostDataOneOf: Codable, Equatable {
         }
     }
 
+    public func toCommentPostData() -> Either<PulpFictionRequestError, CommentPostData> {
+        switch self {
+        case let .commentPostData(commentPostData):
+            return Either.right(commentPostData)
+        default:
+            return Either.left(ErrorConvertingToImagePostData("PostDataOneOf \(self) could not be converted to CommentPostData"))
+        }
+    }
+
     public func toUserPostData() -> Either<PulpFictionRequestError, UserPostData> {
         switch self {
         case let .userPostData(userPostData):

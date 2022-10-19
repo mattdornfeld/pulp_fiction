@@ -14,6 +14,7 @@ public struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
     public let imagePostContentData: ContentData
     public let postMetadata: PostMetadata
     public let postInteractionAggregates: PostInteractionAggregates
+    public let loggedInUserPostInteractions: LoggedInUserPostInteractions
 
     public func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.imagePostData(self)
@@ -31,13 +32,18 @@ public extension ImagePostData {
             caption: imagePostProto.caption,
             imagePostContentData: imagePostContentData,
             postMetadata: postMetadata,
-            postInteractionAggregates: imagePostProto.interactionAggregates.toPostInteractionAggregates()
+            postInteractionAggregates: imagePostProto
+                .interactionAggregates
+                .toPostInteractionAggregates(),
+            loggedInUserPostInteractions: imagePostProto
+                .loggedInUserPostInteractions
+                .toLoggedInUserPostInteractions()
         )
     }
 
     init(_ createImagePostRequestProto: CreatePostRequest.CreateImagePostRequest) {
         let postMetadata = PostMetadata(
-            PostUpdateIdentifier: PostUpdateIdentifier(postId: UUID(), updatedAt: Date()),
+            postUpdateIdentifier: PostUpdateIdentifier(postId: UUID(), updatedAt: Date()),
             postType: Post.PostType.image,
             postState: Post.PostState.created,
             createdAt: Date.now,
@@ -48,7 +54,8 @@ public extension ImagePostData {
             caption: createImagePostRequestProto.caption,
             imagePostContentData: ContentData(data: createImagePostRequestProto.imageJpg, contentDataType: ContentData.ContentDataType.jpg),
             postMetadata: postMetadata,
-            postInteractionAggregates: PostInteractionAggregates(numLikes: 10, numDislikes: 5, numChildComments: 3)
+            postInteractionAggregates: PostInteractionAggregates(numLikes: 10, numDislikes: 5, numChildComments: 3),
+            loggedInUserPostInteractions: LoggedInUserPostInteractions(postLikeStatus: Post.PostLike.neutral)
         )
     }
 }

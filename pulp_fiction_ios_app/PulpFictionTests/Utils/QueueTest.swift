@@ -17,7 +17,7 @@ class QueueTests: XCTestCase {
         XCTAssertFalse(queue.checkLockedBecauseFull())
     }
 
-    func testEnqueueAndDequeue() throws {
+    func testEnqueueAndDequeue() {
         let expectedElement = 2
         let element = Queue<Int>(maxSize: 1)
             .enqueue(expectedElement)
@@ -26,7 +26,7 @@ class QueueTests: XCTestCase {
         XCTAssertEqual(expectedElement, element)
     }
 
-    func testQueueLocksWhenFull() throws {
+    func testQueueLocksWhenFull() {
         let expectedMaxSize = 1
         let queue = Queue<Int>(maxSize: expectedMaxSize)
             .enqueue(1)

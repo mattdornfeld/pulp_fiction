@@ -58,10 +58,14 @@ interface ImagePostDatum : Entity<ImagePostDatum>, ReferencesS3Key, PostDatum {
         tag(TagKey.fileType.name, JPG),
     ).toTagging()
 
-    fun toProto(postInteractions: PulpFictionProtos.Post.InteractionAggregates): PulpFictionProtos.Post.ImagePost = imagePost {
+    fun toProto(
+        loggedInUserPostInteractions: PulpFictionProtos.Post.LoggedInUserPostInteractions,
+        postInteractionAggregates: PulpFictionProtos.Post.InteractionAggregates
+    ): PulpFictionProtos.Post.ImagePost = imagePost {
         this.imageUrl = this@ImagePostDatum.imageS3Key // TODO (matt): Replace with url
         this.caption = this@ImagePostDatum.caption
-        this.interactionAggregates = postInteractions
+        this.interactionAggregates = postInteractionAggregates
+        this.loggedInUserPostInteractions = loggedInUserPostInteractions
     }
 }
 

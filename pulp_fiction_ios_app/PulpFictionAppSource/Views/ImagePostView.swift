@@ -3,74 +3,181 @@
 //
 
 import Bow
+import BowOptics
+import ComposableArchitecture
 import Logging
 import SwiftUI
 
-public struct ImagePostView: View, Identifiable {
-    private static let logger = Logger(label: String(describing: ImagePostView.self))
-    public let id: PostUpdateIdentifier
-    public let imagePostData: ImagePostData
-    public let creatorUserPostData: UserPostData
+private struct ImagePostViewState: Equatable {
+    var shouldLoadCommentsPage: Bool = false
+}
+
+private struct ImagePostViewEnvironment {
+    let mainQueue: AnySchedulerOf<DispatchQueue>
+}
+
+private enum ImagePostViewAction {
+    case loadCommentsPage
+    case unloadCommentsPage
+}
+
+private enum ImagePostViewReducer {
+    static let reducer = Reducer<ImagePostViewState, ImagePostViewAction, ImagePostViewEnvironment> {
+        state, action, _ in
+        switch action {
+        case .loadCommentsPage:
+            state.shouldLoadCommentsPage = true
+            return .none
+        case .unloadCommentsPage:
+            state.shouldLoadCommentsPage = false
+            return .none
+        }
+    }
+}
+
+public extension ImagePostView {
+    init(
+        postFeedMessenger: PostFeedMessenger,
+        postUIImage: UIImage,
+        userAvatarUIImage: UIImage,
+        creatorUserPostData: UserPostData,
+        id: Int,
+        imagePostData: ImagePostData
+    ) {
+        self.postFeedMessenger = postFeedMessenger
+        self.postUIImage = postUIImage
+        self.userAvatarUIImage = userAvatarUIImage
+        self.creatorUserPostData = creatorUserPostData
+        self.id = id
+        self.imagePostData = imagePostData
+        store = Store(
+            initialState: ImagePostViewState(),
+            reducer: ImagePostViewReducer.reducer,
+            environment: ImagePostViewEnvironment(mainQueue: .main)
+        )
+        swipablePostStore = ImagePostView.buildStore(
+            postInteractionAggregates: imagePostData.postInteractionAggregates,
+            loggedInUserPostInteractions: imagePostData.loggedInUserPostInteractions
+        )
+    }
+}
+
+/// Renders an image post
+public struct ImagePostView: SwipablePostView, AutoSetter {
+    private let postFeedMessenger: PostFeedMessenger
     private let postUIImage: UIImage
     private let userAvatarUIImage: UIImage
+    public let creatorUserPostData: UserPostData
+    public let id: Int
+    public let imagePostData: ImagePostData
+    private var isForCommentsScrollView: Bool = false
+    private let store: Store<ImagePostViewState, ImagePostViewAction>
+    internal let swipablePostStore: ComposableArchitecture.Store<PostSwipeState, PostSwipeAction>
+    private static let logger = Logger(label: String(describing: ImagePostView.self))
 
-    public var body: some View {
-        VStack {
-            HStack(alignment: .bottom) {
-                HStack {
-                    CircularImage(
-                        uiImage: userAvatarUIImage,
-                        radius: 15,
-                        borderColor: .red,
-                        borderWidth: 1
-                    ).padding(.leading, 5)
-                    BoldCaption(creatorUserPostData.userDisplayName)
-                }
-                Spacer()
-                Symbol(symbolName: "ellipsis")
-                    .padding(.trailing, 10)
-                    .padding(.bottom, 4)
-            }
-            postUIImage.toImage().resizable().scaledToFit()
-            HStack {
-                VStack(alignment: .leading) {
+    public static func == (lhs: ImagePostView, rhs: ImagePostView) -> Bool {
+        lhs.postUIImage == rhs.postUIImage
+            && lhs.userAvatarUIImage == rhs.userAvatarUIImage
+            && lhs.creatorUserPostData == rhs.creatorUserPostData
+            && lhs.id == rhs.id
+            && lhs.imagePostData == rhs.imagePostData
+    }
+
+    private func buildCommentsIcon(_: ViewStore<ImagePostViewState, ImagePostViewAction>) -> some View {
+        SymbolWithCaption(
+            symbolName: "text.bubble",
+            symbolCaption: imagePostData
+                .postInteractionAggregates
+                .numChildComments
+                .formatAsStringForView()
+        )
+    }
+
+    private func buildCommentsIconWithNavigation(_ viewStore: ViewStore<ImagePostViewState, ImagePostViewAction>) -> some View {
+        return buildCommentsIcon(viewStore).navigateOnTap(
+            isActive: viewStore.binding(
+                get: \.shouldLoadCommentsPage,
+                send: ImagePostViewAction.unloadCommentsPage
+            ),
+            destination: CommentScrollView(
+                imagePostView: ImagePostView
+                    .setter(for: \.isForCommentsScrollView)
+                    .set(self, true),
+                postFeedMessenger: postFeedMessenger
+            )
+        ) { viewStore.send(.loadCommentsPage) }
+    }
+
+    @ViewBuilder func postViewBuilder() -> some View {
+        WithViewStore(store) { viewStore in
+            VStack {
+                HStack(alignment: .bottom) {
                     HStack {
-                        SymbolWithCaption(
-                            symbolName: "arrow.up",
-                            symbolCaption: imagePostData.postInteractionAggregates.getNetLikes().formatAsStringForView()
-                        )
-                        SymbolWithCaption(
-                            symbolName: "text.bubble",
-                            symbolCaption: imagePostData.postInteractionAggregates.numChildComments.formatAsStringForView()
-                        )
-                    }.padding(.bottom, 1)
-                    HStack {
+                        CircularImage(
+                            uiImage: userAvatarUIImage,
+                            radius: 15,
+                            borderColor: .red,
+                            borderWidth: 1
+                        ).padding(.leading, 5)
                         BoldCaption(creatorUserPostData.userDisplayName)
-                        Caption(imagePostData.caption)
                     }
-                    Caption(imagePostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
-                }.padding(.leading, 4)
-                Spacer()
+                    Spacer()
+                    Symbol(symbolName: "ellipsis")
+                        .padding(.trailing, 10)
+                        .padding(.bottom, 4)
+                }
+                postUIImage.toImage().resizable().scaledToFit()
+                HStack {
+                    VStack(alignment: .leading) {
+                        HStack {
+                            buildPostLikeArrowView()
+
+                            if isForCommentsScrollView {
+                                buildCommentsIcon(viewStore)
+                            } else {
+                                buildCommentsIconWithNavigation(viewStore)
+                            }
+
+                        }.padding(.bottom, 1)
+                        HStack {
+                            BoldCaption(creatorUserPostData.userDisplayName)
+                                .append(textView: Caption(imagePostData.caption))
+                        }
+                        Caption(imagePostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
+                    }.padding(.leading, 4)
+                    Spacer()
+                }
             }
         }
     }
 
-    public static func create(_ imagePostData: ImagePostData, _ userPostData: UserPostData) -> Either<PulpFictionRequestError, ImagePostView> {
-        let createPostUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
-        let createUserAvatarUIImageResult = Either<PulpFictionRequestError, UIImage>.var()
+    public static func create(
+        postViewIndex: Int,
+        imagePostData: ImagePostData,
+        userPostData: UserPostData,
+        postFeedMessenger: PostFeedMessenger
+    ) -> Either<PulpFictionRequestError, ImagePostView> {
+        let createPostUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
+        let createUserAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
         return binding(
-            createPostUIImageResult <- imagePostData.imagePostContentData.toUIImage(),
-            createUserAvatarUIImageResult <- userPostData.userPostContentData.toUIImage(),
+            createPostUIImageEither <- imagePostData.imagePostContentData.toUIImage(),
+            createUserAvatarUIImageEither <- userPostData.userPostContentData.toUIImage(),
             yield: ImagePostView(
-                id: imagePostData.id,
-                imagePostData: imagePostData,
+                postFeedMessenger: postFeedMessenger,
+                postUIImage: createPostUIImageEither.get,
+                userAvatarUIImage: createUserAvatarUIImageEither.get,
                 creatorUserPostData: userPostData,
-                postUIImage: createPostUIImageResult.get,
-                userAvatarUIImage: createUserAvatarUIImageResult.get
+                id: postViewIndex,
+                imagePostData: imagePostData
             )
         )^.onError { cause in
-            logger.error("Error loading post \(imagePostData.postMetadata.postUpdateIdentifier) because \(cause)")
+            logger.error(
+                "Error loading post \(imagePostData.postMetadata.postUpdateIdentifier)",
+                metadata: [
+                    "cause": "\(cause)",
+                ]
+            )
         }
     }
 }

@@ -52,11 +52,14 @@ public struct PostDataMessenger {
         _ postMetadataProto: Post.PostMetadata,
         _ commentPostProto: Post.Comment
     ) -> IO<PulpFictionRequestError, PostDataOneOf> {
-        postMetadataProto.toPostMetadata().toIO().mapRight { postMetadata in
-            commentPostProto
-                .toPostData(postMetadata)
-                .toPostDataOneOf()
-        }
+        let postMetadataIO = Either<PulpFictionRequestError, PostMetadata>.var()
+        let commentPostDataIO = Either<PulpFictionRequestError, CommentPostData>.var()
+
+        return binding(
+            postMetadataIO <- postMetadataProto.toPostMetadata(),
+            commentPostDataIO <- CommentPostData.create(postMetadataIO.get, commentPostProto),
+            yield: commentPostDataIO.get.toPostDataOneOf()
+        )^.toIO()
     }
 
     private func getImagePostData(
@@ -72,6 +75,7 @@ public struct PostDataMessenger {
                         .toPostDataOneOf()
                 }
         }
+        .logError("Error building ImagePostData")
     }
 
     private func getUserPostData(

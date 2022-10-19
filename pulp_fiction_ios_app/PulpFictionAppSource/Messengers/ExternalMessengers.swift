@@ -10,9 +10,15 @@ import Foundation
 public struct ExternalMessengers {
     public let backendMessenger: BackendMessenger
     public let postDataMessenger: PostDataMessenger
+    public let postFeedMessenger: PostFeedMessenger
 
-    public init(backendMessenger: BackendMessenger, postDataMessenger: PostDataMessenger) {
+    public init(
+        backendMessenger: BackendMessenger,
+        postDataMessenger: PostDataMessenger,
+        postFeedMessenger: PostFeedMessenger
+    ) {
         self.backendMessenger = backendMessenger
         self.postDataMessenger = postDataMessenger
+        self.postFeedMessenger = postFeedMessenger
     }
 }
