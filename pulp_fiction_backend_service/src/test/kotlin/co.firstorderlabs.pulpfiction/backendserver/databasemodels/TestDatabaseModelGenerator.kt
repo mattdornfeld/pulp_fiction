@@ -73,6 +73,7 @@ object TestDatabaseModelGenerator {
         this.userId = userId
         this.displayName = displayName
         this.avatarImageS3Key = faker.internet.domain()
+        this.bio = faker.lordOfTheRings.quotes()
     }
 
     fun LoginSession.Companion.generateRandom(userId: UUID): LoginSession = LoginSession {

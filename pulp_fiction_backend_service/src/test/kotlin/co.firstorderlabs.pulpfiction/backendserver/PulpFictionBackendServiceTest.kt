@@ -218,6 +218,7 @@ internal class PulpFictionBackendServiceTest {
                 .assertTrue { it.latestUserPostUpdateIdentifier.hasUpdatedAt() }
                 .assertEquals(post.metadata.postUpdateIdentifier) { it.latestUserPostUpdateIdentifier }
                 .assertEquals(createUserRequest.displayName) { it.displayName }
+                .assertEquals(createUserRequest.bio) { it.bio }
 
             // Check the value of avatarImageUrl corresponds to the uploaed image
             val loginRequest =

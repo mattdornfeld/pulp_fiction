@@ -304,7 +304,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
         database.transactionToEffect {
             effectWithDatabaseError { database.users.add(user) }.bind()
-            createPost(user.toCreatePostRequest(request.avatarJpg)).bind()
+            createPost(user.toCreatePostRequest(request)).bind()
         }.bind()
     }
 

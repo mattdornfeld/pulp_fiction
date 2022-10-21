@@ -122,6 +122,7 @@ message CreatePostRequest {
     string userId = 1;
     string display_name = 2;
     bytes avatarJpg = 3;
+    string bio = 4;
   }
 
   LoginResponse.LoginSession loginSession = 1;
@@ -144,6 +145,7 @@ message CreateUserRequest {
   string password = 5;
   bool opt_in_to_emails = 6;
   bytes avatarJpg = 7;
+  string bio = 8;
 }
 
 message GetUserResponse {
