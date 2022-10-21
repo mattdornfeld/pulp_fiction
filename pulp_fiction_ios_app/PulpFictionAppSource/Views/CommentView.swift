@@ -11,19 +11,40 @@ import Foundation
 import Logging
 import SwiftUI
 
-public struct CommentView: SwipablePostView {
+private struct CommentViewReducer: ReducerProtocol {
+    struct State: Equatable {
+        var shouldLoadUserProfileView: Bool = false
+    }
+
+    enum Action {
+        case updateShouldLoadUserProfileView(Bool)
+    }
+
+    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
+        switch action {
+        case let .updateShouldLoadUserProfileView(shouldLoadUserProfileView):
+            state.shouldLoadUserProfileView = shouldLoadUserProfileView
+            return .none
+        }
+    }
+}
+
+struct CommentView: SwipablePostView {
     private static let logger = Logger(label: String(describing: CommentView.self))
-    public let commentPostData: CommentPostData
-    public let creatorUserPostData: UserPostData
-    public let id: Int
+    let commentPostData: CommentPostData
+    let creatorUserPostData: UserPostData
+    let id: Int
     private let userAvatarUIImage: UIImage
     internal let swipablePostStore: ComposableArchitecture.Store<PostSwipeState, PostSwipeAction>
+    private let store: ComposableArchitecture.StoreOf<CommentViewReducer>
+    private let postFeedMessenger: PostFeedMessenger
 
     init(
         commentPostData: CommentPostData,
         creatorUserPostData: UserPostData,
         id: Int,
-        userAvatarUIImage: UIImage
+        userAvatarUIImage: UIImage,
+        postFeedMessenger: PostFeedMessenger
     ) {
         self.commentPostData = commentPostData
         self.creatorUserPostData = creatorUserPostData
@@ -33,9 +54,14 @@ public struct CommentView: SwipablePostView {
             postInteractionAggregates: commentPostData.postInteractionAggregates,
             loggedInUserPostInteractions: commentPostData.loggedInUserPostInteractions
         )
+        store = Store(
+            initialState: CommentViewReducer.State(),
+            reducer: CommentViewReducer()
+        )
+        self.postFeedMessenger = postFeedMessenger
     }
 
-    public static func == (lhs: CommentView, rhs: CommentView) -> Bool {
+    static func == (lhs: CommentView, rhs: CommentView) -> Bool {
         lhs.commentPostData == rhs.commentPostData
             && lhs.creatorUserPostData == rhs.creatorUserPostData
             && lhs.id == rhs.id
@@ -43,23 +69,42 @@ public struct CommentView: SwipablePostView {
     }
 
     @ViewBuilder func postViewBuilder() -> some View {
-        VStack(alignment: .leading) {
-            HStack(alignment: .bottom, spacing: 5) {
-                BoldCaption(creatorUserPostData.userDisplayName)
-                buildPostLikeArrowView()
-                Spacer()
-                Caption(commentPostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
-                Symbol(symbolName: "ellipsis")
-                    .padding(.trailing, 10)
-                    .padding(.bottom, 4)
+        WithViewStore(store) { viewStore in
+            VStack(alignment: .leading) {
+                HStack(alignment: .bottom, spacing: 5) {
+                    BoldCaption(creatorUserPostData.userDisplayName)
+                        .navigateOnTap(
+                            isActive: viewStore.binding(
+                                get: \.shouldLoadUserProfileView,
+                                send: CommentViewReducer.Action.updateShouldLoadUserProfileView(false)
+                            ),
+                            destination: UserProfileView(
+                                id: 0,
+                                userPostData: creatorUserPostData,
+                                userAvatarUIImage: userAvatarUIImage,
+                                postFeedMessenger: postFeedMessenger
+                            )
+                        ) { viewStore.send(.updateShouldLoadUserProfileView(true)) }
+                    buildPostLikeArrowView()
+                    Spacer()
+                    Caption(commentPostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
+                    Symbol(symbolName: "ellipsis")
+                        .padding(.trailing, 10)
+                        .padding(.bottom, 4)
+                }
+                Caption(commentPostData.body)
             }
-            Caption(commentPostData.body)
+            .padding(.leading, 5)
+            .padding(.bottom, 5)
         }
-        .padding(.leading, 5)
-        .padding(.bottom, 5)
     }
 
-    public static func create(_ postViewIndex: Int, _ commentPostData: CommentPostData, _ userPostData: UserPostData) -> Either<PulpFictionRequestError, CommentView> {
+    static func create(
+        postViewIndex: Int,
+        commentPostData: CommentPostData,
+        userPostData: UserPostData,
+        postFeedMessenger: PostFeedMessenger
+    ) -> Either<PulpFictionRequestError, CommentView> {
         let userAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
         return binding(
@@ -68,7 +113,8 @@ public struct CommentView: SwipablePostView {
                 commentPostData: commentPostData,
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
-                userAvatarUIImage: userAvatarUIImageEither.get
+                userAvatarUIImage: userAvatarUIImageEither.get,
+                postFeedMessenger: postFeedMessenger
             )
         )^.onError { cause in
             logger.error(

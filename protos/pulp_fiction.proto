@@ -87,6 +87,7 @@ message User {
     string avatar_image_url = 3;
     google.protobuf.Timestamp created_at = 4;
     Post.PostUpdateIdentifier latest_user_post_update_identifier = 5;
+    string bio = 6;
   }
 
   message SensitiveUserMetadata {

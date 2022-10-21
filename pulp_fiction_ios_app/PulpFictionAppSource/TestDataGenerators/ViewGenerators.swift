@@ -9,7 +9,7 @@ import Bow
 import BowEffects
 import Foundation
 
-public extension ImagePostView {
+extension ImagePostView {
     static func generate(postFeedMessenger: PostFeedMessenger) -> IO<PulpFictionRequestError, ImagePostView> {
         let imagePostDataIO = IO<PulpFictionRequestError, ImagePostData>.var()
         let userPostDataIO = IO<PulpFictionRequestError, UserPostData>.var()

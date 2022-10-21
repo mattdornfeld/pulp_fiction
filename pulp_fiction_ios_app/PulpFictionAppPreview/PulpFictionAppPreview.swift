@@ -18,7 +18,7 @@ struct PulpFictionAppPreview: App {
         return .init(externalMessengersEither)
     }()
 
-    public var body: some Scene {
+    var body: some Scene {
         WindowGroup {
             pulpFictionAppViewBuilder.buildView()
         }

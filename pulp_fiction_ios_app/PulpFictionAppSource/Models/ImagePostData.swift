@@ -8,20 +8,20 @@
 import Foundation
 
 /// Image post data is stored in this model. Used for rendering ImagePostView.
-public struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
-    public let id: PostUpdateIdentifier
-    public let caption: String
-    public let imagePostContentData: ContentData
-    public let postMetadata: PostMetadata
-    public let postInteractionAggregates: PostInteractionAggregates
-    public let loggedInUserPostInteractions: LoggedInUserPostInteractions
+struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
+    let id: PostUpdateIdentifier
+    let caption: String
+    let imagePostContentData: ContentData
+    let postMetadata: PostMetadata
+    let postInteractionAggregates: PostInteractionAggregates
+    let loggedInUserPostInteractions: LoggedInUserPostInteractions
 
-    public func toPostDataOneOf() -> PostDataOneOf {
+    func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.imagePostData(self)
     }
 }
 
-public extension ImagePostData {
+extension ImagePostData {
     init(
         _ postMetadata: PostMetadata,
         _ imagePostProto: Post.ImagePost,
@@ -60,7 +60,7 @@ public extension ImagePostData {
     }
 }
 
-public extension Post.ImagePost {
+extension Post.ImagePost {
     func toPostData(_ postMetadata: PostMetadata, _ imagePostContentData: ContentData) -> ImagePostData {
         ImagePostData(postMetadata, self, imagePostContentData)
     }

@@ -13,6 +13,7 @@ import UIKit
 public enum FakeData {
     public static let caption = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
     public static let comment = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+    public static let bio = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
     public static let imagePostJpgUrl = try! URL(string: "https://firstorderlabs.com/rickroll.jpg").getOrThrow()
     public static let userAvatarJpgUrl = try! URL(string: "https://firstorderlabs.com/shadowfax.jpg").getOrThrow()
     public static let userAvatarJpgName = "Shadowfax"
@@ -30,6 +31,7 @@ public extension UserMetadataProto {
                 $0.nanos = 0
             }
             $0.avatarImageURL = FakeData.userAvatarJpgUrl.absoluteString
+            $0.bio = FakeData.bio
         }
     }
 }

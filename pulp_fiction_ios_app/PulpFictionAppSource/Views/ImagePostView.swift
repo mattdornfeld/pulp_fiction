@@ -8,34 +8,38 @@ import ComposableArchitecture
 import Logging
 import SwiftUI
 
-private struct ImagePostViewState: Equatable {
-    var shouldLoadCommentsPage: Bool = false
-}
+struct ImagePostViewReducer: ReducerProtocol {
+    struct State: Equatable {
+        var shouldLoadCommentScrollView: Bool = false
+        var shouldLoadUserProfileView: Bool = false
+    }
 
-private struct ImagePostViewEnvironment {
-    let mainQueue: AnySchedulerOf<DispatchQueue>
-}
+    enum Action {
+        case loadCommentScrollView
+        case unloadCommentScrollView
+        case loadUserProfileView
+        case unloadUserProfileView
+    }
 
-private enum ImagePostViewAction {
-    case loadCommentsPage
-    case unloadCommentsPage
-}
-
-private enum ImagePostViewReducer {
-    static let reducer = Reducer<ImagePostViewState, ImagePostViewAction, ImagePostViewEnvironment> {
-        state, action, _ in
+    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
-        case .loadCommentsPage:
-            state.shouldLoadCommentsPage = true
+        case .loadCommentScrollView:
+            state.shouldLoadCommentScrollView = true
             return .none
-        case .unloadCommentsPage:
-            state.shouldLoadCommentsPage = false
+        case .unloadCommentScrollView:
+            state.shouldLoadCommentScrollView = false
+            return .none
+        case .loadUserProfileView:
+            state.shouldLoadUserProfileView = true
+            return .none
+        case .unloadUserProfileView:
+            state.shouldLoadUserProfileView = false
             return .none
         }
     }
 }
 
-public extension ImagePostView {
+extension ImagePostView {
     init(
         postFeedMessenger: PostFeedMessenger,
         postUIImage: UIImage,
@@ -51,9 +55,8 @@ public extension ImagePostView {
         self.id = id
         self.imagePostData = imagePostData
         store = Store(
-            initialState: ImagePostViewState(),
-            reducer: ImagePostViewReducer.reducer,
-            environment: ImagePostViewEnvironment(mainQueue: .main)
+            initialState: ImagePostViewReducer.State(),
+            reducer: ImagePostViewReducer()
         )
         swipablePostStore = ImagePostView.buildStore(
             postInteractionAggregates: imagePostData.postInteractionAggregates,
@@ -63,19 +66,19 @@ public extension ImagePostView {
 }
 
 /// Renders an image post
-public struct ImagePostView: SwipablePostView, AutoSetter {
+struct ImagePostView: SwipablePostView, AutoSetter {
     private let postFeedMessenger: PostFeedMessenger
     private let postUIImage: UIImage
     private let userAvatarUIImage: UIImage
-    public let creatorUserPostData: UserPostData
-    public let id: Int
-    public let imagePostData: ImagePostData
+    let creatorUserPostData: UserPostData
+    let id: Int
+    let imagePostData: ImagePostData
     private var isForCommentsScrollView: Bool = false
-    private let store: Store<ImagePostViewState, ImagePostViewAction>
+    private let store: ComposableArchitecture.StoreOf<ImagePostViewReducer>
     internal let swipablePostStore: ComposableArchitecture.Store<PostSwipeState, PostSwipeAction>
     private static let logger = Logger(label: String(describing: ImagePostView.self))
 
-    public static func == (lhs: ImagePostView, rhs: ImagePostView) -> Bool {
+    static func == (lhs: ImagePostView, rhs: ImagePostView) -> Bool {
         lhs.postUIImage == rhs.postUIImage
             && lhs.userAvatarUIImage == rhs.userAvatarUIImage
             && lhs.creatorUserPostData == rhs.creatorUserPostData
@@ -83,7 +86,7 @@ public struct ImagePostView: SwipablePostView, AutoSetter {
             && lhs.imagePostData == rhs.imagePostData
     }
 
-    private func buildCommentsIcon(_: ViewStore<ImagePostViewState, ImagePostViewAction>) -> some View {
+    private func buildCommentsIcon(_: ViewStore<ImagePostViewReducer.State, ImagePostViewReducer.Action>) -> some View {
         SymbolWithCaption(
             symbolName: "text.bubble",
             symbolCaption: imagePostData
@@ -93,11 +96,11 @@ public struct ImagePostView: SwipablePostView, AutoSetter {
         )
     }
 
-    private func buildCommentsIconWithNavigation(_ viewStore: ViewStore<ImagePostViewState, ImagePostViewAction>) -> some View {
+    private func buildCommentsIconWithNavigation(_ viewStore: ViewStore<ImagePostViewReducer.State, ImagePostViewReducer.Action>) -> some View {
         return buildCommentsIcon(viewStore).navigateOnTap(
             isActive: viewStore.binding(
-                get: \.shouldLoadCommentsPage,
-                send: ImagePostViewAction.unloadCommentsPage
+                get: \.shouldLoadCommentScrollView,
+                send: ImagePostViewReducer.Action.unloadCommentScrollView
             ),
             destination: CommentScrollView(
                 imagePostView: ImagePostView
@@ -105,7 +108,7 @@ public struct ImagePostView: SwipablePostView, AutoSetter {
                     .set(self, true),
                 postFeedMessenger: postFeedMessenger
             )
-        ) { viewStore.send(.loadCommentsPage) }
+        ) { viewStore.send(.loadCommentScrollView) }
     }
 
     @ViewBuilder func postViewBuilder() -> some View {
@@ -120,7 +123,21 @@ public struct ImagePostView: SwipablePostView, AutoSetter {
                             borderWidth: 1
                         ).padding(.leading, 5)
                         BoldCaption(creatorUserPostData.userDisplayName)
+                    }.navigateOnTap(
+                        isActive: viewStore.binding(
+                            get: \.shouldLoadUserProfileView,
+                            send: ImagePostViewReducer.Action.unloadUserProfileView
+                        ),
+                        destination: UserProfileView(
+                            id: 0,
+                            userPostData: creatorUserPostData,
+                            userAvatarUIImage: userAvatarUIImage,
+                            postFeedMessenger: postFeedMessenger
+                        )
+                    ) {
+                        viewStore.send(.loadUserProfileView)
                     }
+
                     Spacer()
                     Symbol(symbolName: "ellipsis")
                         .padding(.trailing, 10)
@@ -151,7 +168,7 @@ public struct ImagePostView: SwipablePostView, AutoSetter {
         }
     }
 
-    public static func create(
+    static func create(
         postViewIndex: Int,
         imagePostData: ImagePostData,
         userPostData: UserPostData,

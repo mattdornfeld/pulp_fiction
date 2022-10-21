@@ -10,7 +10,7 @@ import BowEffects
 import Foundation
 import PulpFictionAppSource
 
-public extension ExternalMessengers {
+extension ExternalMessengers {
     /// Create the ExternalMessengers for tests and running the preview app
     static func createForTests(numPostsInFeedResponse: Int) -> Either<PulpFictionStartupError, ExternalMessengers> {
         let createPostDataCacheIO = IO<PulpFictionStartupError, PostDataCache>.var()
