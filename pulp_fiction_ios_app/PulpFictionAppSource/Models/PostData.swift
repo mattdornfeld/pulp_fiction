@@ -9,7 +9,7 @@ import Bow
 import Foundation
 
 /// Base protocol implemented by all data models which contain post data
-public protocol PostData: Codable {
+protocol PostData: Codable {
     var postMetadata: PostMetadata { get }
 
     /// - Returns: PostData wrapped in a PostDataOneOf
@@ -18,16 +18,16 @@ public protocol PostData: Codable {
 
 /// Enum wrapper for post data models. All models must be wrapped in this structure before being stored in the cache.
 /// Also useful for identifying what type of PostData is being used.
-public enum PostDataOneOf: Codable, Equatable {
+enum PostDataOneOf: Codable, Equatable {
     case unregonizedPostData(UnrecognizedPostData)
     case imagePostData(ImagePostData)
     case commentPostData(CommentPostData)
     case userPostData(UserPostData)
 
-    public class ErrorConvertingToImagePostData: PulpFictionRequestError {}
-    public class ErrorConvertingToUserPostData: PulpFictionRequestError {}
+    class ErrorConvertingToImagePostData: PulpFictionRequestError {}
+    class ErrorConvertingToUserPostData: PulpFictionRequestError {}
 
-    public func toPostData() -> PostData {
+    func toPostData() -> PostData {
         switch self {
         case let .unregonizedPostData(unrecognizedPostData):
             return unrecognizedPostData
@@ -40,7 +40,7 @@ public enum PostDataOneOf: Codable, Equatable {
         }
     }
 
-    public func toImagePostData() -> Either<PulpFictionRequestError, ImagePostData> {
+    func toImagePostData() -> Either<PulpFictionRequestError, ImagePostData> {
         switch self {
         case let .imagePostData(imagePostData):
             return Either.right(imagePostData)
@@ -49,7 +49,7 @@ public enum PostDataOneOf: Codable, Equatable {
         }
     }
 
-    public func toCommentPostData() -> Either<PulpFictionRequestError, CommentPostData> {
+    func toCommentPostData() -> Either<PulpFictionRequestError, CommentPostData> {
         switch self {
         case let .commentPostData(commentPostData):
             return Either.right(commentPostData)
@@ -58,7 +58,7 @@ public enum PostDataOneOf: Codable, Equatable {
         }
     }
 
-    public func toUserPostData() -> Either<PulpFictionRequestError, UserPostData> {
+    func toUserPostData() -> Either<PulpFictionRequestError, UserPostData> {
         switch self {
         case let .userPostData(userPostData):
             return Either.right(userPostData)

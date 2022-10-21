@@ -176,10 +176,12 @@ private struct PostScrollViewBuilder<A: PostView> {
                         }
                     }
 
-                    Caption("You have reached the end\nTry refreshing the feed to see new posts")
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.gray)
-                        .padding()
+                    Caption(
+                        text: "You have reached the end\nTry refreshing the feed to see new posts",
+                        alignment: .center
+                    )
+                    .foregroundColor(.gray)
+                    .padding()
                 }
             }
             .onAppear { viewStore.send(.startScroll) }
@@ -188,10 +190,10 @@ private struct PostScrollViewBuilder<A: PostView> {
     }
 }
 
-public struct ImagePostScrollView: View {
+struct ImagePostScrollView: View {
     private let postScrollViewBuilder: PostScrollViewBuilder<ImagePostView>
 
-    public init(postFeedMessenger: PostFeedMessenger) {
+    init(postFeedMessenger: PostFeedMessenger) {
         postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { (environment: PostScrollEnvironment) -> PostViewFeedIterator<ImagePostView> in
             environment
                 .postFeedMessenger
@@ -200,16 +202,39 @@ public struct ImagePostScrollView: View {
         }
     }
 
-    public var body: some View {
+    var body: some View {
         postScrollViewBuilder.buildView()
     }
 }
 
-public struct CommentScrollView: View {
+struct UserProfileScrollView<Content: View>: View {
+    private let postScrollViewBuilder: PostScrollViewBuilder<ImagePostView>
+    @ViewBuilder private let userProfileViewBuilder: () -> Content
+
+    init(
+        userId: UUID,
+        postFeedMessenger: PostFeedMessenger,
+        userProfileViewBuilder: @escaping () -> Content
+    ) {
+        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { (environment: PostScrollEnvironment) -> PostViewFeedIterator<ImagePostView> in
+            environment
+                .postFeedMessenger
+                .getUserProfilePostFeed(userId: userId)
+                .makeIterator()
+        }
+        self.userProfileViewBuilder = userProfileViewBuilder
+    }
+
+    var body: some View {
+        postScrollViewBuilder.buildView(.some(userProfileViewBuilder()))
+    }
+}
+
+struct CommentScrollView: View {
     private let postScrollViewBuilder: PostScrollViewBuilder<CommentView>
     private let imagePostView: ImagePostView
 
-    public init(imagePostView: ImagePostView, postFeedMessenger: PostFeedMessenger) {
+    init(imagePostView: ImagePostView, postFeedMessenger: PostFeedMessenger) {
         postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { (environment: PostScrollEnvironment) -> PostViewFeedIterator<CommentView> in
             environment
                 .postFeedMessenger
@@ -219,7 +244,7 @@ public struct CommentScrollView: View {
         self.imagePostView = imagePostView
     }
 
-    public var body: some View {
+    var body: some View {
         postScrollViewBuilder.buildView(.some(
             VStack {
                 imagePostView
