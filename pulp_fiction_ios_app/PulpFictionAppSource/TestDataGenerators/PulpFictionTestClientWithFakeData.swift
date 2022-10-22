@@ -31,6 +31,10 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         generatePostsForFeed { Post.generate(Post.PostType.image) }
     }
 
+    private func generateUserPostsForFeed() -> [Post] {
+        generatePostsForFeed { Post.generate(Post.PostType.user) }
+    }
+
     private func generateCommentPostsForFeed(_ parentPostId: UUID) -> [Post] {
         generatePostsForFeed {
             let postMetadata = Post.PostMetadata.generate(Post.PostType.comment)
@@ -59,7 +63,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
                 case .getGlobalFeedRequest:
                     return generateImagePostsForFeed()
                 case .getFollowedFeedRequest:
-                    return generateImagePostsForFeed()
+                    return generateUserPostsForFeed()
                 case .getCommentFeedRequest:
                     let parentPostId = request
                         .getCommentFeedRequest

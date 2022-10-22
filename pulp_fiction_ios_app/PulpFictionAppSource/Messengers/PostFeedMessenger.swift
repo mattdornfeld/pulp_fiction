@@ -13,7 +13,7 @@ public struct PostFeedMessenger {
     public let pulpFictionClientProtocol: PulpFictionClientProtocol
     public let postDataMessenger: PostDataMessenger
     public let loginSession: LoginSession
-    
+
     public init(pulpFictionClientProtocol: PulpFictionClientProtocol, postDataMessenger: PostDataMessenger, loginSession: LoginSession) {
         self.pulpFictionClientProtocol = pulpFictionClientProtocol
         self.postDataMessenger = postDataMessenger
@@ -112,6 +112,37 @@ public struct PostFeedMessenger {
             pulpFictionClientProtocol: pulpFictionClientProtocol,
             getFeedRequest: getFeedRequest,
             postViewEitherSupplier: commentViewEitherSupplier
+        )
+    }
+
+    func getFollowedScrollFeed(userId: UUID) -> PostViewFeed<UserPostView> {
+        let getFeedRequest = GetFeedRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.getFollowedFeedRequest = GetFeedRequest.GetFollowedFeedRequest.with {
+                $0.userID = userId.uuidString
+            }
+        }
+
+        let userPostViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, UserPostView> = { postViewIndex, postProto in
+            let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
+
+            return binding(
+                userPostDataEither <- postDataMessenger
+                    .getPostData(postProto)
+                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
+                    .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
+                yield: UserPostView(
+                    id: postViewIndex,
+                    userPostData: userPostDataEither.get,
+                    postFeedMessenger: self
+                )
+            )^
+        }
+
+        return PostViewFeed(
+            pulpFictionClientProtocol: pulpFictionClientProtocol,
+            getFeedRequest: getFeedRequest,
+            postViewEitherSupplier: userPostViewEitherSupplier
         )
     }
 }

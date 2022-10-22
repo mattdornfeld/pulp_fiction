@@ -12,7 +12,7 @@ public struct ExternalMessengers {
     public let postDataMessenger: PostDataMessenger
     public let postFeedMessenger: PostFeedMessenger
     public let loginSession: LoginSession
-    
+
     public init(
         backendMessenger: BackendMessenger,
         postDataMessenger: PostDataMessenger,

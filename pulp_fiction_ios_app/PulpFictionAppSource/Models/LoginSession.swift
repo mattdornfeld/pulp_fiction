@@ -9,12 +9,12 @@ import Foundation
 
 public struct LoginSession {
     let loggedInUserPostData: UserPostData
-    
+
     public init(loggedInUserPostData: UserPostData) {
         self.loggedInUserPostData = loggedInUserPostData
     }
-    
+
     func toProto() -> LoginResponse.LoginSession {
-        LoginResponse.LoginSession.with {_ in }
+        LoginResponse.LoginSession.with { _ in }
     }
 }

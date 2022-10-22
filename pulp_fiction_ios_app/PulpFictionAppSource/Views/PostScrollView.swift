@@ -157,35 +157,40 @@ private struct PostScrollViewBuilder<A: PostView> {
 
     @ViewBuilder internal func buildView<Content: View>(_ prependToBeginningOfScrollMaybe: Option<Content> = .none()) -> some View {
         WithViewStore(store) { viewStore in
-            ScrollView {
-                VStack(alignment: .center) {
-                    ProgressView()
-                        .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
-                        .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
+            GeometryReader { geometryProxy in
+                ScrollView {
+                    VStack(alignment: .center) {
+                        ProgressView()
+                            .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
+                            .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
 
-                    prependToBeginningOfScrollMaybe
-                        .toEither()
-                        .mapLeft { _ in EmptyView() }
-                        .toEitherView()
+                        prependToBeginningOfScrollMaybe
+                            .toEither()
+                            .mapLeft { _ in EmptyView() }
+                            .toEitherView()
 
-                    LazyVStack(alignment: .leading) {
-                        ForEach(viewStore.state.postViews) { currentPost in
-                            currentPost.onAppear {
-                                viewStore.send(.loadMorePostsIfNeeded(currentPost))
+                        LazyVStack(alignment: .leading) {
+                            ForEach(viewStore.state.postViews) { currentPost in
+                                currentPost.onAppear {
+                                    viewStore.send(.loadMorePostsIfNeeded(currentPost))
+                                }
                             }
                         }
-                    }
 
-                    Caption(
-                        text: "You have reached the end\nTry refreshing the feed to see new posts",
-                        alignment: .center
-                    )
-                    .foregroundColor(.gray)
-                    .padding()
+                        Spacer()
+
+                        Caption(
+                            text: "You have reached the end\nTry refreshing the feed to see new posts",
+                            alignment: .center
+                        )
+                        .foregroundColor(.gray)
+                        .padding()
+                    }
+                    .frame(minHeight: geometryProxy.size.height)
                 }
+                .onAppear { viewStore.send(.startScroll) }
+                .onDragUp { viewStore.send(.refreshScroll) }
             }
-            .onAppear { viewStore.send(.startScroll) }
-            .onDragUp { viewStore.send(.refreshScroll) }
         }
     }
 }
@@ -253,5 +258,25 @@ struct CommentsPageScrollView: View {
                     .foregroundColor(.gray)
             })
         )
+    }
+}
+
+struct FollowedScrollView: View {
+    private let postScrollViewBuilder: PostScrollViewBuilder<UserPostView>
+
+    init(
+        userId: UUID,
+        postFeedMessenger: PostFeedMessenger
+    ) {
+        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { (environment: PostScrollEnvironment) -> PostViewFeedIterator<UserPostView> in
+            environment
+                .postFeedMessenger
+                .getFollowedScrollFeed(userId: userId)
+                .makeIterator()
+        }
+    }
+
+    var body: some View {
+        postScrollViewBuilder.buildView()
     }
 }
