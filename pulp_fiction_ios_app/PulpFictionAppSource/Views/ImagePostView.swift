@@ -43,14 +43,12 @@ extension ImagePostView {
     init(
         postFeedMessenger: PostFeedMessenger,
         postUIImage: UIImage,
-        userAvatarUIImage: UIImage,
         creatorUserPostData: UserPostData,
         id: Int,
         imagePostData: ImagePostData
     ) {
         self.postFeedMessenger = postFeedMessenger
         self.postUIImage = postUIImage
-        self.userAvatarUIImage = userAvatarUIImage
         self.creatorUserPostData = creatorUserPostData
         self.id = id
         self.imagePostData = imagePostData
@@ -69,7 +67,6 @@ extension ImagePostView {
 struct ImagePostView: SwipablePostView, AutoSetter {
     private let postFeedMessenger: PostFeedMessenger
     private let postUIImage: UIImage
-    private let userAvatarUIImage: UIImage
     let creatorUserPostData: UserPostData
     let id: Int
     let imagePostData: ImagePostData
@@ -80,7 +77,6 @@ struct ImagePostView: SwipablePostView, AutoSetter {
 
     static func == (lhs: ImagePostView, rhs: ImagePostView) -> Bool {
         lhs.postUIImage == rhs.postUIImage
-            && lhs.userAvatarUIImage == rhs.userAvatarUIImage
             && lhs.creatorUserPostData == rhs.creatorUserPostData
             && lhs.id == rhs.id
             && lhs.imagePostData == rhs.imagePostData
@@ -102,7 +98,7 @@ struct ImagePostView: SwipablePostView, AutoSetter {
                 get: \.shouldLoadCommentScrollView,
                 send: ImagePostViewReducer.Action.unloadCommentScrollView
             ),
-            destination: CommentScrollView(
+            destination: CommentsPageScrollView(
                 imagePostView: ImagePostView
                     .setter(for: \.isForCommentsScrollView)
                     .set(self, true),
@@ -117,7 +113,7 @@ struct ImagePostView: SwipablePostView, AutoSetter {
                 HStack(alignment: .bottom) {
                     HStack {
                         CircularImage(
-                            uiImage: userAvatarUIImage,
+                            uiImage: creatorUserPostData.userAvatarUIImage,
                             radius: 15,
                             borderColor: .red,
                             borderWidth: 1
@@ -129,9 +125,7 @@ struct ImagePostView: SwipablePostView, AutoSetter {
                             send: ImagePostViewReducer.Action.unloadUserProfileView
                         ),
                         destination: UserProfileView(
-                            id: 0,
                             userPostData: creatorUserPostData,
-                            userAvatarUIImage: userAvatarUIImage,
                             postFeedMessenger: postFeedMessenger
                         )
                     ) {
@@ -183,7 +177,6 @@ struct ImagePostView: SwipablePostView, AutoSetter {
             yield: ImagePostView(
                 postFeedMessenger: postFeedMessenger,
                 postUIImage: createPostUIImageEither.get,
-                userAvatarUIImage: createUserAvatarUIImageEither.get,
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
                 imagePostData: imagePostData

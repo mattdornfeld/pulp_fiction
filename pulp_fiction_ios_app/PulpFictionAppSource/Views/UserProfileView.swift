@@ -24,16 +24,12 @@ import SwiftUI
 //    }
 // }
 
-struct UserProfileView: PostView {
-    let id: Int
+struct UserProfileView: View {
     let userPostData: UserPostData
-    let userAvatarUIImage: UIImage
     let postFeedMessenger: PostFeedMessenger
 
     static func == (lhs: UserProfileView, rhs: UserProfileView) -> Bool {
-        lhs.id == rhs.id
-            && lhs.userPostData == rhs.userPostData
-            && lhs.userAvatarUIImage == rhs.userAvatarUIImage
+        lhs.userPostData == rhs.userPostData
     }
 
     var body: some View {
@@ -44,7 +40,7 @@ struct UserProfileView: PostView {
             VStack {
                 HStack {
                     CircularImage(
-                        uiImage: userAvatarUIImage,
+                        uiImage: userPostData.userAvatarUIImage,
                         radius: 35,
                         borderColor: .gray,
                         borderWidth: 1
@@ -65,23 +61,5 @@ struct UserProfileView: PostView {
                     .padding()
             }
         }
-    }
-
-    public static func create(
-        postViewIndex: Int,
-        userPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger
-    ) -> Either<PulpFictionRequestError, UserProfileView> {
-        let createUserAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
-
-        return binding(
-            createUserAvatarUIImageEither <- userPostData.userPostContentData.toUIImage(),
-            yield: UserProfileView(
-                id: postViewIndex,
-                userPostData: userPostData,
-                userAvatarUIImage: createUserAvatarUIImageEither.get,
-                postFeedMessenger: postFeedMessenger
-            )
-        )^
     }
 }

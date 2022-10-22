@@ -12,14 +12,12 @@ import Foundation
 public struct PostFeedMessenger {
     public let pulpFictionClientProtocol: PulpFictionClientProtocol
     public let postDataMessenger: PostDataMessenger
-    public let loginSession = LoginSession.with { _ in }
-
-    public init(
-        pulpFictionClientProtocol: PulpFictionClientProtocol,
-        postDataMessenger: PostDataMessenger
-    ) {
+    public let loginSession: LoginSession
+    
+    public init(pulpFictionClientProtocol: PulpFictionClientProtocol, postDataMessenger: PostDataMessenger, loginSession: LoginSession) {
         self.pulpFictionClientProtocol = pulpFictionClientProtocol
         self.postDataMessenger = postDataMessenger
+        self.loginSession = loginSession
     }
 
     private func getImagePostFeed(getFeedRequest: GetFeedRequest) -> PostViewFeed<ImagePostView> {
@@ -58,7 +56,7 @@ public struct PostFeedMessenger {
     /// - Returns: A PostFeed iterator that returns PostView objects for a user
     func getUserProfilePostFeed(userId: UUID) -> PostViewFeed<ImagePostView> {
         let getFeedRequest = GetFeedRequest.with {
-            $0.loginSession = loginSession
+            $0.loginSession = loginSession.toProto()
             $0.getUserFeedRequest = GetFeedRequest.GetUserFeedRequest.with {
                 $0.userID = userId.uuidString
             }
@@ -71,7 +69,7 @@ public struct PostFeedMessenger {
     /// - Returns: A PostFeed iterator that returns PostView objects for the global feed
     func getGlobalPostFeed() -> PostViewFeed<ImagePostView> {
         let getFeedRequest = GetFeedRequest.with {
-            $0.loginSession = loginSession
+            $0.loginSession = loginSession.toProto()
             $0.getGlobalFeedRequest = GetFeedRequest.GetGlobalFeedRequest()
         }
 
@@ -80,7 +78,7 @@ public struct PostFeedMessenger {
 
     func getCommentFeed(postId: UUID) -> PostViewFeed<CommentView> {
         let getFeedRequest = GetFeedRequest.with {
-            $0.loginSession = loginSession
+            $0.loginSession = loginSession.toProto()
             $0.getCommentFeedRequest = GetFeedRequest.GetCommentFeedRequest.with {
                 $0.postID = postId.uuidString
             }

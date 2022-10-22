@@ -67,6 +67,10 @@ public extension Optional {
         return map { success in Either.right(success) }
             .getOrElse(Either.left(error))
     }
+    
+    func toEither() -> Either<Error, Wrapped> {
+        toEither(EmptyOptional())
+    }
 }
 
 public extension Result {
