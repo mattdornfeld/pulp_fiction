@@ -24,7 +24,7 @@ public struct UserPostData: PostData, PostDataIdentifiable, Equatable {
     }
 }
 
-fileprivate extension UserPostData {
+private extension UserPostData {
     init(
         postMetadata: PostMetadata,
         userPostProto: Post.UserPost,

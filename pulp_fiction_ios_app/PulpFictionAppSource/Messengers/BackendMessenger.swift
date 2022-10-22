@@ -12,7 +12,7 @@ import protos_pulp_fiction_grpc_swift
 public struct BackendMessenger {
     public let pulpFictionClientProtocol: PulpFictionClientProtocol
     public let loginSession: LoginSession
-    
+
     public init(pulpFictionClientProtocol: PulpFictionClientProtocol, loginSession: LoginSession) {
         self.pulpFictionClientProtocol = pulpFictionClientProtocol
         self.loginSession = loginSession

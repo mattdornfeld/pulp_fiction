@@ -31,7 +31,7 @@ extension ExternalMessengers {
                     postDataCache: createPostDataCacheIO.get,
                     imageDataSupplier: fakeImageDataSupplierIO.get.imageDataSupplier
                 )
-                
+
                 let loginSession = LoginSession(loggedInUserPostData: loggedInUserUserPostDataIO.get)
 
                 let postFeedMessenger = PostFeedMessenger(
@@ -39,7 +39,7 @@ extension ExternalMessengers {
                     postDataMessenger: postDataMessenger,
                     loginSession: loginSession
                 )
-                
+
                 let backendMessenger = BackendMessenger(
                     pulpFictionClientProtocol: pulpFictionClientProtocol,
                     loginSession: loginSession

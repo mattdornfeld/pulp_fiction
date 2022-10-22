@@ -15,10 +15,10 @@ struct Symbol: View {
 
     var body: some View {
         let image = Image(systemName: symbolName)
-        
+
         size
             .toEither()
-            .mapLeft{ _ in image }
+            .mapLeft { _ in image }
             .mapRight { image
                 .font(.system(size: $0))
             }
@@ -32,4 +32,3 @@ extension Symbol {
         self.init(symbolName: symbolName, size: nil, color: .gray)
     }
 }
-

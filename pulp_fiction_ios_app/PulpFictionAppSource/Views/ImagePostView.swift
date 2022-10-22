@@ -111,26 +111,11 @@ struct ImagePostView: SwipablePostView, AutoSetter {
         WithViewStore(store) { viewStore in
             VStack {
                 HStack(alignment: .bottom) {
-                    HStack {
-                        CircularImage(
-                            uiImage: creatorUserPostData.userAvatarUIImage,
-                            radius: 15,
-                            borderColor: .red,
-                            borderWidth: 1
-                        ).padding(.leading, 5)
-                        BoldCaption(creatorUserPostData.userDisplayName)
-                    }.navigateOnTap(
-                        isActive: viewStore.binding(
-                            get: \.shouldLoadUserProfileView,
-                            send: ImagePostViewReducer.Action.unloadUserProfileView
-                        ),
-                        destination: UserProfileView(
-                            userPostData: creatorUserPostData,
-                            postFeedMessenger: postFeedMessenger
-                        )
-                    ) {
-                        viewStore.send(.loadUserProfileView)
-                    }
+                    UserPostView(
+                        id: 0,
+                        userPostData: creatorUserPostData,
+                        postFeedMessenger: postFeedMessenger
+                    )
 
                     Spacer()
                     Symbol(symbolName: "ellipsis")
