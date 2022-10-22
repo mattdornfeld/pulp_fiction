@@ -146,7 +146,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
 
     override suspend fun getFeed(request: PulpFictionProtos.GetFeedRequest): Flow<PulpFictionProtos.GetFeedResponse> {
         val endpoint = EndpointName.getFeed
-        return effect<PulpFictionRequestError, GetUserResponse> {
+        return effect<PulpFictionRequestError, Flow<GetFeedResponse>> {
             checkLoginSessionValid(request.loginSession, endpointName).bind()
 
             val postsFeed = databaseMessenger
@@ -154,10 +154,10 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
                 .logDatabaseMetrics(endpointName, DatabaseOperation.getFeed)
                 .bind()
             getFeedResponse {
-                this.posts = postsFeed
-            }
+                this.post = postsFeed
+            }.asFlow()
+
         }
             .logEndpointMetrics(endpointName)
             .getResultAndThrowException()
-    }
-}
+    }}

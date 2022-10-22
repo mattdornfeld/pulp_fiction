@@ -343,15 +343,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         request: GetPostRequest
     ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         val postId = request.postId.toUUID().bind()
-        val postUpdate = database.from(PostUpdates)
-            .joinReferencesAndSelect()
-            .where(PostUpdates.postId eq postId)
-            .orderBy(PostUpdates.updatedAt.desc())
-            .limit(1)
-            .map { PostUpdates.createEntity(it) }
-            .firstOrOption()
-            .getOrElse { shift(PostNotFoundError()) }
-
+        val postUpdate = getPostUpdate(postId).bind()
         val userMetadata = getPublicUserMetadata(postUpdate.post.postCreatorId.toString()).bind()
 
         post {
@@ -460,17 +452,19 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .where { Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE }
             .orderBy(Posts.createdAt.desc())
 
-        val pagination = 100
-        for (index in 0..sortedPostsQuery.totalRecords step pagination) {
-            sortedPostsQuery.limit(offset=pagination * index, limit=pagination)
-        }
-                /*
-            .map { ImagePostData.createEntity(it) }
-            .toOption()
-            .getOrElse { shift(PostNotFoundError()) }
-        val interactionAggregate = posts.map { getPostInteractionAggregates(it.postId).bind() }
-        posts.zip(interactionAggregate) { postData, postInteractions -> postData.toProto(postInteractions) }
-    */
+        val pagination = 2000
+        val paginatedPosts = sortedPostsQuery.limit(offset=0, limit=pagination)
+        paginatedPosts.map {row ->
+            val postId = row[Posts.postId] ?: shift(PostNotFoundError())
+            val postUpdate = getPostUpdate(postId).bind()
+            val postCreatorId = row[Posts.postCreatorId] ?: shift(UserNotFoundError("Null"))
+            val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
+            post {
+                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.imagePost = getPostData(postId, ImagePostData).bind().toProto(postInteractionAggregates)
+
+                }
+            }
     }
 
     private fun getPostsQuery(
@@ -512,5 +506,16 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         } else {
             true
         }
+    }
+
+    private suspend fun getPostUpdate(postId: UUID): Effect<PulpFictionRequestError, PostUpdate> = effect {
+        database.from(PostUpdates)
+            .joinReferencesAndSelect()
+            .where(PostUpdates.postId eq postId)
+            .orderBy(PostUpdates.updatedAt.desc())
+            .limit(1)
+            .map { PostUpdates.createEntity(it) }
+            .firstOrOption()
+            .getOrElse { shift(PostNotFoundError()) }
     }
 }
