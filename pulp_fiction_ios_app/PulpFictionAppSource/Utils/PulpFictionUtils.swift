@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftProtobuf
+import UIKit
 
 public enum PulpFictionUtils {
     public static func getAppDirectoryFileURL(fileName: String) -> URL {

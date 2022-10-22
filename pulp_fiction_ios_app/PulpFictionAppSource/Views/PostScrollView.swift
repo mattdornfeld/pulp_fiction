@@ -190,7 +190,7 @@ private struct PostScrollViewBuilder<A: PostView> {
     }
 }
 
-struct ImagePostScrollView: View {
+struct PostFeedScrollView: View {
     private let postScrollViewBuilder: PostScrollViewBuilder<ImagePostView>
 
     init(postFeedMessenger: PostFeedMessenger) {
@@ -230,7 +230,7 @@ struct UserProfileScrollView<Content: View>: View {
     }
 }
 
-struct CommentScrollView: View {
+struct CommentsPageScrollView: View {
     private let postScrollViewBuilder: PostScrollViewBuilder<CommentView>
     private let imagePostView: ImagePostView
 

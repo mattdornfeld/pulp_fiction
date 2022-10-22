@@ -34,7 +34,6 @@ struct CommentView: SwipablePostView {
     let commentPostData: CommentPostData
     let creatorUserPostData: UserPostData
     let id: Int
-    private let userAvatarUIImage: UIImage
     internal let swipablePostStore: ComposableArchitecture.Store<PostSwipeState, PostSwipeAction>
     private let store: ComposableArchitecture.StoreOf<CommentViewReducer>
     private let postFeedMessenger: PostFeedMessenger
@@ -43,13 +42,11 @@ struct CommentView: SwipablePostView {
         commentPostData: CommentPostData,
         creatorUserPostData: UserPostData,
         id: Int,
-        userAvatarUIImage: UIImage,
         postFeedMessenger: PostFeedMessenger
     ) {
         self.commentPostData = commentPostData
         self.creatorUserPostData = creatorUserPostData
         self.id = id
-        self.userAvatarUIImage = userAvatarUIImage
         swipablePostStore = CommentView.buildStore(
             postInteractionAggregates: commentPostData.postInteractionAggregates,
             loggedInUserPostInteractions: commentPostData.loggedInUserPostInteractions
@@ -65,7 +62,6 @@ struct CommentView: SwipablePostView {
         lhs.commentPostData == rhs.commentPostData
             && lhs.creatorUserPostData == rhs.creatorUserPostData
             && lhs.id == rhs.id
-            && lhs.userAvatarUIImage == rhs.userAvatarUIImage
     }
 
     @ViewBuilder func postViewBuilder() -> some View {
@@ -79,9 +75,7 @@ struct CommentView: SwipablePostView {
                                 send: CommentViewReducer.Action.updateShouldLoadUserProfileView(false)
                             ),
                             destination: UserProfileView(
-                                id: 0,
                                 userPostData: creatorUserPostData,
-                                userAvatarUIImage: userAvatarUIImage,
                                 postFeedMessenger: postFeedMessenger
                             )
                         ) { viewStore.send(.updateShouldLoadUserProfileView(true)) }
@@ -113,7 +107,6 @@ struct CommentView: SwipablePostView {
                 commentPostData: commentPostData,
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
-                userAvatarUIImage: userAvatarUIImageEither.get,
                 postFeedMessenger: postFeedMessenger
             )
         )^.onError { cause in

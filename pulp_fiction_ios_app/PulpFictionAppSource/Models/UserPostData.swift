@@ -7,27 +7,30 @@
 
 import Bow
 import Foundation
+import UIKit
 
 /// User post data is stored in this model. Used for rendering UserPostView and avatar + display name in other post views.
-struct UserPostData: PostData, PostDataIdentifiable, Equatable {
-    let id: PostUpdateIdentifier
+public struct UserPostData: PostData, PostDataIdentifiable, Equatable {
+    public let id: PostUpdateIdentifier
     let postMetadata: PostMetadata
     let userPostContentData: ContentData
     let userDisplayName: String
     let bio: String
     let userId: UUID
+    @CodableUIImage var userAvatarUIImage: UIImage
 
     func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.userPostData(self)
     }
 }
 
-extension UserPostData {
+fileprivate extension UserPostData {
     init(
         postMetadata: PostMetadata,
         userPostProto: Post.UserPost,
         userPostContentData: ContentData,
-        userId: UUID
+        userId: UUID,
+        userAvatarUIImage: UIImage
     ) {
         self.init(
             id: postMetadata.id,
@@ -35,7 +38,8 @@ extension UserPostData {
             userPostContentData: userPostContentData,
             userDisplayName: userPostProto.userMetadata.displayName,
             bio: userPostProto.userMetadata.bio,
-            userId: userId
+            userId: userId,
+            userAvatarUIImage: userAvatarUIImage
         )
     }
 }
@@ -46,14 +50,17 @@ extension Post.UserPost {
         userPostContentData: ContentData
     ) -> Either<PulpFictionRequestError, UserPostData> {
         let userIdEither = Either<PulpFictionRequestError, UUID>.var()
+        let userAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
         return binding(
             userIdEither <- userMetadata.userID.toUUID(),
+            userAvatarUIImageEither <- userPostContentData.toUIImage(),
             yield: UserPostData(
                 postMetadata: postMetadata,
                 userPostProto: self,
                 userPostContentData: userPostContentData,
-                userId: userIdEither.get
+                userId: userIdEither.get,
+                userAvatarUIImage: userAvatarUIImageEither.get
             )
         )^
     }

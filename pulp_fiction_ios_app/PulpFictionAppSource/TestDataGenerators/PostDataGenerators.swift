@@ -35,7 +35,7 @@ extension ImagePostData {
     }
 }
 
-extension UserPostData {
+public extension UserPostData {
     class ErrorBuildingUserAvatarUIImage: PulpFictionRequestError {}
 
     static func generate() -> IO<PulpFictionRequestError, UserPostData> {

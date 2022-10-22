@@ -15,30 +15,41 @@ extension ExternalMessengers {
     static func createForTests(numPostsInFeedResponse: Int) -> Either<PulpFictionStartupError, ExternalMessengers> {
         let createPostDataCacheIO = IO<PulpFictionStartupError, PostDataCache>.var()
         let fakeImageDataSupplierIO = IO<PulpFictionStartupError, FakeImageDataSupplier>.var()
+        let loggedInUserUserPostDataIO = IO<PulpFictionStartupError, UserPostData>.var()
 
         let pulpFictionClientProtocol = PulpFictionTestClientWithFakeData(
             numPostsInFeedResponse: numPostsInFeedResponse
         )
-        let backendMessenger = BackendMessenger(pulpFictionClientProtocol: pulpFictionClientProtocol)
 
         return binding(
             createPostDataCacheIO <- PostDataCache.create(),
             fakeImageDataSupplierIO <- FakeImageDataSupplier.create(),
+            loggedInUserUserPostDataIO <- UserPostData.generate()
+                .mapError { PulpFictionStartupError($0) },
             yield: {
                 let postDataMessenger = PostDataMessenger(
                     postDataCache: createPostDataCacheIO.get,
                     imageDataSupplier: fakeImageDataSupplierIO.get.imageDataSupplier
                 )
+                
+                let loginSession = LoginSession(loggedInUserPostData: loggedInUserUserPostDataIO.get)
 
                 let postFeedMessenger = PostFeedMessenger(
                     pulpFictionClientProtocol: pulpFictionClientProtocol,
-                    postDataMessenger: postDataMessenger
+                    postDataMessenger: postDataMessenger,
+                    loginSession: loginSession
+                )
+                
+                let backendMessenger = BackendMessenger(
+                    pulpFictionClientProtocol: pulpFictionClientProtocol,
+                    loginSession: loginSession
                 )
 
                 return ExternalMessengers(
                     backendMessenger: backendMessenger,
                     postDataMessenger: postDataMessenger,
-                    postFeedMessenger: postFeedMessenger
+                    postFeedMessenger: postFeedMessenger,
+                    loginSession: loginSession
                 )
             }()
         )^.unsafeRunSyncEither()
