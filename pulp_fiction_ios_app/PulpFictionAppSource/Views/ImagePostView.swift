@@ -64,7 +64,7 @@ extension ImagePostView {
 }
 
 /// Renders an image post
-struct ImagePostView: SwipablePostView, AutoSetter {
+struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
     private let postFeedMessenger: PostFeedMessenger
     private let postUIImage: UIImage
     let creatorUserPostData: UserPostData
@@ -72,7 +72,7 @@ struct ImagePostView: SwipablePostView, AutoSetter {
     let imagePostData: ImagePostData
     private var isForCommentsScrollView: Bool = false
     private let store: ComposableArchitecture.StoreOf<ImagePostViewReducer>
-    internal let swipablePostStore: ComposableArchitecture.StoreOf<PostSwipeViewReducer>
+    internal let swipablePostStore: ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer>
     private static let logger = Logger(label: String(describing: ImagePostView.self))
 
     static func == (lhs: ImagePostView, rhs: ImagePostView) -> Bool {
