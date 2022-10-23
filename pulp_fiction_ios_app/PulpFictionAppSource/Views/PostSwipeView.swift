@@ -14,136 +14,138 @@ import SwiftUI
 
 private let logger = Logger(label: String(describing: "PostSwipeView"))
 
-private struct PostLikeArrowState: Equatable {
-    /// Whether or not the current logged in user likes the current post or not
-    var loggedInUserPostLikeStatus: Post.PostLike
-    /// Total # of likes - dislikes for the current post
-    var postNumNetLikes: Int64
-}
+struct PostLikeArrowReducer: ReducerProtocol {
+    struct State: Equatable {
+        /// Whether or not the current logged in user likes the current post or not
+        var loggedInUserPostLikeStatus: Post.PostLike
+        /// Total # of likes - dislikes for the current post
+        var postNumNetLikes: Int64
+    }
 
-struct PostSwipeState: Equatable {
-    /// The offset of the post from its initial position. Keeps track of how far the post has been dragged
-    fileprivate var dragOffset: CGSize = .zero
-    /// The visibility of the parts of the view that signify a post is being liked
-    fileprivate var likeOpacity: CGFloat = 0.0
-    /// The visibility of the part of the view that signify a post is being disliked
-    fileprivate var dislikeOpacity: CGFloat = 0.0
-    /// State of the PostLikeArrowView
-    fileprivate var postLikeArrowState: PostLikeArrowState
-}
+    indirect enum Action {
+        case updatePostLikeStatus(PostSwipeViewReducer.Action)
+        case tapPostLikeArrow
+    }
 
-indirect enum PostLikeArrowAction {
-    case updatePostLikeStatus(PostSwipeAction)
-    case tapPostLikeArrow
-}
+    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
+        switch action {
+        case .tapPostLikeArrow:
+            return .task { .updatePostLikeStatus(.like) }
 
-enum PostSwipeAction {
-    /// Called when post is being moved via a swipe
-    case translate(CGSize)
-    /// Called when post is moved back to neutral position
-    case neutral
-    /// Called when post is swiped to the like position
-    case like
-    /// Called when post is swiped to the dislike position
-    case dislike
-    /// Called when a swipe gesture is ended
-    case endSwipeGesture(CGSize)
-    /// Calls the postLikeArrowReducer
-    case updatePostLikeArrow(PostLikeArrowAction)
-}
+        case let .updatePostLikeStatus(swipablePostAction):
+            switch (state.loggedInUserPostLikeStatus, swipablePostAction) {
+            case (.neutral, .like):
+                state.loggedInUserPostLikeStatus = .like
+                state.postNumNetLikes += 1
+            case (.neutral, .dislike):
+                state.loggedInUserPostLikeStatus = .dislike
+                state.postNumNetLikes -= 1
+            case (.like, .like):
+                state.loggedInUserPostLikeStatus = .neutral
+                state.postNumNetLikes -= 1
+            case (.dislike, .dislike):
+                state.loggedInUserPostLikeStatus = .neutral
+                state.postNumNetLikes += 1
+            case (.dislike, .like):
+                state.loggedInUserPostLikeStatus = .like
+                state.postNumNetLikes += 2
+            case (.like, .dislike):
+                state.loggedInUserPostLikeStatus = .dislike
+                state.postNumNetLikes -= 2
+            default:
+                logger.error("Unrecognized action",
+                             metadata: [
+                                 "postLikeStatus": "\(state.loggedInUserPostLikeStatus)",
+                                 "swipablePostAction": "\(swipablePostAction)",
+                             ])
+            }
 
-private let postLikeArrowReducer = Reducer<PostLikeArrowState, PostLikeArrowAction, Void> {
-    state, action, _ in
-    switch action {
-    case .tapPostLikeArrow:
-        return .task { .updatePostLikeStatus(PostSwipeAction.like) }
-
-    case let .updatePostLikeStatus(swipablePostAction):
-        switch (state.loggedInUserPostLikeStatus, swipablePostAction) {
-        case (.neutral, .like):
-            state.loggedInUserPostLikeStatus = Post.PostLike.like
-            state.postNumNetLikes += 1
-        case (.neutral, .dislike):
-            state.loggedInUserPostLikeStatus = Post.PostLike.dislike
-            state.postNumNetLikes -= 1
-        case (.like, .like):
-            state.loggedInUserPostLikeStatus = Post.PostLike.neutral
-            state.postNumNetLikes -= 1
-        case (.dislike, .dislike):
-            state.loggedInUserPostLikeStatus = Post.PostLike.neutral
-            state.postNumNetLikes += 1
-        case (.dislike, .like):
-            state.loggedInUserPostLikeStatus = Post.PostLike.like
-            state.postNumNetLikes += 2
-        case (.like, .dislike):
-            state.loggedInUserPostLikeStatus = Post.PostLike.dislike
-            state.postNumNetLikes -= 2
-        default:
-            logger.error("Unrecognized action",
-                         metadata: [
-                             "postLikeStatus": "\(state.loggedInUserPostLikeStatus)",
-                             "swipablePostAction": "\(swipablePostAction)",
-                         ])
+            return .none
         }
-
-        return .none
     }
 }
 
-private let reducer = Reducer<PostSwipeState, PostSwipeAction, Void>.combine(
-    postLikeArrowReducer.pullback(
-        state: \PostSwipeState.postLikeArrowState,
-        action: /PostSwipeAction.updatePostLikeArrow,
-        environment: { _ in () }
-    ),
-    Reducer { state, action, _ in
-        switch action {
-        case let .translate(dragOffset):
-            state.dragOffset = dragOffset
+struct PostSwipeViewReducer: ReducerProtocol {
+    struct State: Equatable {
+        /// The offset of the post from its initial position. Keeps track of how far the post has been dragged
+        fileprivate var dragOffset: CGSize = .zero
+        /// The visibility of the parts of the view that signify a post is being liked
+        fileprivate var likeOpacity: CGFloat = 0.0
+        /// The visibility of the part of the view that signify a post is being disliked
+        fileprivate var dislikeOpacity: CGFloat = 0.0
+        /// State of the PostLikeArrowView
+        fileprivate var postLikeArrowState: PostLikeArrowReducer.State
+    }
 
-            if (dragOffset.width + 1e-6) < 0 {
-                return .task { .like }
-            } else if (dragOffset.width - 1e-6) > 0 {
-                return .task { .dislike }
-            } else {
-                return .task { .neutral }
-            }
+    enum Action {
+        /// Called when post is being moved via a swipe
+        case translate(CGSize)
+        /// Called when post is moved back to neutral position
+        case neutral
+        /// Called when post is swiped to the like position
+        case like
+        /// Called when post is swiped to the dislike position
+        case dislike
+        /// Called when a swipe gesture is ended
+        case endSwipeGesture(CGSize)
+        /// Calls the postLikeArrowReducer
+        case updatePostLikeArrow(PostLikeArrowReducer.Action)
+    }
 
-        case .neutral:
-            state.likeOpacity = 0.0
-            state.dislikeOpacity = 0.0
-            return .none
+    var body: some ReducerProtocol<State, Action> {
+        Scope(state: \.postLikeArrowState, action: /Action.updatePostLikeArrow) {
+            PostLikeArrowReducer()
+        }
 
-        case .like:
-            state.likeOpacity = 1.0
-            state.dislikeOpacity = 0.0
-            return .none
+        Reduce { state, action in
+            switch action {
+            case let .translate(dragOffset):
+                state.dragOffset = dragOffset
 
-        case .dislike:
-            state.likeOpacity = 0.0
-            state.dislikeOpacity = 1.0
-            return .none
+                if (dragOffset.width + 1e-6) < 0 {
+                    return .task { .like }
+                } else if (dragOffset.width - 1e-6) > 0 {
+                    return .task { .dislike }
+                } else {
+                    return .task { .neutral }
+                }
 
-        case let .endSwipeGesture(dragOffset):
-            if (dragOffset.width + 1e-6) < 0 {
-                return .task { .updatePostLikeArrow(PostLikeArrowAction.updatePostLikeStatus(.like)) }
-            } else if (dragOffset.width - 1e-6) > 0 {
-                return .task { .updatePostLikeArrow(PostLikeArrowAction.updatePostLikeStatus(.dislike)) }
-            } else {
+            case .neutral:
+                state.likeOpacity = 0.0
+                state.dislikeOpacity = 0.0
+                return .none
+
+            case .like:
+                state.likeOpacity = 1.0
+                state.dislikeOpacity = 0.0
+                return .none
+
+            case .dislike:
+                state.likeOpacity = 0.0
+                state.dislikeOpacity = 1.0
+                return .none
+
+            case let .endSwipeGesture(dragOffset):
+                if (dragOffset.width + 1e-6) < 0 {
+                    return .task { .updatePostLikeArrow(.updatePostLikeStatus(.like)) }
+                } else if (dragOffset.width - 1e-6) > 0 {
+                    return .task { .updatePostLikeArrow(.updatePostLikeStatus(.dislike)) }
+                } else {
+                    return .task { .translate(CGSize.zero) }
+                }
+
+            case .updatePostLikeArrow:
                 return .task { .translate(CGSize.zero) }
             }
-
-        case let .updatePostLikeArrow(updatePostLikeStatus):
-            return .task { .translate(CGSize.zero) }
         }
     }
-)
+}
 
 /// View that generates an arrow which shows info about likes for a post
 struct PostLikeArrowView: View {
-    private let store: Store<PostLikeArrowState, PostLikeArrowAction>
+    private let store: ComposableArchitecture.StoreOf<PostLikeArrowReducer>
 
-    fileprivate init(store: Store<PostLikeArrowState, PostLikeArrowAction>) {
+    fileprivate init(store: ComposableArchitecture.StoreOf<PostLikeArrowReducer>) {
         self.store = store
     }
 
@@ -154,7 +156,7 @@ struct PostLikeArrowView: View {
         }
     }
 
-    private func buildPostLikeArrow(_ state: PostLikeArrowState) -> some View {
+    private func buildPostLikeArrow(_ state: PostLikeArrowReducer.State) -> some View {
         switch state.loggedInUserPostLikeStatus {
         case .neutral, .UNRECOGNIZED:
             return SymbolWithCaption(
@@ -179,12 +181,12 @@ struct PostLikeArrowView: View {
 
 /// A wrapper view that introduces functionality for interacting with a post via swiping
 struct PostSwipeView<Content: View>: View {
-    private let store: Store<PostSwipeState, PostSwipeAction>
+    private let store: ComposableArchitecture.StoreOf<PostSwipeViewReducer>
     private let postView: Content
 
     fileprivate init(
         postViewBuilder: @escaping () -> Content,
-        store: Store<PostSwipeState, PostSwipeAction>
+        store: ComposableArchitecture.StoreOf<PostSwipeViewReducer>
     ) {
         self.store = store
         postView = postViewBuilder()
@@ -222,7 +224,7 @@ struct PostSwipeView<Content: View>: View {
 
 /// All posts that introduce swipe functionality implement this protocol
 protocol SwipablePostView: ScrollableContentView {
-    var swipablePostStore: Store<PostSwipeState, PostSwipeAction> { get }
+    var swipablePostStore: ComposableArchitecture.StoreOf<PostSwipeViewReducer> { get }
     associatedtype Content: View
     var body: PostSwipeView<Content> { get }
 
@@ -245,7 +247,7 @@ extension SwipablePostView {
         PostLikeArrowView(
             store: swipablePostStore.scope(
                 state: { $0.postLikeArrowState },
-                action: PostSwipeAction.updatePostLikeArrow
+                action: { PostLikeArrowReducerAction in .updatePostLikeArrow(PostLikeArrowReducerAction) }
             )
         )
     }
@@ -253,16 +255,15 @@ extension SwipablePostView {
     static func buildStore(
         postInteractionAggregates: PostInteractionAggregates,
         loggedInUserPostInteractions: LoggedInUserPostInteractions
-    ) -> Store<PostSwipeState, PostSwipeAction> {
+    ) -> ComposableArchitecture.StoreOf<PostSwipeViewReducer> {
         Store(
-            initialState: PostSwipeState(
-                postLikeArrowState: PostLikeArrowState(
+            initialState: PostSwipeViewReducer.State(
+                postLikeArrowState: PostLikeArrowReducer.State(
                     loggedInUserPostLikeStatus: loggedInUserPostInteractions.postLikeStatus,
                     postNumNetLikes: postInteractionAggregates.getNetLikes()
                 )
             ),
-            reducer: reducer,
-            environment: ()
+            reducer: PostSwipeViewReducer()
         )
     }
 }

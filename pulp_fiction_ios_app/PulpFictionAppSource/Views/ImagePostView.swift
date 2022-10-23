@@ -72,7 +72,7 @@ struct ImagePostView: SwipablePostView, AutoSetter {
     let imagePostData: ImagePostData
     private var isForCommentsScrollView: Bool = false
     private let store: ComposableArchitecture.StoreOf<ImagePostViewReducer>
-    internal let swipablePostStore: ComposableArchitecture.Store<PostSwipeState, PostSwipeAction>
+    internal let swipablePostStore: ComposableArchitecture.StoreOf<PostSwipeViewReducer>
     private static let logger = Logger(label: String(describing: ImagePostView.self))
 
     static func == (lhs: ImagePostView, rhs: ImagePostView) -> Bool {

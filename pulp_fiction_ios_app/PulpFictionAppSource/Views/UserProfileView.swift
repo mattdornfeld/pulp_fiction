@@ -24,6 +24,7 @@ import SwiftUI
 //    }
 // }
 
+/// Constructs a view for a users profile
 struct UserProfileView: View {
     let userPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
