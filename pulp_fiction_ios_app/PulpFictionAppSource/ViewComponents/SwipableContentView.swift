@@ -12,18 +12,18 @@ import Foundation
 import SwiftUI
 
 /// Reducer that manages updating a view while it's being swiped
-struct SwipabablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: ReducerProtocol where ViewComponentsReducer.State: Equatable {
+struct SwipablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: ReducerProtocol where ViewComponentsReducer.State: Equatable {
     /// Function that supplies a reducer that's used to update the components when a swipe action occurs
     let viewComponentsReducerSuplier: () -> ViewComponentsReducer
     /// Function that's called on swipe end. This is where the logic to call ViewComponentsReducer is specified.
-    let endSwipeGestureAction: (inout State, CGSize) -> EffectTask<Action>
+    let updateViewComponentsActionSupplier: (inout State, CGSize) -> ViewComponentsReducer.Action?
 
     struct State: Equatable {
         /// The offset of the post from its initial position. Keeps track of how far the post has been dragged
         var dragOffset: CGSize = .zero
-        /// The visibility of the parts of the view that signify a post is being liked
+        /// The visibility of the parts of the view that signify a post is being swiped left
         var swipeLeftOpacity: CGFloat = 0.0
-        /// The visibility of the part of the view that signify a post is being disliked
+        /// The visibility of the part of the view that signify a post is being swiped right
         var swipeRightOpacity: CGFloat = 0.0
         /// State of the external view components
         var viewComponentsState: ViewComponentsReducer.State
@@ -34,14 +34,14 @@ struct SwipabablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: Reduce
         case translate(CGSize)
         /// Called when post is moved back to neutral position
         case neutral
-        /// Called when post is swiped to the like position
+        /// Called when post is swiped to the left position
         case swipeLeft
-        /// Called when post is swiped to the dislike position
+        /// Called when post is swiped to the right position
         case swipeRight
         /// Called when a swipe gesture is ended
         case endSwipeGesture(CGSize)
         /// Called to update the view components
-        case updateViewComponents(ViewComponentsReducer.Action)
+        case updateViewComponents(ViewComponentsReducer.Action?)
     }
 
     var body: some ReducerProtocol<State, Action> {
@@ -81,7 +81,8 @@ struct SwipabablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: Reduce
                 return .none
 
             case let .endSwipeGesture(dragOffset):
-                return endSwipeGestureAction(&state, dragOffset)
+                let action = updateViewComponentsActionSupplier(&state, dragOffset)
+                return .task { .updateViewComponents(action) }
 
             case .updateViewComponents:
                 return .task { .translate(CGSize.zero) }
@@ -98,18 +99,18 @@ struct SwipableContentView<Content: View, SwipableSwipeViewReducer: ReducerProto
     let swipeLeftSymbolName: String
     /// Symbol that appears on the left side of postView when a right swipe occurs
     let swipeRightSymbolName: String
-    private let store: ComposableArchitecture.StoreOf<SwipabablePostViewReducer<SwipableSwipeViewReducer>>
+    private let store: ComposableArchitecture.StoreOf<SwipablePostViewReducer<SwipableSwipeViewReducer>>
 
     init(
-        postViewBuilder: @escaping () -> Content,
-        store: ComposableArchitecture.StoreOf<SwipabablePostViewReducer<SwipableSwipeViewReducer>>,
+        store: ComposableArchitecture.StoreOf<SwipablePostViewReducer<SwipableSwipeViewReducer>>,
         swipeLeftSymbolName: String,
-        swipeRightSymbolName: String
+        swipeRightSymbolName: String,
+        postViewBuilder: @escaping () -> Content
     ) {
-        self.store = store
         postView = postViewBuilder()
         self.swipeLeftSymbolName = swipeLeftSymbolName
         self.swipeRightSymbolName = swipeRightSymbolName
+        self.store = store
     }
 
     var body: some View {

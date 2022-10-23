@@ -14,7 +14,7 @@ import SwiftUI
 
 private let logger = Logger(label: String(describing: "PostSwipeView"))
 
-typealias PostLikeOnSwipeReducer = SwipabablePostViewReducer<PostLikeArrowReducer>
+typealias PostLikeOnSwipeReducer = SwipablePostViewReducer<PostLikeArrowReducer>
 
 /// Reducer for updating the post like arrow
 struct PostLikeArrowReducer: ReducerProtocol {
@@ -122,10 +122,10 @@ protocol PostLikeOnSwipeView: ScrollableContentView {
 extension PostLikeOnSwipeView {
     public var body: SwipableContentView<Content, PostLikeArrowReducer> {
         SwipableContentView(
-            postViewBuilder: postViewBuilder,
             store: swipablePostStore,
             swipeLeftSymbolName: "arrow.up",
-            swipeRightSymbolName: "arrow.down"
+            swipeRightSymbolName: "arrow.down",
+            postViewBuilder: postViewBuilder
         )
     }
 
@@ -149,15 +149,15 @@ extension PostLikeOnSwipeView {
                     postNumNetLikes: postInteractionAggregates.getNetLikes()
                 )
             ),
-            reducer: SwipabablePostViewReducer(
+            reducer: PostLikeOnSwipeReducer(
                 viewComponentsReducerSuplier: { PostLikeArrowReducer() },
-                endSwipeGestureAction: { _, dragOffset in
+                updateViewComponentsActionSupplier: { _, dragOffset in
                     if (dragOffset.width + 1e-6) < 0 {
-                        return .task { .updateViewComponents(.updatePostLikeStatus(.swipeLeft)) }
+                        return .updatePostLikeStatus(.swipeLeft)
                     } else if (dragOffset.width - 1e-6) > 0 {
-                        return .task { .updateViewComponents(.updatePostLikeStatus(.swipeRight)) }
+                        return .updatePostLikeStatus(.swipeRight)
                     } else {
-                        return .task { .translate(CGSize.zero) }
+                        return nil
                     }
                 }
             )
