@@ -112,11 +112,9 @@ struct ImagePostView: SwipablePostView, AutoSetter {
             VStack {
                 HStack(alignment: .bottom) {
                     UserPostView(
-                        id: 0,
                         userPostData: creatorUserPostData,
                         postFeedMessenger: postFeedMessenger
                     )
-
                     Spacer()
                     Symbol(symbolName: "ellipsis")
                         .padding(.trailing, 10)

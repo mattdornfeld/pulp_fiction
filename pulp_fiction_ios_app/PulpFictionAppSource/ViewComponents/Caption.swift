@@ -34,7 +34,7 @@ struct Caption: TextView {
 }
 
 extension Caption {
-    public init(text: String, alignment: TextAlignment) {
+    init(text: String, alignment: TextAlignment) {
         self.text = Text(text).font(.caption)
         self.alignment = alignment
     }

@@ -221,7 +221,7 @@ struct PostSwipeView<Content: View>: View {
 }
 
 /// All posts that introduce swipe functionality implement this protocol
-protocol SwipablePostView: PostView {
+protocol SwipablePostView: ScrollableContentView {
     var swipablePostStore: Store<PostSwipeState, PostSwipeAction> { get }
     associatedtype Content: View
     var body: PostSwipeView<Content> { get }

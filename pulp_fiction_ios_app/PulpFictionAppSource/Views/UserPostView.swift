@@ -27,8 +27,7 @@ struct UserPostViewReducer: ReducerProtocol {
     }
 }
 
-struct UserPostView: PostView {
-    let id: Int
+struct UserPostView: View {
     let userPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     private let store: ComposableArchitecture.StoreOf<UserPostViewReducer> = Store(
@@ -37,8 +36,7 @@ struct UserPostView: PostView {
     )
 
     static func == (lhs: UserPostView, rhs: UserPostView) -> Bool {
-        lhs.id == rhs.id
-            && lhs.userPostData == rhs.userPostData
+        lhs.userPostData == rhs.userPostData
     }
 
     var body: some View {

@@ -9,145 +9,131 @@ import SwiftUI
 
 private let logger: Logger = .init(label: String(describing: "PostScrollView"))
 
-private struct PostScrollState<A: PostView>: Equatable {
-    /// The iterator used to retrieve posts from the backend API and data store
-    var postViewFeedIteratorMaybe: PostViewFeedIterator<A>? = nil
-    /// The PostView objects currently available in the scroll
-    var postViews: [A] = []
-    var feedLoadProgressIndicatorOpacity: Double = 0.0
+/// A protocol from which which all Views that can be embedded in a scroll should inherit
+public protocol ScrollableContentView: View, Identifiable, Equatable {
+    var id: Int { get }
+}
 
-    func shouldLoadMorePosts(_ postViewFeedIterator: PostViewFeedIterator<A>, _ currentPostViewIndex: Int) -> Bool {
-        let thresholdIndex = postViews.index(postViews.endIndex, offsetBy: -PostFeedConfigs.numPostViewsLoadedInAdvance)
-        return !postViewFeedIterator.isDone
-            && (postViews.count == 0
-                || postViews.firstIndex(where: { $0.id == currentPostViewIndex }) == thresholdIndex
-            )
-    }
+struct PostScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
+    let postViewFeedIteratorSupplier: () -> PostViewFeedIterator<A>
 
-    mutating func loadMorePostsIfNeeded(_ postViewFeedIterator: PostViewFeedIterator<A>, _ currentPostViewIndex: Int) {
-        if shouldLoadMorePosts(postViewFeedIterator, currentPostViewIndex) {
-            logger.debug(
-                "Loading more posts from iterator",
-                metadata: [
-                    "currentPostViewIndex": "\(currentPostViewIndex)",
-                    "numPostsInScroll": "\(postViews.count)",
-                ]
-            )
+    struct State: Equatable {
+        /// The iterator used to retrieve posts from the backend API and data store
+        var postViewFeedIteratorMaybe: PostViewFeedIterator<A>? = nil
+        /// The PostView objects currently available in the scroll
+        var postViews: [A] = []
+        var feedLoadProgressIndicatorOpacity: Double = 0.0
 
-            (1 ... PostFeedConfigs.numPostViewsLoadedInAdvance).forEach { _ in
-                postViewFeedIterator.next().map { postView in
-                    self.postViews.append(postView)
+        func shouldLoadMorePosts(_ postViewFeedIterator: PostViewFeedIterator<A>, _ currentPostViewIndex: Int) -> Bool {
+            let thresholdIndex = postViews.index(postViews.endIndex, offsetBy: -PostFeedConfigs.numPostViewsLoadedInAdvance)
+            return !postViewFeedIterator.isDone
+                && (postViews.count == 0
+                    || postViews.firstIndex(where: { $0.id == currentPostViewIndex }) == thresholdIndex
+                )
+        }
+
+        mutating func loadMorePostsIfNeeded(_ postViewFeedIterator: PostViewFeedIterator<A>, _ currentPostViewIndex: Int) {
+            if shouldLoadMorePosts(postViewFeedIterator, currentPostViewIndex) {
+                logger.debug(
+                    "Loading more posts from iterator",
+                    metadata: [
+                        "currentPostViewIndex": "\(currentPostViewIndex)",
+                        "numPostsInScroll": "\(postViews.count)",
+                    ]
+                )
+
+                (1 ... PostFeedConfigs.numPostViewsLoadedInAdvance).forEach { _ in
+                    postViewFeedIterator.next().map { postView in
+                        self.postViews.append(postView)
+                    }
                 }
+
+                logger.debug(
+                    "Posts added to scroll",
+                    metadata: [
+                        "currentPostViewIndex": "\(currentPostViewIndex)",
+                        "numPostsInScroll": "\(postViews.count)",
+                    ]
+                )
+
+            } else {
+                logger.debug(
+                    "Loading more posts from iterator is not needed. Continuing",
+                    metadata: [
+                        "currentPostViewIndex": "\(currentPostViewIndex)",
+                        "numPostsInScroll": "\(postViews.count)",
+                    ]
+                )
             }
-
-            logger.debug(
-                "Posts added to scroll",
-                metadata: [
-                    "currentPostViewIndex": "\(currentPostViewIndex)",
-                    "numPostsInScroll": "\(postViews.count)",
-                ]
-            )
-
-        } else {
-            logger.debug(
-                "Loading more posts from iterator is not needed. Continuing",
-                metadata: [
-                    "currentPostViewIndex": "\(currentPostViewIndex)",
-                    "numPostsInScroll": "\(postViews.count)",
-                ]
-            )
         }
     }
-}
 
-private struct PostScrollEnvironment {
-    let mainQueue: AnySchedulerOf<DispatchQueue>
-    let postFeedMessenger: PostFeedMessenger
-}
+    enum Action {
+        /// This action is called on view load. It starts the PostViewFeedIterator and begins loading posts into the view.
+        case startScroll
+        case refreshScroll
+        /// Loads more posts if necessary. Triggered on scroll.
+        case loadMorePostsIfNeeded(any ScrollableContentView)
+    }
 
-private enum PostScrollAction {
-    /// This action is called on view load. It starts the PostViewFeedIterator and begins loading posts into the view.
-    case startScroll
-    case refreshScroll
-    /// Loads more posts if necessary. Triggered on scroll.
-    case loadMorePostsIfNeeded(any PostView)
-    /// Handles errors with loadMorePostsIfNeeded.
-    case loadMorePostsIfNeededHandleErrors(Result<Void, PulpFictionRequestError>)
-}
+    enum PostScrollErrors {
+        class PostViewFeedIteratorNotStarted: PulpFictionRequestError {}
+    }
 
-private enum PostScrollErrors {
-    class PostViewFeedIteratorNotStarted: PulpFictionRequestError {}
-}
+    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
+        switch action {
+        case .startScroll:
+            state.postViews = []
+            state.postViewFeedIteratorMaybe = {
+                let postViewFeedIterator = postViewFeedIteratorSupplier()
 
-private struct PostScrollReducer<A: PostView> {
-    let postViewFeedIteratorSupplier: (PostScrollEnvironment) -> PostViewFeedIterator<A>
+                logger.debug("Started post feed iterator")
 
-    func buildReducer() -> Reducer<PostScrollState<A>, PostScrollAction, PostScrollEnvironment> {
-        Reducer<PostScrollState<A>, PostScrollAction, PostScrollEnvironment> {
-            state, action, environment in
-            switch action {
-            case .startScroll:
-                state.postViews = []
-                state.postViewFeedIteratorMaybe = {
-                    let postViewFeedIterator = postViewFeedIteratorSupplier(environment)
+                state.loadMorePostsIfNeeded(postViewFeedIterator, 0)
 
-                    logger.debug("Started post feed iterator")
+                return postViewFeedIterator
+            }()
+            state.feedLoadProgressIndicatorOpacity = 0.0
+            return .none
 
-                    state.loadMorePostsIfNeeded(postViewFeedIterator, 0)
+        case .refreshScroll:
+            state.feedLoadProgressIndicatorOpacity = 1.0
+            return .task {
+                .startScroll
+            }
 
-                    return postViewFeedIterator
-                }()
-                state.feedLoadProgressIndicatorOpacity = 0.0
-                return .none
-
-            case .refreshScroll:
-                state.feedLoadProgressIndicatorOpacity = 1.0
-                return .task {
-                    .startScroll
-                }
-
-            case let .loadMorePostsIfNeeded(currentPostView):
-                return state.postViewFeedIteratorMaybe.map { postViewFeedIterator in
-                    state.loadMorePostsIfNeeded(postViewFeedIterator, currentPostView.id)
-                }
-                .toEither(PostScrollErrors.PostViewFeedIteratorNotStarted())
-                .toEffect()
-                .receive(on: environment.mainQueue)
-                .catchToEffect(PostScrollAction.loadMorePostsIfNeededHandleErrors)
-
-            case .loadMorePostsIfNeededHandleErrors(.success):
-                return .none
-
-            case let .loadMorePostsIfNeededHandleErrors(.failure(cause)):
+        case let .loadMorePostsIfNeeded(currentPostView):
+            state.postViewFeedIteratorMaybe.map { postViewFeedIterator in
+                state.loadMorePostsIfNeeded(postViewFeedIterator, currentPostView.id)
+            }
+            .toEither(PostScrollErrors.PostViewFeedIteratorNotStarted())
+            .mapLeft { cause in
                 logger.error(
                     "Error loading posts",
                     metadata: [
                         "cause": "\(cause)",
                     ]
                 )
-                return .none
             }
+
+            return .none
         }
     }
 }
 
-private struct PostScrollViewBuilder<A: PostView> {
-    private let store: Store<PostScrollState<A>, PostScrollAction>
+private struct PostScrollViewBuilder<A: ScrollableContentView> {
+    private let store: ComposableArchitecture.StoreOf<PostScrollViewReducer<A>>
     private let progressIndicatorScaleFactor: CGFloat = 2.0
     private let refreshFeedOnScrollUpSensitivity: CGFloat = 10.0
     @GestureState private var dragOffset: CGFloat = -100
 
     init(
-        postFeedMessenger: PostFeedMessenger,
-        postViewFeedIteratorSupplier: @escaping (PostScrollEnvironment) -> PostViewFeedIterator<A>
+        postFeedMessenger _: PostFeedMessenger,
+        postViewFeedIteratorSupplier: @escaping () -> PostViewFeedIterator<A>
     ) {
         store = Store(
-            initialState: PostScrollState<A>(),
-            reducer: PostScrollReducer(postViewFeedIteratorSupplier: postViewFeedIteratorSupplier).buildReducer(),
-            environment: PostScrollEnvironment(
-                mainQueue: .main,
-                postFeedMessenger: postFeedMessenger
-            )
+            initialState: PostScrollViewReducer<A>.State(),
+            reducer: PostScrollViewReducer<A>(postViewFeedIteratorSupplier: postViewFeedIteratorSupplier)
         )
     }
 
@@ -199,9 +185,8 @@ struct PostFeedScrollView: View {
     private let postScrollViewBuilder: PostScrollViewBuilder<ImagePostView>
 
     init(postFeedMessenger: PostFeedMessenger) {
-        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { (environment: PostScrollEnvironment) -> PostViewFeedIterator<ImagePostView> in
-            environment
-                .postFeedMessenger
+        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
+            postFeedMessenger
                 .getGlobalPostFeed()
                 .makeIterator()
         }
@@ -221,9 +206,8 @@ struct UserProfileScrollView<Content: View>: View {
         postFeedMessenger: PostFeedMessenger,
         userProfileViewBuilder: @escaping () -> Content
     ) {
-        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { (environment: PostScrollEnvironment) -> PostViewFeedIterator<ImagePostView> in
-            environment
-                .postFeedMessenger
+        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
+            postFeedMessenger
                 .getUserProfilePostFeed(userId: userId)
                 .makeIterator()
         }
@@ -240,9 +224,8 @@ struct CommentsPageScrollView: View {
     private let imagePostView: ImagePostView
 
     init(imagePostView: ImagePostView, postFeedMessenger: PostFeedMessenger) {
-        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { (environment: PostScrollEnvironment) -> PostViewFeedIterator<CommentView> in
-            environment
-                .postFeedMessenger
+        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<CommentView> in
+            postFeedMessenger
                 .getCommentFeed(postId: imagePostView.imagePostData.postMetadata.postUpdateIdentifier.postId)
                 .makeIterator()
         }
@@ -262,15 +245,14 @@ struct CommentsPageScrollView: View {
 }
 
 struct FollowedScrollView: View {
-    private let postScrollViewBuilder: PostScrollViewBuilder<UserPostView>
+    private let postScrollViewBuilder: PostScrollViewBuilder<UserConnectionView>
 
     init(
         userId: UUID,
         postFeedMessenger: PostFeedMessenger
     ) {
-        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { (environment: PostScrollEnvironment) -> PostViewFeedIterator<UserPostView> in
-            environment
-                .postFeedMessenger
+        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<UserConnectionView> in
+            postFeedMessenger
                 .getFollowedScrollFeed(userId: userId)
                 .makeIterator()
         }
