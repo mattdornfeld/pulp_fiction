@@ -34,7 +34,7 @@ struct CommentView: SwipablePostView {
     let commentPostData: CommentPostData
     let creatorUserPostData: UserPostData
     let id: Int
-    internal let swipablePostStore: ComposableArchitecture.Store<PostSwipeState, PostSwipeAction>
+    internal let swipablePostStore: ComposableArchitecture.StoreOf<PostSwipeViewReducer>
     private let store: ComposableArchitecture.StoreOf<CommentViewReducer>
     private let postFeedMessenger: PostFeedMessenger
 

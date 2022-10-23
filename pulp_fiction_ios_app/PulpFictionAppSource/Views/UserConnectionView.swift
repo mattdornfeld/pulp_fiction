@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 
+/// Constructs a view that shows a users connection with another user (e.g. a follower or a followee)
 struct UserConnectionView: ScrollableContentView {
     let id: Int
     let userPostData: UserPostData
