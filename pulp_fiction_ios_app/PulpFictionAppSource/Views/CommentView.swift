@@ -29,12 +29,12 @@ private struct CommentViewReducer: ReducerProtocol {
     }
 }
 
-struct CommentView: SwipablePostView {
+struct CommentView: PostLikeOnSwipeView {
     private static let logger = Logger(label: String(describing: CommentView.self))
     let commentPostData: CommentPostData
     let creatorUserPostData: UserPostData
     let id: Int
-    internal let swipablePostStore: ComposableArchitecture.StoreOf<PostSwipeViewReducer>
+    internal let swipablePostStore: ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer>
     private let store: ComposableArchitecture.StoreOf<CommentViewReducer>
     private let postFeedMessenger: PostFeedMessenger
 
