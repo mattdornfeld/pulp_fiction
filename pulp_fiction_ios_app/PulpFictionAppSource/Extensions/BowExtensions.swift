@@ -156,6 +156,13 @@ public extension Either {
     func toIO() -> IO<A, B> where A: Error {
         IO.invoke { try self.getOrThrow() }
     }
+
+    func toResult() -> Swift.Result<B, A> where A: Error {
+        return fold(
+            { error in Swift.Result.failure(error) },
+            { value in Swift.Result.success(value) }
+        )
+    }
 }
 
 public extension Option {
