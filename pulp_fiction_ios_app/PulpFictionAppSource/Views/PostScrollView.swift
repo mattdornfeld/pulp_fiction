@@ -193,29 +193,35 @@ struct PostFeedScrollView: View {
     }
 
     var body: some View {
-        postScrollViewBuilder.buildView()
+        TopNavigationBarView(topNavigationBarViewBuilder: { PostFeedTopNavigationBar() }) {
+            postScrollViewBuilder.buildView()
+        }
     }
 }
 
 struct UserProfileScrollView<Content: View>: View {
     private let postScrollViewBuilder: PostScrollViewBuilder<ImagePostView>
     @ViewBuilder private let userProfileViewBuilder: () -> Content
+    private let userPostData: UserPostData
 
     init(
-        userId: UUID,
+        userPostData: UserPostData,
         postFeedMessenger: PostFeedMessenger,
         userProfileViewBuilder: @escaping () -> Content
     ) {
         postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
             postFeedMessenger
-                .getUserProfilePostFeed(userId: userId)
+                .getUserProfilePostFeed(userId: userPostData.userId)
                 .makeIterator()
         }
         self.userProfileViewBuilder = userProfileViewBuilder
+        self.userPostData = userPostData
     }
 
     var body: some View {
-        postScrollViewBuilder.buildView(.some(userProfileViewBuilder()))
+        TopNavigationBarView(topNavigationBarViewBuilder: { UserProfileTopNavigationBar(userPostData: userPostData) }) {
+            postScrollViewBuilder.buildView(.some(userProfileViewBuilder()))
+        }
     }
 }
 
@@ -244,7 +250,7 @@ struct CommentsPageScrollView: View {
     }
 }
 
-struct FollowedScrollView: View {
+struct UserConnectionsScrollView: View {
     private let postScrollViewBuilder: PostScrollViewBuilder<UserConnectionView>
 
     init(
@@ -259,6 +265,8 @@ struct FollowedScrollView: View {
     }
 
     var body: some View {
-        postScrollViewBuilder.buildView()
+        TopNavigationBarView(topNavigationBarViewBuilder: { UserConnectionsTopNavigationBar() }) {
+            postScrollViewBuilder.buildView()
+        }
     }
 }

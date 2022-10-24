@@ -59,3 +59,19 @@ extension BoldCaption {
         self.init(text: text, alignment: .leading)
     }
 }
+
+struct Title: TextView {
+    let text: Text
+    let alignment: TextAlignment
+}
+
+extension Title {
+    init(text: String, alignment: TextAlignment) {
+        self.text = Text(text).font(.title).font(.caption)
+        self.alignment = alignment
+    }
+
+    init(_ text: String) {
+        self.init(text: text, alignment: .leading)
+    }
+}
