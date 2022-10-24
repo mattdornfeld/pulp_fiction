@@ -35,7 +35,7 @@ struct UserProfileView: View {
 
     var body: some View {
         UserProfileScrollView(
-            userId: userPostData.userId,
+            userPostData: userPostData,
             postFeedMessenger: postFeedMessenger
         ) {
             VStack {

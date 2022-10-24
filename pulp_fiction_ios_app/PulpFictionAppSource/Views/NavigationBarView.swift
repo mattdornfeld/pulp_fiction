@@ -72,39 +72,7 @@ struct NavigationBarView: View {
     var body: some View {
         WithViewStore(store) { viewStore in
             NavigationView { buildMainView(viewStore.state.currentMainView) }
-
-            HStack(alignment: .center) {
-                Symbol(
-                    symbolName: "house",
-                    size: 28,
-                    color: viewStore.state.navigationBarSymbolColor.postFeedScrollView
-                )
-                .padding(.horizontal)
-                .padding(.bottom, 5)
-                .onTapGesture {
-                    viewStore.send(.updateCurrentNavigationView(.postFeedScrollView))
-                }
-                Symbol(
-                    symbolName: "person.circle",
-                    size: 28,
-                    color: viewStore.state.navigationBarSymbolColor.loggedInUserProfileView
-                )
-                .padding(.horizontal)
-                .padding(.bottom, 5)
-                .onTapGesture {
-                    viewStore.send(.updateCurrentNavigationView(.loggedInUserProfileView))
-                }
-                Symbol(
-                    symbolName: "person.2",
-                    size: 28,
-                    color: viewStore.state.navigationBarSymbolColor.loggedInUserFollowedScrollView
-                )
-                .padding(.horizontal)
-                .padding(.bottom, 5)
-                .onTapGesture {
-                    viewStore.send(.updateCurrentNavigationView(.loggedInUserFollowedScrollView))
-                }
-            }
+            buildBottomNavigationBar(viewStore)
         }
     }
 
@@ -120,10 +88,45 @@ struct NavigationBarView: View {
                 postFeedMessenger: postFeedMessenger
             )
         case .loggedInUserFollowedScrollView:
-            FollowedScrollView(
+            UserConnectionsScrollView(
                 userId: loggedInUserPostData.userId,
                 postFeedMessenger: postFeedMessenger
             )
+        }
+    }
+
+    @ViewBuilder private func buildBottomNavigationBar(_ viewStore: ViewStore<NavigationBarViewReducer.State, NavigationBarViewReducer.Action>) -> some View {
+        HStack(alignment: .center) {
+            Symbol(
+                symbolName: "house",
+                size: 28,
+                color: viewStore.state.navigationBarSymbolColor.postFeedScrollView
+            )
+            .padding(.horizontal)
+            .padding(.bottom, 5)
+            .onTapGesture {
+                viewStore.send(.updateCurrentNavigationView(.postFeedScrollView))
+            }
+            Symbol(
+                symbolName: "person.circle",
+                size: 28,
+                color: viewStore.state.navigationBarSymbolColor.loggedInUserProfileView
+            )
+            .padding(.horizontal)
+            .padding(.bottom, 5)
+            .onTapGesture {
+                viewStore.send(.updateCurrentNavigationView(.loggedInUserProfileView))
+            }
+            Symbol(
+                symbolName: "person.2",
+                size: 28,
+                color: viewStore.state.navigationBarSymbolColor.loggedInUserFollowedScrollView
+            )
+            .padding(.horizontal)
+            .padding(.bottom, 5)
+            .onTapGesture {
+                viewStore.send(.updateCurrentNavigationView(.loggedInUserFollowedScrollView))
+            }
         }
     }
 }
