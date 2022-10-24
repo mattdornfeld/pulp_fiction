@@ -9,13 +9,16 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
-struct NavigationBarViewReducer: ReducerProtocol {
+/// Reducer for navigating for the app's main pages
+struct BottomNavigationBarViewReducer: ReducerProtocol {
+    /// Signifies which app page is loaded into the main view
     enum MainView {
         case postFeedScrollView
         case loggedInUserProfileView
         case loggedInUserFollowedScrollView
     }
 
+    /// The colors of the navigation bar symbols. Blue corresponds to the currently selected view.
     struct NavigationBarSymbolColor: Equatable {
         var postFeedScrollView: Color = .blue
         var loggedInUserProfileView: Color = .gray
@@ -23,11 +26,14 @@ struct NavigationBarViewReducer: ReducerProtocol {
     }
 
     struct State: Equatable {
+        /// The page loaded into the main view
         var currentMainView: MainView = .postFeedScrollView
+        /// The colors of the navigation bar symbols
         var navigationBarSymbolColor: NavigationBarSymbolColor = .init()
     }
 
     enum Action {
+        /// Update State.currentMainView
         case updateCurrentNavigationView(MainView)
     }
 
@@ -61,12 +67,13 @@ struct NavigationBarViewReducer: ReducerProtocol {
     }
 }
 
-struct NavigationBarView: View {
+/// View for a navigation bar at the bottom of the app. Used to navigate between the app's main pages.
+struct BottomNavigationBarView: View {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
-    private let store: ComposableArchitecture.StoreOf<NavigationBarViewReducer> = Store(
-        initialState: NavigationBarViewReducer.State(),
-        reducer: NavigationBarViewReducer()
+    private let store: ComposableArchitecture.StoreOf<BottomNavigationBarViewReducer> = Store(
+        initialState: BottomNavigationBarViewReducer.State(),
+        reducer: BottomNavigationBarViewReducer()
     )
 
     var body: some View {
@@ -76,7 +83,7 @@ struct NavigationBarView: View {
         }
     }
 
-    @ViewBuilder private func buildMainView(_ currentMainView: NavigationBarViewReducer.MainView) -> some View {
+    @ViewBuilder private func buildMainView(_ currentMainView: BottomNavigationBarViewReducer.MainView) -> some View {
         switch currentMainView {
         case .postFeedScrollView:
             PostFeedScrollView(
@@ -95,7 +102,7 @@ struct NavigationBarView: View {
         }
     }
 
-    @ViewBuilder private func buildBottomNavigationBar(_ viewStore: ViewStore<NavigationBarViewReducer.State, NavigationBarViewReducer.Action>) -> some View {
+    @ViewBuilder private func buildBottomNavigationBar(_ viewStore: ViewStore<BottomNavigationBarViewReducer.State, BottomNavigationBarViewReducer.Action>) -> some View {
         HStack(alignment: .center) {
             Symbol(
                 symbolName: "house",

@@ -1,5 +1,8 @@
 //
-// Created by Matthew Dornfeld on 4/3/22.
+//  ScrollableContentView.swift
+//  build_app_source
+//
+//  Created by Matthew Dornfeld on 10/23/22.
 //
 
 import Bow
@@ -7,14 +10,15 @@ import ComposableArchitecture
 import Logging
 import SwiftUI
 
-private let logger: Logger = .init(label: String(describing: "PostScrollView"))
+private let logger: Logger = .init(label: String(describing: "ScrollableContentView"))
 
 /// A protocol from which which all Views that can be embedded in a scroll should inherit
 public protocol ScrollableContentView: View, Identifiable, Equatable {
     var id: Int { get }
 }
 
-struct PostScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
+/// Reducer that manages scrolling through an infinite list of content
+struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
     let postViewFeedIteratorSupplier: () -> PostViewFeedIterator<A>
 
     struct State: Equatable {
@@ -22,6 +26,7 @@ struct PostScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
         var postViewFeedIteratorMaybe: PostViewFeedIterator<A>? = nil
         /// The PostView objects currently available in the scroll
         var postViews: [A] = []
+        /// Indicator that shows new content is being loaded into the feed
         var feedLoadProgressIndicatorOpacity: Double = 0.0
 
         func shouldLoadMorePosts(_ postViewFeedIterator: PostViewFeedIterator<A>, _ currentPostViewIndex: Int) -> Bool {
@@ -71,6 +76,7 @@ struct PostScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
     enum Action {
         /// This action is called on view load. It starts the PostViewFeedIterator and begins loading posts into the view.
         case startScroll
+        /// Refreshes the feed scroll with new content
         case refreshScroll
         /// Loads more posts if necessary. Triggered on scroll.
         case loadMorePostsIfNeeded(any ScrollableContentView)
@@ -121,8 +127,9 @@ struct PostScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
     }
 }
 
-private struct PostScrollViewBuilder<A: ScrollableContentView> {
-    private let store: ComposableArchitecture.StoreOf<PostScrollViewReducer<A>>
+/// Build a view that shows a feed of scrollable content
+struct ScrollableContentViewBuilder<A: ScrollableContentView> {
+    private let store: ComposableArchitecture.StoreOf<ContentScrollViewReducer<A>>
     private let progressIndicatorScaleFactor: CGFloat = 2.0
     private let refreshFeedOnScrollUpSensitivity: CGFloat = 10.0
     @GestureState private var dragOffset: CGFloat = -100
@@ -132,8 +139,8 @@ private struct PostScrollViewBuilder<A: ScrollableContentView> {
         postViewFeedIteratorSupplier: @escaping () -> PostViewFeedIterator<A>
     ) {
         store = Store(
-            initialState: PostScrollViewReducer<A>.State(),
-            reducer: PostScrollViewReducer<A>(postViewFeedIteratorSupplier: postViewFeedIteratorSupplier)
+            initialState: ContentScrollViewReducer<A>.State(),
+            reducer: ContentScrollViewReducer<A>(postViewFeedIteratorSupplier: postViewFeedIteratorSupplier)
         )
     }
 
@@ -177,96 +184,6 @@ private struct PostScrollViewBuilder<A: ScrollableContentView> {
                 .onAppear { viewStore.send(.startScroll) }
                 .onDragUp { viewStore.send(.refreshScroll) }
             }
-        }
-    }
-}
-
-struct PostFeedScrollView: View {
-    private let postScrollViewBuilder: PostScrollViewBuilder<ImagePostView>
-
-    init(postFeedMessenger: PostFeedMessenger) {
-        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
-            postFeedMessenger
-                .getGlobalPostFeed()
-                .makeIterator()
-        }
-    }
-
-    var body: some View {
-        TopNavigationBarView(topNavigationBarViewBuilder: { PostFeedTopNavigationBar() }) {
-            postScrollViewBuilder.buildView()
-        }
-    }
-}
-
-struct UserProfileScrollView<Content: View>: View {
-    private let postScrollViewBuilder: PostScrollViewBuilder<ImagePostView>
-    @ViewBuilder private let userProfileViewBuilder: () -> Content
-    private let userPostData: UserPostData
-
-    init(
-        userPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger,
-        userProfileViewBuilder: @escaping () -> Content
-    ) {
-        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
-            postFeedMessenger
-                .getUserProfilePostFeed(userId: userPostData.userId)
-                .makeIterator()
-        }
-        self.userProfileViewBuilder = userProfileViewBuilder
-        self.userPostData = userPostData
-    }
-
-    var body: some View {
-        TopNavigationBarView(topNavigationBarViewBuilder: { UserProfileTopNavigationBar(userPostData: userPostData) }) {
-            postScrollViewBuilder.buildView(.some(userProfileViewBuilder()))
-        }
-    }
-}
-
-struct CommentsPageScrollView: View {
-    private let postScrollViewBuilder: PostScrollViewBuilder<CommentView>
-    private let imagePostView: ImagePostView
-
-    init(imagePostView: ImagePostView, postFeedMessenger: PostFeedMessenger) {
-        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<CommentView> in
-            postFeedMessenger
-                .getCommentFeed(postId: imagePostView.imagePostData.postMetadata.postUpdateIdentifier.postId)
-                .makeIterator()
-        }
-        self.imagePostView = imagePostView
-    }
-
-    var body: some View {
-        postScrollViewBuilder.buildView(.some(
-            VStack {
-                imagePostView
-                Divider()
-                Caption("\(imagePostView.imagePostData.postInteractionAggregates.numChildComments.formatAsStringForView()) Comments")
-                    .foregroundColor(.gray)
-            })
-        )
-    }
-}
-
-struct UserConnectionsScrollView: View {
-    private let postScrollViewBuilder: PostScrollViewBuilder<UserConnectionView>
-
-    init(
-        userId: UUID,
-        postFeedMessenger: PostFeedMessenger
-    ) {
-        postScrollViewBuilder = PostScrollViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<UserConnectionView> in
-            postFeedMessenger
-                .getFollowedScrollFeed(userId: userId)
-                .makeIterator()
-        }
-    }
-
-    var body: some View {
-        TopNavigationBarView(topNavigationBarViewBuilder: { UserConnectionsTopNavigationBar() }) {
-            postScrollViewBuilder.buildView()
         }
     }
 }
