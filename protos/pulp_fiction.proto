@@ -160,7 +160,11 @@ message GetFeedRequest {
   message GetGlobalFeedRequest {
   }
 
-  message GetFollowedFeedRequest {
+  message GetFollowersFeedRequest {
+    string user_id = 1;
+  }
+
+  message GetFollowingFeedRequest {
     string user_id = 1;
   }
 
@@ -172,8 +176,9 @@ message GetFeedRequest {
   oneof get_feed_request {
     GetUserFeedRequest get_user_feed_request = 2;
     GetGlobalFeedRequest get_global_feed_request = 3;
-    GetFollowedFeedRequest get_followed_feed_request = 4;
-    GetCommentFeedRequest get_comment_feed_request = 5;
+    GetFollowersFeedRequest get_followers_feed_request = 4;
+    GetFollowingFeedRequest get_following_feed_request = 5;
+    GetCommentFeedRequest get_comment_feed_request = 6;
   }
 }
 

@@ -10,26 +10,14 @@ import SwiftUI
 
 /// View that scrolls through the comments page for a post
 struct CommentsPageScrollView: View {
-    private let postScrollViewBuilder: ScrollableContentViewBuilder<CommentView>
-    private let imagePostView: ImagePostView
+    let imagePostView: ImagePostView
+    let postFeedMessenger: PostFeedMessenger
 
-    init(imagePostView: ImagePostView, postFeedMessenger: PostFeedMessenger) {
-        postScrollViewBuilder = ScrollableContentViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<CommentView> in
+    var body: some View {
+        ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<CommentView> in
             postFeedMessenger
                 .getCommentFeed(postId: imagePostView.imagePostData.postMetadata.postUpdateIdentifier.postId)
                 .makeIterator()
         }
-        self.imagePostView = imagePostView
-    }
-
-    var body: some View {
-        postScrollViewBuilder.buildView(.some(
-            VStack {
-                imagePostView
-                Divider()
-                Caption("\(imagePostView.imagePostData.postInteractionAggregates.numChildComments.formatAsStringForView()) Comments")
-                    .foregroundColor(.gray)
-            })
-        )
     }
 }

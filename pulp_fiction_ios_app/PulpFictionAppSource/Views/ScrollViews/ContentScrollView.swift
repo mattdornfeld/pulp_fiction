@@ -1,5 +1,5 @@
 //
-//  ScrollableContentView.swift
+//  ContentScrollView.swift
 //  build_app_source
 //
 //  Created by Matthew Dornfeld on 10/23/22.
@@ -89,6 +89,10 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
         case .startScroll:
+            if state.postViewFeedIteratorMaybe != nil {
+                return .none
+            }
+
             state.postViews = []
             state.postViewFeedIteratorMaybe = {
                 let postViewFeedIterator = postViewFeedIteratorSupplier()
@@ -104,6 +108,7 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
 
         case .refreshScroll:
             state.feedLoadProgressIndicatorOpacity = 1.0
+            state.postViewFeedIteratorMaybe = nil
             return .task {
                 .startScroll
             }
@@ -127,28 +132,50 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
     }
 }
 
+extension ContentScrollView where B == EmptyView {
+    init(
+        postFeedMessenger: PostFeedMessenger,
+        postViewFeedIteratorSupplier: @escaping () -> PostViewFeedIterator<A>
+    ) {
+        self.init(
+            postFeedMessenger: postFeedMessenger,
+            prependToBeginningOfScroll: EmptyView(),
+            postViewFeedIteratorSupplier: postViewFeedIteratorSupplier
+        )
+    }
+}
+
 /// Build a view that shows a feed of scrollable content
-struct ScrollableContentViewBuilder<A: ScrollableContentView> {
+struct ContentScrollView<A: ScrollableContentView, B: View>: View {
     private let store: ComposableArchitecture.StoreOf<ContentScrollViewReducer<A>>
     private let progressIndicatorScaleFactor: CGFloat = 2.0
     private let refreshFeedOnScrollUpSensitivity: CGFloat = 10.0
+    private let prependToBeginningOfScroll: B
     @GestureState private var dragOffset: CGFloat = -100
 
+    /// Builds a ContentScrollView
+    /// - Parameters:
+    ///   - postFeedMessenger: Messenger that calls backend API and post data store to construct post feeds
+    ///   - prependToBeginningOfScroll: View to prepend to beginning of scroll
+    ///   - postViewFeedIteratorSupplier: Function that constructs the views which make up the items of the scroll
     init(
         postFeedMessenger _: PostFeedMessenger,
+        prependToBeginningOfScroll: B,
         postViewFeedIteratorSupplier: @escaping () -> PostViewFeedIterator<A>
     ) {
         store = Store(
             initialState: ContentScrollViewReducer<A>.State(),
             reducer: ContentScrollViewReducer<A>(postViewFeedIteratorSupplier: postViewFeedIteratorSupplier)
         )
+        self.prependToBeginningOfScroll = prependToBeginningOfScroll
     }
 
-    @ViewBuilder internal func buildView() -> some View {
-        buildView(.some(EmptyView()))
+    func startScroll(_ viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>) -> some View {
+        viewStore.send(.startScroll)
+        return EmptyView()
     }
 
-    @ViewBuilder internal func buildView<Content: View>(_ prependToBeginningOfScrollMaybe: Option<Content> = .none()) -> some View {
+    var body: some View {
         WithViewStore(store) { viewStore in
             GeometryReader { geometryProxy in
                 ScrollView {
@@ -157,10 +184,8 @@ struct ScrollableContentViewBuilder<A: ScrollableContentView> {
                             .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
                             .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
 
-                        prependToBeginningOfScrollMaybe
-                            .toEither()
-                            .mapLeft { _ in EmptyView() }
-                            .toEitherView()
+                        startScroll(viewStore)
+                        prependToBeginningOfScroll
 
                         LazyVStack(alignment: .leading) {
                             ForEach(viewStore.state.postViews) { currentPost in
@@ -181,7 +206,6 @@ struct ScrollableContentViewBuilder<A: ScrollableContentView> {
                     }
                     .frame(minHeight: geometryProxy.size.height)
                 }
-                .onAppear { viewStore.send(.startScroll) }
                 .onDragUp { viewStore.send(.refreshScroll) }
             }
         }

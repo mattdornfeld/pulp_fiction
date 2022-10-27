@@ -115,15 +115,10 @@ public struct PostFeedMessenger {
         )
     }
 
-    func getFollowedScrollFeed(userId: UUID) -> PostViewFeed<UserConnectionView> {
+    private func getUserConnectionScrollFeed(getFeedRequest: GetFeedRequest) -> PostViewFeed<UserConnectionView> {
         return PostViewFeed(
             pulpFictionClientProtocol: pulpFictionClientProtocol,
-            getFeedRequest: GetFeedRequest.with {
-                $0.loginSession = loginSession.toProto()
-                $0.getFollowedFeedRequest = GetFeedRequest.GetFollowedFeedRequest.with {
-                    $0.userID = userId.uuidString
-                }
-            }
+            getFeedRequest: getFeedRequest
         ) { postViewIndex, postProto in
             let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
 
@@ -139,5 +134,23 @@ public struct PostFeedMessenger {
                 )
             )^
         }
+    }
+
+    func getFollowingScrollFeed(userId: UUID) -> PostViewFeed<UserConnectionView> {
+        getUserConnectionScrollFeed(getFeedRequest: GetFeedRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.getFollowingFeedRequest = GetFeedRequest.GetFollowingFeedRequest.with {
+                $0.userID = userId.uuidString
+            }
+        })
+    }
+
+    func getFollowersScrollFeed(userId: UUID) -> PostViewFeed<UserConnectionView> {
+        getUserConnectionScrollFeed(getFeedRequest: GetFeedRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.getFollowersFeedRequest = GetFeedRequest.GetFollowersFeedRequest.with {
+                $0.userID = userId.uuidString
+            }
+        })
     }
 }

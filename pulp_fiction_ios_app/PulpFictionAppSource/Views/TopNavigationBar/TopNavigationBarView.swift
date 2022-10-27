@@ -12,7 +12,7 @@ protocol NavigationBarContents: View {}
 
 struct TopNavigationBarView<TopNavigationBarViewContent: NavigationBarContents, MainViewContent: View>: View {
     let topNavigationBarViewBuilder: () -> TopNavigationBarViewContent
-    let mainViewContentBuilder: () -> MainViewContent
+    @ViewBuilder let mainViewContentBuilder: () -> MainViewContent
 
     var body: some View {
         VStack(spacing: 8.0) {
