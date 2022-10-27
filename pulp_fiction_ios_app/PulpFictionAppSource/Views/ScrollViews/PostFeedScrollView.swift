@@ -9,41 +9,62 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
-// struct PostFeedScrollReducer: ReducerProtocol {
-//    struct State: Equatable {
-//        var topNavigationBarState: UserProfileTopNavigationBarReducer.State
-//    }
-//
-//    enum Action {
-//        case updateTopNavigationBarState
-//    }
-//
-//    var body: some ReducerProtocol<State, Action> {
-//        Scope(
-//            state: \.topNavigationBarState,
-//            action: /Action.updateViewComponents
-//        ) {
-//            PostFeedTopNavigationBarReducer()
-//        }
-//
-//        Reduce { state, action in
-//            switch action {
-//            }
-//        }
-//    }
-// }
+enum PostFeedFilter: String, DropDownMenuOption {
+    case Global
+    case Following
+}
+
+struct PostFeedScrollReducer: ReducerProtocol {
+    struct State: Equatable {
+        var currentPostFeedFilter: PostFeedFilter = .Global
+    }
+
+    enum Action {
+        case updateCurrentPostFeedFilter(PostFeedFilter)
+    }
+
+    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
+        switch action {
+        case let .updateCurrentPostFeedFilter(newPostFeedFilter):
+            state.currentPostFeedFilter = newPostFeedFilter
+            return .none
+        }
+    }
+}
 
 /// View that scrolls through a feed of posts
 struct PostFeedScrollView: View {
+    let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    private let store: ComposableArchitecture.StoreOf<PostFeedScrollReducer> = Store(
+        initialState: PostFeedScrollReducer.State(),
+        reducer: PostFeedScrollReducer()
+    )
 
     var body: some View {
-        TopNavigationBarView(topNavigationBarViewBuilder: { PostFeedTopNavigationBar() }) {
-            ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
-                postFeedMessenger
-                    .getGlobalPostFeed()
-                    .makeIterator()
+        WithViewStore(store) { viewStore in
+            TopNavigationBarView(topNavigationBarViewBuilder: { PostFeedTopNavigationBar(
+                postFeedFilter: viewStore.state.currentPostFeedFilter)
+            { newPostFeedFilter in
+                viewStore.send(.updateCurrentPostFeedFilter(newPostFeedFilter))
             }
+            }) {
+                ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
+                    getPostFeed(viewStore.state.currentPostFeedFilter)
+                        .makeIterator()
+                }
+            }
+        }
+    }
+
+    func getPostFeed(_ postFeedFilter: PostFeedFilter) -> PostViewFeed<ImagePostView> {
+        switch postFeedFilter {
+        case .Global:
+            return postFeedMessenger
+                .getGlobalPostFeed()
+        case .Following:
+            return postFeedMessenger
+                .getFollowingPostFeed(userId: loggedInUserPostData.userId)
         }
     }
 }

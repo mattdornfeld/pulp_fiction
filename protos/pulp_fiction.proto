@@ -1,4 +1,4 @@
-syntax = "proto3";
+itsyntax = "proto3";
 
 package pulp_fiction.protos;
 
@@ -153,11 +153,15 @@ message GetUserResponse {
 }
 
 message GetFeedRequest {
-  message GetUserFeedRequest {
+  message GetUserPostFeedRequest {
     string user_id = 1;
   }
 
-  message GetGlobalFeedRequest {
+  message GetGlobalPostFeedRequest {
+  }
+
+  message GetFollowingPostFeedRequest {
+    string user_id = 1;
   }
 
   message GetFollowersFeedRequest {
@@ -174,11 +178,12 @@ message GetFeedRequest {
 
   LoginResponse.LoginSession loginSession = 1;
   oneof get_feed_request {
-    GetUserFeedRequest get_user_feed_request = 2;
-    GetGlobalFeedRequest get_global_feed_request = 3;
-    GetFollowersFeedRequest get_followers_feed_request = 4;
-    GetFollowingFeedRequest get_following_feed_request = 5;
-    GetCommentFeedRequest get_comment_feed_request = 6;
+    GetUserPostFeedRequest get_user_post_feed_request = 2;
+    GetGlobalPostFeedRequest get_global_post_feed_request = 3;
+    GetFollowingPostFeedRequest get_following_post_feed_request = 4;
+    GetFollowersFeedRequest get_followers_feed_request = 5;
+    GetFollowingFeedRequest get_following_feed_request = 6;
+    GetCommentFeedRequest get_comment_feed_request = 7;
   }
 }
 

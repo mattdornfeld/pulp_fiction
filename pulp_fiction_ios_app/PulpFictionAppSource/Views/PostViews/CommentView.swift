@@ -75,7 +75,7 @@ struct CommentView: PostLikeOnSwipeView {
                                 send: CommentViewReducer.Action.updateShouldLoadUserProfileView(false)
                             ),
                             destination: UserProfileView(
-                                userPostData: creatorUserPostData,
+                                loggedInUserPostData: creatorUserPostData,
                                 postFeedMessenger: postFeedMessenger
                             )
                         ) { viewStore.send(.updateShouldLoadUserProfileView(true)) }

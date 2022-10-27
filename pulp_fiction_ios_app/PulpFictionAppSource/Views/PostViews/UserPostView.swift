@@ -57,7 +57,7 @@ struct UserPostView: View {
                     send: .updateShouldLoadUserProfileView(false)
                 ),
                 destination: UserProfileView(
-                    userPostData: userPostData,
+                    loggedInUserPostData: userPostData,
                     postFeedMessenger: postFeedMessenger
                 )
             ) {

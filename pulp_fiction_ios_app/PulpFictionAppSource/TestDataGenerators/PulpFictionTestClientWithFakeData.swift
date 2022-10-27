@@ -58,9 +58,11 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         request.getFeedRequest.map { getFeedRequest in
             var posts: [Post] {
                 switch getFeedRequest {
-                case .getUserFeedRequest:
+                case .getUserPostFeedRequest:
                     return generateImagePostsForFeed()
-                case .getGlobalFeedRequest:
+                case .getGlobalPostFeedRequest:
+                    return generateImagePostsForFeed()
+                case .getFollowingPostFeedRequest:
                     return generateImagePostsForFeed()
                 case .getFollowingFeedRequest:
                     return generateUserPostsForFeed()
