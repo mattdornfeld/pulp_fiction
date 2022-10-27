@@ -40,7 +40,7 @@ struct UserConnectionsScrollReducer: ReducerProtocol {
 
 /// View thay scrolls through a user's connections (e.g. their followers and followees)
 struct UserConnectionsScrollView: View {
-    let userId: UUID
+    let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     private let store: ComposableArchitecture.StoreOf<UserConnectionsScrollReducer> = Store(
         initialState: UserConnectionsScrollReducer.State(),
@@ -66,10 +66,10 @@ struct UserConnectionsScrollView: View {
         switch userConnectionsFilter {
         case .Following:
             return postFeedMessenger
-                .getFollowingScrollFeed(userId: userId)
+                .getFollowingScrollFeed(userId: loggedInUserPostData.userId)
         case .Followers:
             return postFeedMessenger
-                .getFollowersScrollFeed(userId: userId)
+                .getFollowersScrollFeed(userId: loggedInUserPostData.userId)
         }
     }
 }

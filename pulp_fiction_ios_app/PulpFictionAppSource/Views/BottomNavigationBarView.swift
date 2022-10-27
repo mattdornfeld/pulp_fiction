@@ -87,16 +87,17 @@ struct BottomNavigationBarView: View {
         switch currentMainView {
         case .postFeedScrollView:
             PostFeedScrollView(
+                loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger
             )
         case .loggedInUserProfileView:
             UserProfileView(
-                userPostData: loggedInUserPostData,
+                loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger
             )
         case .loggedInUserFollowedScrollView:
             UserConnectionsScrollView(
-                userId: loggedInUserPostData.userId,
+                loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger
             )
         }

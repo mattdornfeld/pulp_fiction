@@ -10,38 +10,20 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
-// struct UserProfileViewReducer: ReducerProtocol {
-//    struct State: Equatable {
-//
-//    }
-//
-//    enum Action {
-//
-//    }
-//
-//    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
-//        <#code#>
-//    }
-// }
-
 /// Constructs a view for a users profile
 struct UserProfileView: View {
-    let userPostData: UserPostData
+    let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
-
-    static func == (lhs: UserProfileView, rhs: UserProfileView) -> Bool {
-        lhs.userPostData == rhs.userPostData
-    }
 
     var body: some View {
         UserProfileScrollView(
-            userPostData: userPostData,
+            userPostData: loggedInUserPostData,
             postFeedMessenger: postFeedMessenger
         ) {
             VStack {
                 HStack {
                     CircularImage(
-                        uiImage: userPostData.userAvatarUIImage,
+                        uiImage: loggedInUserPostData.userAvatarUIImage,
                         radius: 35,
                         borderColor: .gray,
                         borderWidth: 1
@@ -57,7 +39,7 @@ struct UserProfileView: View {
                         .foregroundColor(.gray)
                         .padding(5)
                 }
-                Caption(text: userPostData.bio, alignment: .center)
+                Caption(text: loggedInUserPostData.bio, alignment: .center)
                     .foregroundColor(.gray)
                     .padding()
             }

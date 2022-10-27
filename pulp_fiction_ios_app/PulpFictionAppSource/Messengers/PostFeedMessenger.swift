@@ -57,7 +57,7 @@ public struct PostFeedMessenger {
     func getUserProfilePostFeed(userId: UUID) -> PostViewFeed<ImagePostView> {
         let getFeedRequest = GetFeedRequest.with {
             $0.loginSession = loginSession.toProto()
-            $0.getUserFeedRequest = GetFeedRequest.GetUserFeedRequest.with {
+            $0.getUserPostFeedRequest = GetFeedRequest.GetUserPostFeedRequest.with {
                 $0.userID = userId.uuidString
             }
         }
@@ -70,7 +70,18 @@ public struct PostFeedMessenger {
     func getGlobalPostFeed() -> PostViewFeed<ImagePostView> {
         let getFeedRequest = GetFeedRequest.with {
             $0.loginSession = loginSession.toProto()
-            $0.getGlobalFeedRequest = GetFeedRequest.GetGlobalFeedRequest()
+            $0.getGlobalPostFeedRequest = GetFeedRequest.GetGlobalPostFeedRequest()
+        }
+
+        return getImagePostFeed(getFeedRequest: getFeedRequest)
+    }
+
+    func getFollowingPostFeed(userId: UUID) -> PostViewFeed<ImagePostView> {
+        let getFeedRequest = GetFeedRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.getFollowingPostFeedRequest = GetFeedRequest.GetFollowingPostFeedRequest.with {
+                $0.userID = userId.uuidString
+            }
         }
 
         return getImagePostFeed(getFeedRequest: getFeedRequest)
