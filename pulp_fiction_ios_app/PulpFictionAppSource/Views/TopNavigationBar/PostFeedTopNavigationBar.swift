@@ -20,6 +20,11 @@ struct PostFeedTopNavigationBarReducer: ReducerProtocol {
 }
 
 struct PostFeedTopNavigationBar: NavigationBarContents {
+    enum FeedFilter: String, DropDownMenuOption {
+        case Global
+        case Following
+    }
+
     var body: some View {
         HStack {
             Title("Pulp Fiction")
@@ -27,8 +32,19 @@ struct PostFeedTopNavigationBar: NavigationBarContents {
                 .padding(.leading, 7.5)
             Spacer()
             Symbol(symbolName: "plus", size: 25, color: .gray)
-            Symbol(symbolName: "line.3.horizontal.decrease.circle", size: 25, color: .gray)
-                .padding(.trailing, 7.5)
+//            SymbolWithDropDownMenu(
+//                symbolName: "line.3.horizontal.decrease.circle",
+//                symbolSize: 25,
+//                symbolColor: .gray,
+//                menuOptions: FeedFilter.allCases,
+//            ) { feedFilter in
+//                switch feedFilter {
+//                case .Global:
+//                    print(FeedFilter.Global)
+//                case .Following:
+//                    print(FeedFilter.Following)
+//                }
+//            }.padding(.trailing, 7.5)
         }
     }
 }

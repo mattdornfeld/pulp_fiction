@@ -62,7 +62,9 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
                     return generateImagePostsForFeed()
                 case .getGlobalFeedRequest:
                     return generateImagePostsForFeed()
-                case .getFollowedFeedRequest:
+                case .getFollowingFeedRequest:
+                    return generateUserPostsForFeed()
+                case .getFollowersFeedRequest:
                     return generateUserPostsForFeed()
                 case .getCommentFeedRequest:
                     let parentPostId = request

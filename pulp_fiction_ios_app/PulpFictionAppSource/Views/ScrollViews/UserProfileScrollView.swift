@@ -10,27 +10,17 @@ import SwiftUI
 
 /// View that scrolls through a user's profile along with their posts
 struct UserProfileScrollView<Content: View>: View {
-    private let postScrollViewBuilder: ScrollableContentViewBuilder<ImagePostView>
-    @ViewBuilder private let userProfileViewBuilder: () -> Content
-    private let userPostData: UserPostData
-
-    init(
-        userPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger,
-        userProfileViewBuilder: @escaping () -> Content
-    ) {
-        postScrollViewBuilder = ScrollableContentViewBuilder(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
-            postFeedMessenger
-                .getUserProfilePostFeed(userId: userPostData.userId)
-                .makeIterator()
-        }
-        self.userProfileViewBuilder = userProfileViewBuilder
-        self.userPostData = userPostData
-    }
+    let userPostData: UserPostData
+    let postFeedMessenger: PostFeedMessenger
+    @ViewBuilder let userProfileViewBuilder: () -> Content
 
     var body: some View {
         TopNavigationBarView(topNavigationBarViewBuilder: { UserProfileTopNavigationBar(userPostData: userPostData) }) {
-            postScrollViewBuilder.buildView(.some(userProfileViewBuilder()))
+            ContentScrollView(postFeedMessenger: postFeedMessenger, prependToBeginningOfScroll: userProfileViewBuilder()) { () -> PostViewFeedIterator<ImagePostView> in
+                postFeedMessenger
+                    .getUserProfilePostFeed(userId: userPostData.userId)
+                    .makeIterator()
+            }
         }
     }
 }

@@ -71,7 +71,6 @@ struct PostLikeArrowReducer: ReducerProtocol {
 /// View that generates an arrow which shows info about likes for a post
 struct PostLikeArrowView: View {
     private let store: ComposableArchitecture.StoreOf<PostLikeArrowReducer>
-
     fileprivate init(store: ComposableArchitecture.StoreOf<PostLikeArrowReducer>) {
         self.store = store
     }
