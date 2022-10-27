@@ -6,9 +6,10 @@
 //
 
 import Foundation
-import PulpFictionAppPreview
-import PulpFictionAppSource
 import XCTest
+
+@testable import PulpFictionAppPreview
+@testable import PulpFictionAppSource
 
 extension PostViewFeedIterator {
     func takeAll() -> [A] {

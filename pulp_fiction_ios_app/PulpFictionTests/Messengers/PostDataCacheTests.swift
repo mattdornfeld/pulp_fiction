@@ -8,8 +8,9 @@ import Bow
 import BowEffects
 import Foundation
 import PulpFictionAppPreview
-import PulpFictionAppSource
 import XCTest
+
+@testable import PulpFictionAppSource
 
 class PostDataCacheTests: XCTestCase {
     let postDataCacheMaybe = PostDataCache.create()
