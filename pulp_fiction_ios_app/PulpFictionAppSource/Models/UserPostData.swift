@@ -5,34 +5,64 @@
 //  Created by Matthew Dornfeld on 9/25/22.
 //
 
+import Bow
 import Foundation
+import UIKit
 
 /// User post data is stored in this model. Used for rendering UserPostView and avatar + display name in other post views.
 public struct UserPostData: PostData, PostDataIdentifiable, Equatable {
     public let id: PostUpdateIdentifier
-    public let postMetadata: PostMetadata
-    public let userPostContentData: ContentData
-    public let userDisplayName: String
+    let postMetadata: PostMetadata
+    let userPostContentData: ContentData
+    let userDisplayName: String
+    let bio: String
+    let userId: UUID
+    @CodableUIImage var userAvatarUIImage: UIImage
 
-    public func toPostDataOneOf() -> PostDataOneOf {
+    func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.userPostData(self)
     }
 }
 
-public extension UserPostData {
-    init(_ postMetadata: PostMetadata, _ userPostProto: Post.UserPost, _ userPostContentData: ContentData) {
+private extension UserPostData {
+    init(
+        postMetadata: PostMetadata,
+        userPostProto: Post.UserPost,
+        userPostContentData: ContentData,
+        userId: UUID,
+        userAvatarUIImage: UIImage
+    ) {
         self.init(
             id: postMetadata.id,
             postMetadata: postMetadata,
             userPostContentData: userPostContentData,
-            userDisplayName: userPostProto.userMetadata.displayName
+            userDisplayName: userPostProto.userMetadata.displayName,
+            bio: userPostProto.userMetadata.bio,
+            userId: userId,
+            userAvatarUIImage: userAvatarUIImage
         )
     }
 }
 
-public extension Post.UserPost {
-    func toPostData(_ postMetadata: PostMetadata, _ userPostContentData: ContentData) -> UserPostData {
-        UserPostData(postMetadata, self, userPostContentData)
+extension Post.UserPost {
+    func toPostData(
+        postMetadata: PostMetadata,
+        userPostContentData: ContentData
+    ) -> Either<PulpFictionRequestError, UserPostData> {
+        let userIdEither = Either<PulpFictionRequestError, UUID>.var()
+        let userAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
+
+        return binding(
+            userIdEither <- userMetadata.userID.toUUID(),
+            userAvatarUIImageEither <- userPostContentData.toUIImage(),
+            yield: UserPostData(
+                postMetadata: postMetadata,
+                userPostProto: self,
+                userPostContentData: userPostContentData,
+                userId: userIdEither.get,
+                userAvatarUIImage: userAvatarUIImageEither.get
+            )
+        )^
     }
 
     func toPost(_ postMetadata: Post.PostMetadata) -> Post {

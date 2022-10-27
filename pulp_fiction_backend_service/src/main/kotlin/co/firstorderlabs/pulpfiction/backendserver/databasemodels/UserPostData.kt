@@ -25,6 +25,7 @@ object UserPostData : PostData<UserPostDatum>("user_post_data") {
     val userId = uuid("user_id").bindTo { it.userId }
     val displayName = varchar("display_name").bindTo { it.displayName }
     val avatarImageS3Key = varchar("avatar_image_s3_key").bindTo { it.avatarImageS3Key }
+    val bio = varchar("bio").bindTo { it.bio }
 }
 
 interface UserPostDatum : Entity<UserPostDatum>, PostDatum, ReferencesS3Key {
@@ -45,6 +46,7 @@ interface UserPostDatum : Entity<UserPostDatum>, PostDatum, ReferencesS3Key {
             this.userId = postUpdate.post.postCreatorId
             this.displayName = request.displayName
             this.avatarImageS3Key = toS3Key()
+            this.bio = request.bio
         }
     }
 
@@ -53,6 +55,7 @@ interface UserPostDatum : Entity<UserPostDatum>, PostDatum, ReferencesS3Key {
     var userId: UUID
     var displayName: String
     var avatarImageS3Key: String?
+    var bio: String
 
     override fun toS3Key(): String = "$USER_AVATARS_KEY_BASE/${postId}_$updatedAt.$JPG"
 
@@ -72,6 +75,7 @@ interface UserPostDatum : Entity<UserPostDatum>, PostDatum, ReferencesS3Key {
             this.displayName = this@UserPostDatum.displayName
             avatarImageS3Key?.let { this.avatarImageUrl = it }
             this.latestUserPostUpdateIdentifier = this@UserPostDatum.getPostUpdateIdentifier()
+            this.bio = this@UserPostDatum.bio
         }
     }
 }

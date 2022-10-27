@@ -18,7 +18,7 @@ def pulp_fiction_swift_dependencies():
             ),
             spm_pkg(
                 url = "https://github.com/pointfreeco/swift-composable-architecture.git",
-                exact_version = "0.39.1",
+                exact_version = "0.43.0",
                 products = ["ComposableArchitecture"],
             ),
             spm_pkg(

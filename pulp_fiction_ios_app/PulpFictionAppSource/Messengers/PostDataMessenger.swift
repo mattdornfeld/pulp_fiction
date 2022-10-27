@@ -83,20 +83,24 @@ public struct PostDataMessenger {
         _ userPostProto: Post.UserPost
     ) -> IO<PulpFictionRequestError, PostDataOneOf> {
         getPostDataFromLocalCacheOrRemoteStorage(postMetadataProto) { postMetadata in
-            ContentData
-                .create(userPostProto.userMetadata.avatarImageURL, imageDataSupplier)
-                .mapRight { userAvatarImageContentData in
-                    userPostProto
-                        .toPostData(postMetadata, userAvatarImageContentData)
-                        .toPostDataOneOf()
-                }
+            let contentDataIO = IO<PulpFictionRequestError, ContentData>.var()
+            let userPostDataIO = IO<PulpFictionRequestError, UserPostData>.var()
+
+            return binding(
+                contentDataIO <- ContentData.create(userPostProto.userMetadata.avatarImageURL, imageDataSupplier),
+                userPostDataIO <- userPostProto.toPostData(
+                    postMetadata: postMetadata,
+                    userPostContentData: contentDataIO.get
+                ).toIO(),
+                yield: userPostDataIO.get.toPostDataOneOf()
+            )^
         }
     }
 
     /// Retrieves PostData for a given PostProto
     /// - Parameter postProto: PostProto returned from backend API
     /// - Returns: IO monad with PostDataOneOf as success type
-    public func getPostData(_ postProto: Post) -> IO<PulpFictionRequestError, PostDataOneOf> {
+    func getPostData(_ postProto: Post) -> IO<PulpFictionRequestError, PostDataOneOf> {
         switch postProto.post {
         case let .comment(commentPostProto):
             return getCommentPostData(postProto.metadata, commentPostProto)

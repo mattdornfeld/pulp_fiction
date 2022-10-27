@@ -10,7 +10,7 @@ import BowEffects
 import Foundation
 import SwiftUI
 
-public extension ImagePostData {
+extension ImagePostData {
     class ErrorBuildingPostUIImage: PulpFictionRequestError {}
 
     static func generate() -> IO<PulpFictionRequestError, ImagePostData> {
@@ -43,6 +43,7 @@ public extension UserPostData {
 
         let serializeUserAvatarImageIO = IO<PulpFictionRequestError, ContentData>.var()
         let buildPostMetadataIO = IO<PulpFictionRequestError, PostMetadata>.var()
+        let userPostDataIO = IO<PulpFictionRequestError, UserPostData>.var()
         return binding(
             serializeUserAvatarImageIO <- UIImage
                 .fromBundleFile(named: FakeData.userAvatarJpgName)
@@ -53,9 +54,13 @@ public extension UserPostData {
                 .metadata
                 .toPostMetadata()
                 .toIO(),
-            yield: postProto
+            userPostDataIO <- postProto
                 .userPost
-                .toPostData(buildPostMetadataIO.get, serializeUserAvatarImageIO.get)
+                .toPostData(
+                    postMetadata: buildPostMetadataIO.get,
+                    userPostContentData: serializeUserAvatarImageIO.get
+                ).toIO(),
+            yield: userPostDataIO.get
         )^
     }
 }

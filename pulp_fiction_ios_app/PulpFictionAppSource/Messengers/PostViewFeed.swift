@@ -12,7 +12,7 @@ import GRPC
 import Logging
 
 /// Sequence of PostViews
-public class PostViewFeed<A: PostView>: Sequence {
+public class PostViewFeed<A: ScrollableContentView>: Sequence {
     private let pulpFictionClientProtocol: PulpFictionClientProtocol
     private let getFeedRequest: GetFeedRequest
     private let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, A>
@@ -37,7 +37,7 @@ public class PostViewFeed<A: PostView>: Sequence {
 }
 
 /// Iterator for PostViewFeed
-public class PostViewFeedIterator<A: PostView>: IteratorProtocol, Equatable {
+public class PostViewFeedIterator<A: ScrollableContentView>: IteratorProtocol, Equatable {
     public typealias Element = A
     private let pulpFictionClientProtocol: PulpFictionClientProtocol
     private let getFeedRequest: GetFeedRequest

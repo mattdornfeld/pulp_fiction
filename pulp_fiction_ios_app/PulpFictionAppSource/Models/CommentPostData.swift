@@ -9,19 +9,19 @@ import Bow
 import Foundation
 
 /// Comment post data is stored in this model. Used for rendering CommentView.
-public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
-    public let body: String
-    public let id: PostUpdateIdentifier
-    public let parentPostId: UUID
-    public let postMetadata: PostMetadata
-    public let postInteractionAggregates: PostInteractionAggregates
-    public let loggedInUserPostInteractions: LoggedInUserPostInteractions
+struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
+    let body: String
+    let id: PostUpdateIdentifier
+    let parentPostId: UUID
+    let postMetadata: PostMetadata
+    let postInteractionAggregates: PostInteractionAggregates
+    let loggedInUserPostInteractions: LoggedInUserPostInteractions
 
-    public func toPostDataOneOf() -> PostDataOneOf {
+    func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.commentPostData(self)
     }
 
-    public static func create(_ postMetadata: PostMetadata, _ commentProto: Post.Comment) -> Either<PulpFictionRequestError, CommentPostData> {
+    static func create(_ postMetadata: PostMetadata, _ commentProto: Post.Comment) -> Either<PulpFictionRequestError, CommentPostData> {
         commentProto.parentPostID.toUUID().mapRight { parentPostId in
             CommentPostData(
                 body: commentProto.body,
@@ -39,7 +39,7 @@ public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
     }
 }
 
-public extension Post.Comment {
+extension Post.Comment {
     func toPost(_ postMetadata: Post.PostMetadata) -> Post {
         Post.with {
             $0.metadata = postMetadata

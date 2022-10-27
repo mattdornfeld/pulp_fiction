@@ -8,16 +8,16 @@
 import Foundation
 
 /// For error handling if an unrecognized post type is matched on. Should never be instantiated.
-public struct UnrecognizedPostData: PostData, PostDataIdentifiable, Equatable {
-    public let id: PostUpdateIdentifier
-    public let postMetadata: PostMetadata
+struct UnrecognizedPostData: PostData, PostDataIdentifiable, Equatable {
+    let id: PostUpdateIdentifier
+    let postMetadata: PostMetadata
 
-    public func toPostDataOneOf() -> PostDataOneOf {
+    func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.unregonizedPostData(self)
     }
 }
 
-public extension UnrecognizedPostData {
+extension UnrecognizedPostData {
     init(_ postMetadata: PostMetadata) {
         self.init(id: postMetadata.id, postMetadata: postMetadata)
     }
