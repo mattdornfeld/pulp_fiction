@@ -14,10 +14,12 @@ struct CommentsPageScrollView: View {
     let postFeedMessenger: PostFeedMessenger
 
     var body: some View {
-        ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<CommentView> in
-            postFeedMessenger
-                .getCommentFeed(postId: imagePostView.imagePostData.postMetadata.postUpdateIdentifier.postId)
-                .makeIterator()
+        TopNavigationBarView(topNavigationBarViewBuilder: { CommentsPageTopNavigationBar() }) {
+            ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<CommentView> in
+                postFeedMessenger
+                    .getCommentFeed(postId: imagePostView.imagePostData.postMetadata.postUpdateIdentifier.postId)
+                    .makeIterator()
+            }
         }
     }
 }

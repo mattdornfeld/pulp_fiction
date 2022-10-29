@@ -75,3 +75,19 @@ extension Title {
         self.init(text: text, alignment: .leading)
     }
 }
+
+struct NavigationBarText: TextView {
+    let text: Text
+    let alignment: TextAlignment
+}
+
+extension NavigationBarText {
+    init(text: String, alignment: TextAlignment) {
+        self.text = Text(text)
+        self.alignment = alignment
+    }
+
+    init(_ text: String) {
+        self.init(text: text, alignment: .leading)
+    }
+}

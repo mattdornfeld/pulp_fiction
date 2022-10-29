@@ -20,15 +20,6 @@ public struct PulpFictionAppViewBuilder {
                 loggedInUserPostData: externalMessengers.loginSession.loggedInUserPostData,
                 postFeedMessenger: externalMessengers.postFeedMessenger
             )
-//            NavigationView {
-//                VStack {
-//                    NavigationLink("create", destination: PostCreatorView(externalMessengers.postDataMessenger.postDataCache))
-//                    Divider()
-//                    NavigationLink("feed", destination: ImagePostScrollView(
-//                        postFeedMessenger: externalMessengers.postFeedMessenger
-//                    ))
-//                }
-//            }
         case let .failure(pulpFictionStartupError):
             NavigationView {}
         }
