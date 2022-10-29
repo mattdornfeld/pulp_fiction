@@ -78,8 +78,12 @@ struct BottomNavigationBarView: View {
 
     var body: some View {
         WithViewStore(store) { viewStore in
-            NavigationView { buildMainView(viewStore.state.currentMainView) }
-            buildBottomNavigationBar(viewStore)
+            NavigationView {
+                VStack {
+                    buildMainView(viewStore.state.currentMainView)
+                    buildBottomNavigationBar(viewStore)
+                }
+            }
         }
     }
 
