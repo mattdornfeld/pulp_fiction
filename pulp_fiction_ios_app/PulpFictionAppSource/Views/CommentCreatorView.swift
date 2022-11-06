@@ -46,23 +46,24 @@ struct CommentCreatorView: View {
 
     var body: some View {
         WithViewStore(store) { viewStore in
-            TopNavigationBarView(topNavigationBarViewBuilder: { CommentCreatorTopNavigationBar(tapPostButtonAction: { viewStore.send(.postComment) }) }) {
-                VStack {
-                    TextField(
-                        "",
-                        text: viewStore.binding(
-                            get: \.comment,
-                            send: { newComment in .updateComment(newComment) }
-                        ),
-                        prompt: Text("Write a comment")
-                    )
-                    .foregroundColor(.gray)
-                    .focused($isInputCommentFieldFocused)
-                    Spacer()
-                }
+            VStack {
+                TextField(
+                    "",
+                    text: viewStore.binding(
+                        get: \.comment,
+                        send: { newComment in .updateComment(newComment) }
+                    ),
+                    prompt: Text("Write a comment")
+                )
+                .foregroundColor(.gray)
+                .focused($isInputCommentFieldFocused)
+                Spacer()
             }
             .onAppear {
                 isInputCommentFieldFocused = true
+            }
+            .toolbar {
+                CommentCreatorTopNavigationBar(tapPostButtonAction: { viewStore.send(.postComment) })
             }
         }
     }

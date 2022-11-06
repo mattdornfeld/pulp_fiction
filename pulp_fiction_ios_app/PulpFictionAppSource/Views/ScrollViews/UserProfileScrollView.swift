@@ -15,12 +15,12 @@ struct UserProfileScrollView<Content: View>: View {
     @ViewBuilder let userProfileViewBuilder: () -> Content
 
     var body: some View {
-        TopNavigationBarView(topNavigationBarViewBuilder: { UserProfileTopNavigationBar(userPostData: userPostData) }) {
-            ContentScrollView(postFeedMessenger: postFeedMessenger, prependToBeginningOfScroll: userProfileViewBuilder()) { () -> PostViewFeedIterator<ImagePostView> in
-                postFeedMessenger
-                    .getUserProfilePostFeed(userId: userPostData.userId)
-                    .makeIterator()
-            }
+        ContentScrollView(postFeedMessenger: postFeedMessenger, prependToBeginningOfScroll: userProfileViewBuilder()) { () -> PostViewFeedIterator<ImagePostView> in
+            postFeedMessenger
+                .getUserProfilePostFeed(userId: userPostData.userId)
+                .makeIterator()
+        }.toolbar {
+            UserProfileTopNavigationBar(userPostData: userPostData)
         }
     }
 }

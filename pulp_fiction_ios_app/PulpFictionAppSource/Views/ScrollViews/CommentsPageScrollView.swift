@@ -13,13 +13,23 @@ struct CommentsPageScrollView: View {
     let imagePostView: ImagePostView
     let postFeedMessenger: PostFeedMessenger
 
+//    var body: some View {
+//        TopNavigationBarView(topNavigationBarViewBuilder: { CommentsPageTopNavigationBar() }) {
+//            ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<CommentView> in
+//                postFeedMessenger
+//                    .getCommentFeed(postId: imagePostView.imagePostData.postMetadata.postUpdateIdentifier.postId)
+//                    .makeIterator()
+//            }
+//        }
+//    }
+    
     var body: some View {
-        TopNavigationBarView(topNavigationBarViewBuilder: { CommentsPageTopNavigationBar() }) {
-            ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<CommentView> in
-                postFeedMessenger
-                    .getCommentFeed(postId: imagePostView.imagePostData.postMetadata.postUpdateIdentifier.postId)
-                    .makeIterator()
-            }
+        ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<CommentView> in
+            postFeedMessenger
+                .getCommentFeed(postId: imagePostView.imagePostData.postMetadata.postUpdateIdentifier.postId)
+                .makeIterator()
+        }.toolbar{
+            CommentsPageTopNavigationBar()
         }
     }
 }

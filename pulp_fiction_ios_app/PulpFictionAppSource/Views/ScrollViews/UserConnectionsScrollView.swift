@@ -49,15 +49,16 @@ struct UserConnectionsScrollView: View {
 
     var body: some View {
         WithViewStore(store) { viewStore in
-            TopNavigationBarView(topNavigationBarViewBuilder: { UserConnectionsTopNavigationBar(userConnectionsFilter: viewStore.state.currentUserConnectionsFilter) { newUserConnectionsFilter in
-                viewStore.send(.updateCurrentUserConnectionsFilter(newUserConnectionsFilter))
-            }
-
-            }) {
-                ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<UserConnectionView> in
-                    buildPostViewFeed(viewStore.state.currentUserConnectionsFilter)
-                        .makeIterator()
-                }
+            ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<UserConnectionView> in
+                buildPostViewFeed(viewStore.state.currentUserConnectionsFilter)
+                    .makeIterator()
+            }.toolbar{
+                UserConnectionsTopNavigationBar(
+                    userConnectionsFilter: viewStore.state.currentUserConnectionsFilter,
+                    dropDownMenuSelectionAction: { newUserConnectionsFilter in
+                        viewStore.send(.updateCurrentUserConnectionsFilter(newUserConnectionsFilter))
+                    }
+                )
             }
         }
     }

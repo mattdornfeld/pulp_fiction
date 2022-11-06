@@ -83,7 +83,7 @@ struct BottomNavigationBarView: View {
                     buildMainView(viewStore.state.currentMainView)
                     buildBottomNavigationBar(viewStore)
                 }
-            }
+            }.accentColor(.black)
         }
     }
 

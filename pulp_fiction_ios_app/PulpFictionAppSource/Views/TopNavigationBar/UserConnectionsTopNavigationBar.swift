@@ -9,16 +9,17 @@ import Foundation
 import SwiftUI
 
 /// Top navigation bar view for the user connections page
-struct UserConnectionsTopNavigationBar: NavigationBarContents {
+struct UserConnectionsTopNavigationBar: ToolbarContent {
     let userConnectionsFilter: UserConnectionsFilter
     let dropDownMenuSelectionAction: (UserConnectionsFilter) -> Void
 
-    var body: some View {
-        HStack {
+    var body: some ToolbarContent {        
+        ToolbarItem(placement: .navigationBarLeading) {
             Title(userConnectionsFilter.rawValue)
                 .foregroundColor(.gray)
-                .padding(.leading, 7.5)
-            Spacer()
+        }
+        
+        ToolbarItem(placement: .navigationBarTrailing) {
             SymbolWithDropDownMenu(
                 symbolName: "line.3.horizontal.decrease.circle",
                 symbolSize: 25,

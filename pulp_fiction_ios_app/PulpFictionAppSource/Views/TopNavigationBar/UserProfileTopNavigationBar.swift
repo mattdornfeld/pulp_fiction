@@ -19,18 +19,19 @@ struct UserProfileTopNavigationBarReducer: ReducerProtocol {
     }
 }
 
-struct UserProfileTopNavigationBar: NavigationBarContents {
+struct UserProfileTopNavigationBar: ToolbarContent {
     let userPostData: UserPostData
 
-    var body: some View {
-        HStack {
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
             Title(userPostData.userDisplayName)
                 .foregroundColor(.gray)
-                .padding(.leading, 7.5)
-            Spacer()
-            Symbol(symbolName: "plus", size: 25, color: .gray)
-            Symbol(symbolName: "gearshape.fill", size: 25, color: .gray)
-                .padding(.trailing, 7.5)
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            HStack {
+                Symbol(symbolName: "plus", size: 20, color: .gray)
+                Symbol(symbolName: "gearshape.fill", size: 20, color: .gray)
+            }
         }
     }
 }

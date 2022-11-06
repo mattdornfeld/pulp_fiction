@@ -9,13 +9,12 @@ import Foundation
 import SwiftUI
 
 /// Contents for the top navigation bar of the comment creation view
-struct CommentCreatorTopNavigationBar: NavigationBarContents {
+struct CommentCreatorTopNavigationBar: ToolbarContent {
     /// Function that's called when Post button is tapped
     let tapPostButtonAction: () -> Void
 
-    var body: some View {
-        HStack {
-            Spacer()
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
             NavigationBarText("Post")
                 .font(.system(size: 25))
                 .foregroundColor(.gray)

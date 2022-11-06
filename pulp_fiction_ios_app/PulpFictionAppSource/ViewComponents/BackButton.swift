@@ -1,12 +1,27 @@
 //
-//  ViewExtensions.swift
+//  BackButton.swift
 //  build_app_source
 //
-//  Created by Matthew Dornfeld on 10/13/22.
+//  Created by Matthew Dornfeld on 11/06/22.
 //
 
 import Foundation
 import SwiftUI
+
+/// View that creates the back button for a NavigationLink
+fileprivate struct BackButton: View {
+    @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
+    
+    var body : some View {
+        Button(action: {
+            self.presentationMode.wrappedValue.dismiss()
+        }) {
+            Image(systemName: "chevron.left")
+                .foregroundColor(.gray)
+                .font(.title2)
+        }
+    }
+}
 
 public extension View {
     /// Navigates to destination when View is tapped
@@ -22,7 +37,11 @@ public extension View {
     ) -> some View {
         NavigationLink(
             isActive: isActive,
-            destination: { LazyView(destination) },
+            destination: {
+                LazyView(destination)
+                    .navigationBarBackButtonHidden(true)
+                    .navigationBarItems(leading: BackButton())
+            },
             label: { self.onTapGesture(perform: perform) }
         )
     }

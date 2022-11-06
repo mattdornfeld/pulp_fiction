@@ -69,6 +69,7 @@ struct CommentView: PostLikeOnSwipeView {
             VStack(alignment: .leading) {
                 HStack(alignment: .bottom, spacing: 5) {
                     BoldCaption(creatorUserPostData.userDisplayName)
+                        .foregroundColor(.black)
                         .navigateOnTap(
                             isActive: viewStore.binding(
                                 get: \.shouldLoadUserProfileView,

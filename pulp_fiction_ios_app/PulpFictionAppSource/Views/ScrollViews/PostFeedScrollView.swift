@@ -41,18 +41,35 @@ struct PostFeedScrollView: View {
         reducer: PostFeedScrollReducer()
     )
 
+//    var body: some View {
+//        WithViewStore(store) { viewStore in
+//            TopNavigationBarView(topNavigationBarViewBuilder: { PostFeedTopNavigationBar(
+//                postFeedFilter: viewStore.state.currentPostFeedFilter)
+//            { newPostFeedFilter in
+//                viewStore.send(.updateCurrentPostFeedFilter(newPostFeedFilter))
+//            }
+//            }) {
+//                ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
+//                    getPostFeed(viewStore.state.currentPostFeedFilter)
+//                        .makeIterator()
+//                }
+//            }
+//        }
+//    }
+    
     var body: some View {
         WithViewStore(store) { viewStore in
-            TopNavigationBarView(topNavigationBarViewBuilder: { PostFeedTopNavigationBar(
-                postFeedFilter: viewStore.state.currentPostFeedFilter)
-            { newPostFeedFilter in
-                viewStore.send(.updateCurrentPostFeedFilter(newPostFeedFilter))
+            ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
+                getPostFeed(viewStore.state.currentPostFeedFilter)
+                    .makeIterator()
             }
-            }) {
-                ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
-                    getPostFeed(viewStore.state.currentPostFeedFilter)
-                        .makeIterator()
-                }
+            .toolbar{
+                PostFeedTopNavigationBar(
+                    postFeedFilter: viewStore.state.currentPostFeedFilter,
+                    dropDownMenuSelectionAction: { newPostFeedFilter in
+                        viewStore.send(.updateCurrentPostFeedFilter(newPostFeedFilter))
+                    }
+                )
             }
         }
     }

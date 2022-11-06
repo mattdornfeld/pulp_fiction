@@ -20,7 +20,7 @@ public struct PulpFictionAppViewBuilder {
                 loggedInUserPostData: externalMessengers.loginSession.loggedInUserPostData,
                 postFeedMessenger: externalMessengers.postFeedMessenger
             )
-        case let .failure(pulpFictionStartupError):
+        case .failure:
             NavigationView {}
         }
     }

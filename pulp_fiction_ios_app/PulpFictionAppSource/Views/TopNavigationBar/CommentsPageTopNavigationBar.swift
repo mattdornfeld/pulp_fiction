@@ -27,27 +27,36 @@ struct CommentsPageTopNavigationBarReducer: ReducerProtocol {
     }
 }
 
-struct CommentsPageTopNavigationBar: NavigationBarContents {
-    private let store: ComposableArchitecture.StoreOf<CommentsPageTopNavigationBarReducer> = Store(
-        initialState: CommentsPageTopNavigationBarReducer.State(),
-        reducer: CommentsPageTopNavigationBarReducer()
-    )
+struct CommentsPageTopNavigationBar: ToolbarContent {
+    @ObservedObject private var viewStore: ViewStore<CommentsPageTopNavigationBarReducer.State, CommentsPageTopNavigationBarReducer.Action> = {
+        let store = Store(
+            initialState: CommentsPageTopNavigationBarReducer.State(),
+            reducer: CommentsPageTopNavigationBarReducer()
+        )
+        
+        return ViewStore(store)
+    }()
+    @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
 
-    var body: some View {
-        WithViewStore(store) { viewStore in
-            HStack {
-                Title("Comments")
-                    .foregroundColor(.gray)
-                    .padding(.leading, 7.5)
-                Spacer()
-                Symbol(symbolName: "plus", size: 25, color: .gray).navigateOnTap(
-                    isActive: viewStore.binding(
-                        get: \.shouldLoadCommentCreatorView,
-                        send: CommentsPageTopNavigationBarReducer.Action.updateShouldLoadCommentCreatorView(false)
-                    ),
-                    destination: CommentCreatorView()
-                ) { viewStore.send(.updateShouldLoadCommentCreatorView(true)) }
-            }
+
+    var body: some ToolbarContent {        
+        ToolbarItem(placement: .navigationBarLeading) {
+            Title("Comments")
+                .foregroundColor(.gray)
+        }
+        
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Symbol(
+                symbolName: "plus",
+                size: 20,
+                color: .gray
+            ).navigateOnTap(
+                isActive: viewStore.binding(
+                    get: \.shouldLoadCommentCreatorView,
+                    send: CommentsPageTopNavigationBarReducer.Action.updateShouldLoadCommentCreatorView(false)
+                ),
+                destination: CommentCreatorView()
+            ) { viewStore.send(.updateShouldLoadCommentCreatorView(true)) }
         }
     }
 }

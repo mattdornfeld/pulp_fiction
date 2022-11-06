@@ -13,7 +13,7 @@ import SwiftUI
 protocol DropDownMenuOption: CaseIterable, Hashable, Equatable, RawRepresentable<String> {}
 
 /// Reducer for SymbolWithDropDownMenu
-struct SymbolWithDropDownMenuReducer<A: DropDownMenuOption>: ReducerProtocol {
+struct ViewWithDropDownMenuReducer<A: DropDownMenuOption>: ReducerProtocol {
     /// A function to be called when a menu item is selected
     let dropDownMenuSelectionAction: (A) -> Void
 
@@ -43,13 +43,40 @@ struct SymbolWithDropDownMenuReducer<A: DropDownMenuOption>: ReducerProtocol {
 }
 
 /// View for a symbol with a selectable drop down menu
-struct SymbolWithDropDownMenu<A: DropDownMenuOption>: View {
-    private let symbolName: String
-    private let symbolSize: CGFloat
-    private let symbolColor: Color
-    private let menuOptions: [A]
-    private let store: ComposableArchitecture.StoreOf<SymbolWithDropDownMenuReducer<A>>
+protocol ViewWithDropDownMenu: View {
+    associatedtype A: DropDownMenuOption
+    associatedtype Label: View
+    var label: Label { get }
+    var menuOptions: [A] { get }
+    var store: ComposableArchitecture.StoreOf<ViewWithDropDownMenuReducer<A>> { get }
+}
 
+extension ViewWithDropDownMenu {
+    var body: some View {
+        WithViewStore(store) { viewStore in
+            Menu {
+                Picker(selection: viewStore.binding(
+                    get: { state in state.currentSelection },
+                    send: { newSelection in .updateSelection(newSelection) }
+                ), label: EmptyView()) {
+                    ForEach(menuOptions, id: \.self) {
+                        Text($0.rawValue)
+                    }
+                }
+            } label: {
+                label
+            }
+        }
+    }
+}
+
+struct SymbolWithDropDownMenu<A: DropDownMenuOption>: ViewWithDropDownMenu {
+    typealias A = A
+    typealias Label = Symbol
+    let label: Symbol
+    let menuOptions: [A]
+    let store: ComposableArchitecture.StoreOf<ViewWithDropDownMenuReducer<A>>
+    
     /// Constucts a SymbolWithDropDownMenu view
     /// - Parameters:
     ///   - symbolName: The SF symbol name
@@ -66,30 +93,39 @@ struct SymbolWithDropDownMenu<A: DropDownMenuOption>: View {
         initialMenuSelection: A,
         dropDownMenuSelectionAction: @escaping (A) -> Void = { _ in }
     ) {
-        self.symbolName = symbolName
-        self.symbolSize = symbolSize
-        self.symbolColor = symbolColor
+        self.label = Symbol(symbolName: symbolName, size: symbolSize, color: symbolColor)
         self.menuOptions = menuOptions
-        store = Store(
+        self.store = Store(
             initialState: .init(currentSelection: initialMenuSelection),
-            reducer: SymbolWithDropDownMenuReducer(dropDownMenuSelectionAction: dropDownMenuSelectionAction)
+            reducer: ViewWithDropDownMenuReducer(dropDownMenuSelectionAction: dropDownMenuSelectionAction)
         )
     }
+}
 
-    var body: some View {
-        WithViewStore(store) { viewStore in
-            Menu {
-                Picker(selection: viewStore.binding(
-                    get: { state in state.currentSelection },
-                    send: { newSelection in .updateSelection(newSelection) }
-                ), label: EmptyView()) {
-                    ForEach(menuOptions, id: \.self) {
-                        Text($0.rawValue)
-                    }
-                }
-            } label: {
-                Symbol(symbolName: symbolName, size: symbolSize, color: symbolColor)
-            }
-        }
+struct TextWithDropDownMenu<A: DropDownMenuOption, B: TextView>: ViewWithDropDownMenu {
+    typealias A = A
+    typealias Label = B
+    let label: B
+    let menuOptions: [A]
+    let store: ComposableArchitecture.StoreOf<ViewWithDropDownMenuReducer<A>>
+    
+    /// Constucts a TextWithDropDownMenu view
+    /// - Parameters:
+    ///   - textView: The text for the dropdown menu
+    ///   - menuOptions: An array of instances of DropDownMenuOption. These will be the options in the drop down menu
+    ///   - initialMenuSelection: The initial menu selection
+    ///   - dropDownMenuSelectionAction: A function to be called when a menu item is selected
+    init(
+        textView: B,
+        menuOptions: [A],
+        initialMenuSelection: A,
+        dropDownMenuSelectionAction: @escaping (A) -> Void = { _ in }
+    ) {
+        self.label = textView
+        self.menuOptions = menuOptions
+        self.store = Store(
+            initialState: .init(currentSelection: initialMenuSelection),
+            reducer: ViewWithDropDownMenuReducer(dropDownMenuSelectionAction: dropDownMenuSelectionAction)
+        )
     }
 }
