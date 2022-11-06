@@ -11,6 +11,8 @@ import SwiftUI
 
 /// Reducer for CommentCreatorView
 struct CommentCreatorReducer: ReducerProtocol {
+    private let maxCommentSize: Int = 100
+    
     struct State: Equatable {
         /// Comment being created
         var comment: String = ""
@@ -20,17 +22,22 @@ struct CommentCreatorReducer: ReducerProtocol {
         /// Updates the comment as new characters are typed
         case updateComment(String)
         /// Posts the comment
-        case postComment
+        case postComment(() -> ())
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
         case let .updateComment(newComment):
-            state.comment = newComment
+            state.comment = String(newComment.prefix(maxCommentSize))
             return .none
 
-        case .postComment:
+        case .postComment(let backAction):
+            if (state.comment.count == 0) {
+                return .none
+            }
+            
             print(state.comment)
+            backAction()
             return .none
         }
     }
@@ -43,12 +50,13 @@ struct CommentCreatorView: View {
         reducer: CommentCreatorReducer()
     )
     @FocusState private var isInputCommentFieldFocused: Bool
+    @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
 
     var body: some View {
         WithViewStore(store) { viewStore in
             VStack {
                 TextField(
-                    "",
+                    "Write a comment",
                     text: viewStore.binding(
                         get: \.comment,
                         send: { newComment in .updateComment(newComment) }
@@ -63,7 +71,9 @@ struct CommentCreatorView: View {
                 isInputCommentFieldFocused = true
             }
             .toolbar {
-                CommentCreatorTopNavigationBar(tapPostButtonAction: { viewStore.send(.postComment) })
+                CommentCreatorTopNavigationBar(tapPostButtonAction: {
+                    viewStore.send(.postComment{ self.presentationMode.wrappedValue.dismiss() })
+                })
             }
         }
     }
