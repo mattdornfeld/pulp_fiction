@@ -8,8 +8,8 @@
 import Foundation
 import SwiftUI
 
-/// Contents for the top navigation bar of the comment creation view
-struct CommentCreatorTopNavigationBar: ToolbarContent {
+/// Contents for the top navigation bar of a text creation view
+struct TextCreatorTopNavigationBar: ToolbarContent {
     /// Function that's called when Post button is tapped
     let tapPostButtonAction: () -> Void
 

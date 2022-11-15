@@ -12,7 +12,7 @@ import SwiftUI
 /// Reducer for CommentCreatorView
 struct CommentCreatorReducer: ReducerProtocol {
     private let maxCommentSize: Int = 100
-    
+
     struct State: Equatable {
         /// Comment being created
         var comment: String = ""
@@ -22,7 +22,7 @@ struct CommentCreatorReducer: ReducerProtocol {
         /// Updates the comment as new characters are typed
         case updateComment(String)
         /// Posts the comment
-        case postComment(() -> ())
+        case postComment(() -> Void)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
@@ -31,11 +31,11 @@ struct CommentCreatorReducer: ReducerProtocol {
             state.comment = String(newComment.prefix(maxCommentSize))
             return .none
 
-        case .postComment(let backAction):
-            if (state.comment.count == 0) {
+        case let .postComment(backAction):
+            if state.comment.count == 0 {
                 return .none
             }
-            
+
             print(state.comment)
             backAction()
             return .none
@@ -71,8 +71,8 @@ struct CommentCreatorView: View {
                 isInputCommentFieldFocused = true
             }
             .toolbar {
-                CommentCreatorTopNavigationBar(tapPostButtonAction: {
-                    viewStore.send(.postComment{ self.presentationMode.wrappedValue.dismiss() })
+                TextCreatorTopNavigationBar(tapPostButtonAction: {
+                    viewStore.send(.postComment { self.presentationMode.wrappedValue.dismiss() })
                 })
             }
         }

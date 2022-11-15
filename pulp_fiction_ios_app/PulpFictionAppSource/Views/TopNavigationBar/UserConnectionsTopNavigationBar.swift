@@ -13,12 +13,12 @@ struct UserConnectionsTopNavigationBar: ToolbarContent {
     let userConnectionsFilter: UserConnectionsFilter
     let dropDownMenuSelectionAction: (UserConnectionsFilter) -> Void
 
-    var body: some ToolbarContent {        
+    var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
             Title(userConnectionsFilter.rawValue)
                 .foregroundColor(.gray)
         }
-        
+
         ToolbarItem(placement: .navigationBarTrailing) {
             SymbolWithDropDownMenu(
                 symbolName: "line.3.horizontal.decrease.circle",

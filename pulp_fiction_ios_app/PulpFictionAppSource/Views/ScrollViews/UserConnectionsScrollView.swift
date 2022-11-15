@@ -52,7 +52,7 @@ struct UserConnectionsScrollView: View {
             ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<UserConnectionView> in
                 buildPostViewFeed(viewStore.state.currentUserConnectionsFilter)
                     .makeIterator()
-            }.toolbar{
+            }.toolbar {
                 UserConnectionsTopNavigationBar(
                     userConnectionsFilter: viewStore.state.currentUserConnectionsFilter,
                     dropDownMenuSelectionAction: { newUserConnectionsFilter in

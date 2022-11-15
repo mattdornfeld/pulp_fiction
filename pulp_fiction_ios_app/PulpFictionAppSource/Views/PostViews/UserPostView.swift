@@ -30,6 +30,7 @@ struct UserPostViewReducer: ReducerProtocol {
 struct UserPostView: View {
     let userPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let loggedInUserPostData: UserPostData
     private let store: ComposableArchitecture.StoreOf<UserPostViewReducer> = Store(
         initialState: UserPostViewReducer.State(),
         reducer: UserPostViewReducer()
@@ -57,7 +58,8 @@ struct UserPostView: View {
                     send: .updateShouldLoadUserProfileView(false)
                 ),
                 destination: UserProfileView(
-                    loggedInUserPostData: userPostData,
+                    userProfileOwnerPostData: userPostData,
+                    loggedInUserPostData: loggedInUserPostData,
                     postFeedMessenger: postFeedMessenger
                 )
             ) {

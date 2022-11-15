@@ -76,7 +76,7 @@ struct SymbolWithDropDownMenu<A: DropDownMenuOption>: ViewWithDropDownMenu {
     let label: Symbol
     let menuOptions: [A]
     let store: ComposableArchitecture.StoreOf<ViewWithDropDownMenuReducer<A>>
-    
+
     /// Constucts a SymbolWithDropDownMenu view
     /// - Parameters:
     ///   - symbolName: The SF symbol name
@@ -93,9 +93,9 @@ struct SymbolWithDropDownMenu<A: DropDownMenuOption>: ViewWithDropDownMenu {
         initialMenuSelection: A,
         dropDownMenuSelectionAction: @escaping (A) -> Void = { _ in }
     ) {
-        self.label = Symbol(symbolName: symbolName, size: symbolSize, color: symbolColor)
+        label = Symbol(symbolName: symbolName, size: symbolSize, color: symbolColor)
         self.menuOptions = menuOptions
-        self.store = Store(
+        store = Store(
             initialState: .init(currentSelection: initialMenuSelection),
             reducer: ViewWithDropDownMenuReducer(dropDownMenuSelectionAction: dropDownMenuSelectionAction)
         )
@@ -108,7 +108,7 @@ struct TextWithDropDownMenu<A: DropDownMenuOption, B: TextView>: ViewWithDropDow
     let label: B
     let menuOptions: [A]
     let store: ComposableArchitecture.StoreOf<ViewWithDropDownMenuReducer<A>>
-    
+
     /// Constucts a TextWithDropDownMenu view
     /// - Parameters:
     ///   - textView: The text for the dropdown menu
@@ -121,9 +121,9 @@ struct TextWithDropDownMenu<A: DropDownMenuOption, B: TextView>: ViewWithDropDow
         initialMenuSelection: A,
         dropDownMenuSelectionAction: @escaping (A) -> Void = { _ in }
     ) {
-        self.label = textView
+        label = textView
         self.menuOptions = menuOptions
-        self.store = Store(
+        store = Store(
             initialState: .init(currentSelection: initialMenuSelection),
             reducer: ViewWithDropDownMenuReducer(dropDownMenuSelectionAction: dropDownMenuSelectionAction)
         )

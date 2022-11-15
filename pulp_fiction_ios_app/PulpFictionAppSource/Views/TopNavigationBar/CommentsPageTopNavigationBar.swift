@@ -33,18 +33,18 @@ struct CommentsPageTopNavigationBar: ToolbarContent {
             initialState: CommentsPageTopNavigationBarReducer.State(),
             reducer: CommentsPageTopNavigationBarReducer()
         )
-        
+
         return ViewStore(store)
     }()
+
     @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
 
-
-    var body: some ToolbarContent {        
+    var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
             Title("Comments")
                 .foregroundColor(.gray)
         }
-        
+
         ToolbarItem(placement: .navigationBarTrailing) {
             Symbol(
                 symbolName: "plus",

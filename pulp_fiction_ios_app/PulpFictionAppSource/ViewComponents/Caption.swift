@@ -57,7 +57,7 @@ extension BoldCaption {
             .foregroundColor(color)
         self.alignment = alignment
     }
-    
+
     init(text: String, color: Color) {
         self.init(text: text, alignment: .leading, color: color)
     }

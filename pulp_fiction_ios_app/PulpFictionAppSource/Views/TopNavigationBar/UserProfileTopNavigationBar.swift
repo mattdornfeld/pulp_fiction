@@ -2,7 +2,7 @@
 //  UserProfileTopNavigationBar.swift
 //  build_app_source
 //
-//  Created by Matthew Dornfeld on 10/23/22.
+//  Created by Matthew Dornfeld on 11/15/22.
 //
 
 import ComposableArchitecture
@@ -20,18 +20,21 @@ struct UserProfileTopNavigationBarReducer: ReducerProtocol {
 }
 
 struct UserProfileTopNavigationBar: ToolbarContent {
-    let userPostData: UserPostData
+    let userProfileOwnerPostData: UserPostData
+    let postFeedMessenger: PostFeedMessenger
+    @ObservedObject private var viewStore: ViewStore<UserProfileTopNavigationBarReducer.State, UserProfileTopNavigationBarReducer.Action> = {
+        let store = Store(
+            initialState: UserProfileTopNavigationBarReducer.State(),
+            reducer: UserProfileTopNavigationBarReducer()
+        )
+
+        return ViewStore(store)
+    }()
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
-            Title(userPostData.userDisplayName)
+            Title(userProfileOwnerPostData.userDisplayName)
                 .foregroundColor(.gray)
-        }
-        ToolbarItem(placement: .navigationBarTrailing) {
-            HStack {
-                Symbol(symbolName: "plus", size: 20, color: .gray)
-                Symbol(symbolName: "gearshape.fill", size: 20, color: .gray)
-            }
         }
     }
 }

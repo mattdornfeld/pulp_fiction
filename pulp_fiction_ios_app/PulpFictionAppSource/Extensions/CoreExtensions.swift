@@ -171,3 +171,18 @@ public extension Int64 {
         }
     }
 }
+
+extension Bool {
+    class FalseEither: Error {}
+
+    func toEither<E: Error>(_ error: E) -> Either<E, Bool> {
+        if self {
+            return .right(true)
+        }
+        return .left(error)
+    }
+
+    func toEither() -> Either<FalseEither, Bool> {
+        toEither(FalseEither())
+    }
+}

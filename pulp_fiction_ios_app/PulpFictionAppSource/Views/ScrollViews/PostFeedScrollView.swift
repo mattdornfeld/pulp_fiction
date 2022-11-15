@@ -56,19 +56,21 @@ struct PostFeedScrollView: View {
 //            }
 //        }
 //    }
-    
+
     var body: some View {
         WithViewStore(store) { viewStore in
             ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
                 getPostFeed(viewStore.state.currentPostFeedFilter)
                     .makeIterator()
             }
-            .toolbar{
+            .toolbar {
                 PostFeedTopNavigationBar(
                     postFeedFilter: viewStore.state.currentPostFeedFilter,
                     dropDownMenuSelectionAction: { newPostFeedFilter in
                         viewStore.send(.updateCurrentPostFeedFilter(newPostFeedFilter))
-                    }
+                    },
+                    postFeedMessenger: postFeedMessenger,
+                    loggedInUserPostData: loggedInUserPostData
                 )
             }
         }

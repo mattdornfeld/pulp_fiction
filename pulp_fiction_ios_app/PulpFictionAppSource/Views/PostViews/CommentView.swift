@@ -30,23 +30,27 @@ private struct CommentViewReducer: ReducerProtocol {
 }
 
 struct CommentView: PostLikeOnSwipeView {
-    private static let logger = Logger(label: String(describing: CommentView.self))
     let commentPostData: CommentPostData
     let creatorUserPostData: UserPostData
     let id: Int
+    let postFeedMessenger: PostFeedMessenger
+    let loggedInUserPostData: UserPostData
+    private static let logger = Logger(label: String(describing: CommentView.self))
     internal let swipablePostStore: ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer>
     private let store: ComposableArchitecture.StoreOf<CommentViewReducer>
-    private let postFeedMessenger: PostFeedMessenger
 
     init(
         commentPostData: CommentPostData,
         creatorUserPostData: UserPostData,
         id: Int,
-        postFeedMessenger: PostFeedMessenger
+        postFeedMessenger: PostFeedMessenger,
+        loggedInUserPostData: UserPostData
     ) {
         self.commentPostData = commentPostData
         self.creatorUserPostData = creatorUserPostData
         self.id = id
+        self.postFeedMessenger = postFeedMessenger
+        self.loggedInUserPostData = loggedInUserPostData
         swipablePostStore = CommentView.buildStore(
             postInteractionAggregates: commentPostData.postInteractionAggregates,
             loggedInUserPostInteractions: commentPostData.loggedInUserPostInteractions
@@ -55,7 +59,6 @@ struct CommentView: PostLikeOnSwipeView {
             initialState: CommentViewReducer.State(),
             reducer: CommentViewReducer()
         )
-        self.postFeedMessenger = postFeedMessenger
     }
 
     static func == (lhs: CommentView, rhs: CommentView) -> Bool {
@@ -76,7 +79,8 @@ struct CommentView: PostLikeOnSwipeView {
                                 send: CommentViewReducer.Action.updateShouldLoadUserProfileView(false)
                             ),
                             destination: UserProfileView(
-                                loggedInUserPostData: creatorUserPostData,
+                                userProfileOwnerPostData: creatorUserPostData,
+                                loggedInUserPostData: loggedInUserPostData,
                                 postFeedMessenger: postFeedMessenger
                             )
                         ) { viewStore.send(.updateShouldLoadUserProfileView(true)) }
@@ -98,7 +102,8 @@ struct CommentView: PostLikeOnSwipeView {
         postViewIndex: Int,
         commentPostData: CommentPostData,
         userPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger
+        postFeedMessenger: PostFeedMessenger,
+        loggedInUserPostData: UserPostData
     ) -> Either<PulpFictionRequestError, CommentView> {
         let userAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
@@ -108,7 +113,8 @@ struct CommentView: PostLikeOnSwipeView {
                 commentPostData: commentPostData,
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
-                postFeedMessenger: postFeedMessenger
+                postFeedMessenger: postFeedMessenger,
+                loggedInUserPostData: loggedInUserPostData
             )
         )^.onError { cause in
             logger.error(

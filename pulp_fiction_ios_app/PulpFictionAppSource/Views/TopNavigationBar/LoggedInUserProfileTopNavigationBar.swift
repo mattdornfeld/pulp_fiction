@@ -1,6 +1,6 @@
 //
-//  PostFeedTopNavigationBarView.swift
-//  build_app
+//  LoggedInUserProfileTopNavigationBar.swift
+//  build_app_source
 //
 //  Created by Matthew Dornfeld on 10/23/22.
 //
@@ -9,7 +9,7 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
-struct PostFeedTopNavigationBarReducer: ReducerProtocol {
+struct LoggedInUserProfileTopNavigationBarReducer: ReducerProtocol {
     struct State: Equatable {
         var shouldLoadPostCreatorView: Bool = false
     }
@@ -27,29 +27,26 @@ struct PostFeedTopNavigationBarReducer: ReducerProtocol {
     }
 }
 
-struct PostFeedTopNavigationBar: ToolbarContent {
-    let postFeedFilter: PostFeedFilter
-    let dropDownMenuSelectionAction: (PostFeedFilter) -> Void
-    let postFeedMessenger: PostFeedMessenger
+struct LoggedInUserProfileTopNavigationBar: ToolbarContent {
     let loggedInUserPostData: UserPostData
-
-    @ObservedObject private var viewStore: ViewStore<PostFeedTopNavigationBarReducer.State, PostFeedTopNavigationBarReducer.Action> = {
+    let postFeedMessenger: PostFeedMessenger
+    @ObservedObject private var viewStore: ViewStore<LoggedInUserProfileTopNavigationBarReducer.State, LoggedInUserProfileTopNavigationBarReducer.Action> = {
         let store = Store(
-            initialState: PostFeedTopNavigationBarReducer.State(),
-            reducer: PostFeedTopNavigationBarReducer()
+            initialState: LoggedInUserProfileTopNavigationBarReducer.State(),
+            reducer: LoggedInUserProfileTopNavigationBarReducer()
         )
 
         return ViewStore(store)
     }()
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            Title("Pulp Fiction")
+        ToolbarItem(placement: .navigationBarLeading) {
+            Title(loggedInUserPostData.userDisplayName)
                 .foregroundColor(.gray)
         }
 
         ToolbarItem(placement: .navigationBarTrailing) {
-            HStack(spacing: 0.001) {
+            HStack {
                 Symbol(
                     symbolName: "plus",
                     size: 20,
@@ -57,7 +54,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
                 ).navigateOnTap(
                     isActive: viewStore.binding(
                         get: \.shouldLoadPostCreatorView,
-                        send: PostFeedTopNavigationBarReducer.Action.updateShouldLoadPostCreatorView(false)
+                        send: LoggedInUserProfileTopNavigationBarReducer.Action.updateShouldLoadPostCreatorView(false)
                     ),
                     destination: PostCreatorView(
                         loggedInUserPostData: loggedInUserPostData,
@@ -67,14 +64,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
                     viewStore.send(.updateShouldLoadPostCreatorView(true))
                 }
 
-                SymbolWithDropDownMenu(
-                    symbolName: "line.3.horizontal.decrease.circle",
-                    symbolSize: 20,
-                    symbolColor: .gray,
-                    menuOptions: PostFeedFilter.allCases,
-                    initialMenuSelection: postFeedFilter,
-                    dropDownMenuSelectionAction: dropDownMenuSelectionAction
-                )
+                Symbol(symbolName: "gearshape.fill", size: 20, color: .gray)
             }
         }
     }
