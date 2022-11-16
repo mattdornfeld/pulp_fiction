@@ -87,9 +87,7 @@ struct CommentView: PostLikeOnSwipeView {
                     buildPostLikeArrowView()
                     Spacer()
                     Caption(commentPostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
-                    Symbol(symbolName: "ellipsis")
-                        .padding(.trailing, 10)
-                        .padding(.bottom, 4)
+                    ExtraOptionsDropDownMenuView(postMetadata: commentPostData.postMetadata)
                 }
                 Caption(commentPostData.body)
             }

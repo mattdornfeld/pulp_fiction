@@ -10,12 +10,13 @@ import SwiftUI
 
 /// Contents for the top navigation bar of a text creation view
 struct TextCreatorTopNavigationBar: ToolbarContent {
+    let createButtonLabel: String
     /// Function that's called when Post button is tapped
     let tapPostButtonAction: () -> Void
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
-            NavigationBarText("Post")
+            NavigationBarText(createButtonLabel)
                 .font(.system(size: 25))
                 .foregroundColor(.gray)
                 .padding(.trailing, 5)

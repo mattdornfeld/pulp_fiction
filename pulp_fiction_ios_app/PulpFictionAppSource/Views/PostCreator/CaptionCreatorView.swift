@@ -106,9 +106,9 @@ struct CaptionCreatorView: View {
                 isInputCaptionFieldFocused = true
             }
             .toolbar {
-                TextCreatorTopNavigationBar(tapPostButtonAction: {
+                TextCreatorTopNavigationBar(createButtonLabel: "Post") {
                     viewStore.send(.createPost)
-                })
+                }
             }
         }
     }

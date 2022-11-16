@@ -71,9 +71,9 @@ struct CommentCreatorView: View {
                 isInputCommentFieldFocused = true
             }
             .toolbar {
-                TextCreatorTopNavigationBar(tapPostButtonAction: {
+                TextCreatorTopNavigationBar(createButtonLabel: "Comment") {
                     viewStore.send(.postComment { self.presentationMode.wrappedValue.dismiss() })
-                })
+                }
             }
         }
     }

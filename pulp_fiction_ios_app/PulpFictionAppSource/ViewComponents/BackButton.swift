@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 /// View that creates the back button for a NavigationLink
-private struct BackButton: View {
+struct BackButton: View {
     @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
 
     var body: some View {

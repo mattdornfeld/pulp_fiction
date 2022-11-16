@@ -120,9 +120,7 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                         loggedInUserPostData: loggedInUserPostData
                     )
                     Spacer()
-                    Symbol(symbolName: "ellipsis")
-                        .padding(.trailing, 10)
-                        .padding(.bottom, 4)
+                    ExtraOptionsDropDownMenuView(postMetadata: imagePostData.postMetadata)
                 }
                 postUIImage.toImage().resizable().scaledToFit()
                 HStack {
