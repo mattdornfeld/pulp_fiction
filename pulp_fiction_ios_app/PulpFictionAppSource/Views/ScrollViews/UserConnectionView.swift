@@ -82,14 +82,18 @@ struct UserConnectionView: ScrollableContentView {
         let notFollowingOpacity = !isFollowing ? 1.0 : 0.0
         let backgroundColor: Color = isFollowing ? .orange : .blue
         ZStack {
-            Caption("Following")
-                .padding()
-                .foregroundColor(.white)
-                .opacity(followingOpacity)
-            Caption("Not Following")
-                .padding()
-                .foregroundColor(.white)
-                .opacity(notFollowingOpacity)
+            Caption(
+                text: "Following",
+                color: .white
+            )
+            .padding()
+            .opacity(followingOpacity)
+            Caption(
+                text: "Not Following",
+                color: .white
+            )
+            .padding()
+            .opacity(notFollowingOpacity)
         }.background(backgroundColor)
     }
 }

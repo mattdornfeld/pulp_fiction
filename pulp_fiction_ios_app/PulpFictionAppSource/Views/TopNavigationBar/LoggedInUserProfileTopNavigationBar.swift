@@ -9,35 +9,9 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
-struct LoggedInUserProfileTopNavigationBarReducer: ReducerProtocol {
-    struct State: Equatable {
-        var shouldLoadPostCreatorView: Bool = false
-    }
-
-    enum Action {
-        case updateShouldLoadPostCreatorView(Bool)
-    }
-
-    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
-        switch action {
-        case let .updateShouldLoadPostCreatorView(newShouldLoadPostCreatorView):
-            state.shouldLoadPostCreatorView = newShouldLoadPostCreatorView
-            return .none
-        }
-    }
-}
-
 struct LoggedInUserProfileTopNavigationBar: ToolbarContent {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
-    @ObservedObject private var viewStore: ViewStore<LoggedInUserProfileTopNavigationBarReducer.State, LoggedInUserProfileTopNavigationBarReducer.Action> = {
-        let store = Store(
-            initialState: LoggedInUserProfileTopNavigationBarReducer.State(),
-            reducer: LoggedInUserProfileTopNavigationBarReducer()
-        )
-
-        return ViewStore(store)
-    }()
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
@@ -51,20 +25,19 @@ struct LoggedInUserProfileTopNavigationBar: ToolbarContent {
                     symbolName: "plus",
                     size: 20,
                     color: .gray
-                ).navigateOnTap(
-                    isActive: viewStore.binding(
-                        get: \.shouldLoadPostCreatorView,
-                        send: LoggedInUserProfileTopNavigationBarReducer.Action.updateShouldLoadPostCreatorView(false)
-                    ),
-                    destination: PostCreatorView(
-                        loggedInUserPostData: loggedInUserPostData,
-                        postFeedMessenger: postFeedMessenger
-                    )
-                ) {
-                    viewStore.send(.updateShouldLoadPostCreatorView(true))
-                }
+                )
+                .navigateOnTap(destination: PostCreatorView(
+                    loggedInUserPostData: loggedInUserPostData,
+                    postFeedMessenger: postFeedMessenger
+                ))
 
-                Symbol(symbolName: "gearshape.fill", size: 20, color: .gray)
+                Symbol(
+                    symbolName: "gearshape.fill",
+                    size: 20,
+                    color: .gray
+                ).navigateOnTap(destination: EditProfileView(
+                    loggedInUserPostData: loggedInUserPostData
+                ))
             }
         }
     }

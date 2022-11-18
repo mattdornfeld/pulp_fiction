@@ -50,9 +50,12 @@ struct UserProfileView: View {
                     .foregroundColor(.gray)
                     .padding(5)
             }
-            Caption(text: loggedInUserPostData.bio, alignment: .center)
-                .foregroundColor(.gray)
-                .padding()
+            Caption(
+                text: loggedInUserPostData.bio,
+                alignment: .center,
+                color: .gray
+            )
+            .padding()
         }
     }
 }

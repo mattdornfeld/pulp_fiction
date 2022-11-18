@@ -86,7 +86,10 @@ struct CommentView: PostLikeOnSwipeView {
                         ) { viewStore.send(.updateShouldLoadUserProfileView(true)) }
                     buildPostLikeArrowView()
                     Spacer()
-                    Caption(commentPostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
+                    Caption(
+                        text: commentPostData.postMetadata.createdAt.formatAsStringForView(),
+                        color: .gray
+                    )
                     ExtraOptionsDropDownMenuView(postMetadata: commentPostData.postMetadata)
                 }
                 Caption(commentPostData.body)

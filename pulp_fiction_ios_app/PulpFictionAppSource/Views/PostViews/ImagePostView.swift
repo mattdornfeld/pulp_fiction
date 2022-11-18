@@ -139,7 +139,10 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                             BoldCaption(creatorUserPostData.userDisplayName)
                                 .append(textView: Caption(imagePostData.caption))
                         }
-                        Caption(imagePostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
+                        Caption(
+                            text: imagePostData.postMetadata.createdAt.formatAsStringForView(),
+                            color: .gray
+                        )
                     }.padding(.leading, 4)
                     Spacer()
                 }

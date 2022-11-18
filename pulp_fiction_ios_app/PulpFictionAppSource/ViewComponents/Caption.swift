@@ -34,13 +34,23 @@ struct Caption: TextView {
 }
 
 extension Caption {
-    init(text: String, alignment: TextAlignment) {
-        self.text = Text(text).font(.caption)
+    init(text: String, alignment: TextAlignment, color: Color?) {
+        self.text = Text(text)
+            .font(.caption)
+            .foregroundColor(color)
         self.alignment = alignment
     }
 
+    init(text: String, color: Color) {
+        self.init(text: text, alignment: .leading, color: color)
+    }
+
+    init(text: String, alignment: TextAlignment) {
+        self.init(text: text, alignment: alignment, color: nil)
+    }
+
     init(_ text: String) {
-        self.init(text: text, alignment: .leading)
+        self.init(text: text, alignment: .leading, color: nil)
     }
 }
 

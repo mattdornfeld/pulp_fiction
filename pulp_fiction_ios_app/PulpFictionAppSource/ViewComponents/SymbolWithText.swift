@@ -16,7 +16,10 @@ public struct SymbolWithCaption: View {
     public var body: some View {
         HStack {
             Image(systemName: symbolName).foregroundStyle(color)
-            Caption(symbolCaption).foregroundColor(color)
+            Caption(
+                text: symbolCaption,
+                color: color
+            )
         }
     }
 }
