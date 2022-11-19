@@ -16,7 +16,7 @@ import SwiftUI
 struct PhotoAlbumView: UIViewControllerRepresentable {
     typealias UIViewControllerType = PHPickerViewController
     typealias PhotoAlbumImage = NSItemProviderReading
-    let viewStore: ViewStore<PostCreatorReducer.State, PostCreatorReducer.Action>
+    let viewStore: ViewStore<ImageSelectorReducer.State, ImageSelectorReducer.Action>
 
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
         var parent: PhotoAlbumView
@@ -30,7 +30,7 @@ struct PhotoAlbumView: UIViewControllerRepresentable {
 
             guard let provider = results.first?.itemProvider else {
                 DispatchQueue.main.async {
-                    self.parent.viewStore.send(.pickImageFromLibrary(.failure(PostCreatorReducer.Error.CancelledWithOutPickingImage())))
+                    self.parent.viewStore.send(.pickImageFromLibrary(.failure(ImageSelectorReducer.Error.CancelledWithOutPickingImage())))
                 }
                 return
             }
@@ -40,7 +40,7 @@ struct PhotoAlbumView: UIViewControllerRepresentable {
 
                     let result: Result<PhotoAlbumImage, PulpFictionRequestError> = photoAlbumImageMaybe
                         .map { photoAlbumImage in .success(photoAlbumImage)
-                        } ?? .failure(PostCreatorReducer.Error.CancelledWithOutPickingImage())
+                        } ?? .failure(ImageSelectorReducer.Error.CancelledWithOutPickingImage())
 
                     DispatchQueue.main.async {
                         self.parent.viewStore.send(.pickImageFromLibrary(result))

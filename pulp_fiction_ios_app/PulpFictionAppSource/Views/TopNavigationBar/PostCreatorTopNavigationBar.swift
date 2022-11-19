@@ -58,6 +58,7 @@ struct PostCreatorTopNavigationBar: ToolbarContent {
             Title("Create Post")
                 .foregroundColor(.gray)
         }
+
         ToolbarItem(placement: .navigationBarTrailing) {
             HStack {
                 SymbolWithDropDownMenu(

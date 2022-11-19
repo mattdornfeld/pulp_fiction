@@ -6,16 +6,17 @@
 //
 
 import Bow
+import BowOptics
 import Foundation
 import UIKit
 
 /// User post data is stored in this model. Used for rendering UserPostView and avatar + display name in other post views.
-public struct UserPostData: PostData, PostDataIdentifiable, Equatable {
+public struct UserPostData: PostData, PostDataIdentifiable, Equatable, AutoSetter {
     public let id: PostUpdateIdentifier
     let postMetadata: PostMetadata
-    let userPostContentData: ContentData
-    let userDisplayName: String
-    let bio: String
+    var userPostContentData: ContentData
+    var userDisplayName: String
+    var bio: String
     let userId: UUID
     @CodableUIImage var userAvatarUIImage: UIImage
 

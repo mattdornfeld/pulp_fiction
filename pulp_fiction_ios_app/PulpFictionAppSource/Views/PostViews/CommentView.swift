@@ -106,10 +106,7 @@ struct CommentView: PostLikeOnSwipeView {
         postFeedMessenger: PostFeedMessenger,
         loggedInUserPostData: UserPostData
     ) -> Either<PulpFictionRequestError, CommentView> {
-        let userAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
-
         return binding(
-            userAvatarUIImageEither <- userPostData.userPostContentData.toUIImage(),
             yield: CommentView(
                 commentPostData: commentPostData,
                 creatorUserPostData: userPostData,

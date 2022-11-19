@@ -5,12 +5,13 @@
 //  Created by Matthew Dornfeld on 11/17/22.
 //
 
+import BowOptics
 import Foundation
 
-struct SensitiveUserMetadata: Equatable {
-    let email: String
-    let phoneNumber: String
-    let dateOfBirth: Date
+struct SensitiveUserMetadata: Equatable, AutoSetter {
+    var email: String
+    var phoneNumber: String
+    var dateOfBirth: Date
 
     func getFormattedDateOfBirth() -> String {
         let dateFormatter = DateFormatter()

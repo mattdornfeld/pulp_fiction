@@ -158,11 +158,9 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
         loggedInUserPostData: UserPostData
     ) -> Either<PulpFictionRequestError, ImagePostView> {
         let createPostUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
-        let createUserAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
         return binding(
             createPostUIImageEither <- imagePostData.imagePostContentData.toUIImage(),
-            createUserAvatarUIImageEither <- userPostData.userPostContentData.toUIImage(),
             yield: ImagePostView(
                 postFeedMessenger: postFeedMessenger,
                 postUIImage: createPostUIImageEither.get,
