@@ -6,12 +6,14 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionGrpcKt
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserResponse
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
 import co.firstorderlabs.protos.pulpfiction.createPostResponse
 import co.firstorderlabs.protos.pulpfiction.createUserResponse
+import co.firstorderlabs.protos.pulpfiction.getFeedResponse
 import co.firstorderlabs.protos.pulpfiction.getPostResponse
 import co.firstorderlabs.protos.pulpfiction.getUserResponse
 import co.firstorderlabs.protos.pulpfiction.loginResponse
@@ -22,6 +24,8 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.logEndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import org.ktorm.database.Database
 import software.amazon.awssdk.services.s3.S3Client
 
@@ -144,20 +148,18 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             .getResultAndThrowException()
     }
 
-    override suspend fun getFeed(request: PulpFictionProtos.GetFeedRequest): Flow<PulpFictionProtos.GetFeedResponse> {
-        val endpoint = EndpointName.getFeed
-        return effect<PulpFictionRequestError, Flow<GetFeedResponse>> {
-            checkLoginSessionValid(request.loginSession, endpointName).bind()
+    override fun getFeed(request: PulpFictionProtos.GetFeedRequest): Flow<PulpFictionProtos.GetFeedResponse> {
+        val endpointName = EndpointName.getFeed
+        return flow {
+            checkLoginSessionValid(request.loginSession, endpointName).getResultAndThrowException()
 
             val postsFeed = databaseMessenger
                 .getFeed(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.getFeed)
-                .bind()
+                .getResultAndThrowException()
             getFeedResponse {
-                this.post = postsFeed
-            }.asFlow()
-
+                this.posts += postsFeed
+            }
         }
-            .logEndpointMetrics(endpointName)
-            .getResultAndThrowException()
-    }}
+    }
+}

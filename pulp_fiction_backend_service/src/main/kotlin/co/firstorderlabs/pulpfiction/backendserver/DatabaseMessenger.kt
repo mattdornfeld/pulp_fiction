@@ -67,8 +67,6 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.getOrThrow
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import com.password4j.Password
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import org.ktorm.database.Database
 import org.ktorm.dsl.Query
 import org.ktorm.dsl.and
@@ -81,7 +79,6 @@ import org.ktorm.dsl.limit
 import org.ktorm.dsl.map
 import org.ktorm.dsl.orderBy
 import org.ktorm.dsl.rightJoin
-import org.ktorm.dsl.leftJoin
 import org.ktorm.dsl.select
 import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
@@ -453,8 +450,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .orderBy(Posts.createdAt.desc())
 
         val pagination = 2000
-        val paginatedPosts = sortedPostsQuery.limit(offset=0, limit=pagination)
-        paginatedPosts.map {row ->
+        val paginatedPosts = sortedPostsQuery.limit(offset = 0, limit = pagination)
+        paginatedPosts.map { row ->
             val postId = row[Posts.postId] ?: shift(PostNotFoundError())
             val postUpdate = getPostUpdate(postId).bind()
             val postCreatorId = row[Posts.postCreatorId] ?: shift(UserNotFoundError("Null"))
@@ -462,9 +459,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             post {
                 this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
                 this.imagePost = getPostData(postId, ImagePostData).bind().toProto(postInteractionAggregates)
-
-                }
             }
+        }
     }
 
     private fun getPostsQuery(
@@ -473,8 +469,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, Query> = effect {
         val postsTable = database
             .from(Posts)
-            .leftJoin(ImagePostData, on = Posts.postId eq ImagePostData.postId)
-        val columns = listOf(Posts.postId, Posts.postCreatorId) + ImagePostData.columns
+        val columns = listOf(Posts.postId, Posts.postCreatorId)
         when {
             request.hasGetGlobalFeedRequest() -> {
                 postsTable
@@ -492,7 +487,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     .select(columns)
             }
             else -> { shift(RequestParsingError("Feed request received without valid instruction.")) }
-        } 
+        }
     }
 
     fun checkUserPasswordValid(
