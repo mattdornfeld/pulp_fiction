@@ -23,8 +23,6 @@ struct EditProfileReducer: ReducerProtocol {
     private let logger: Logger = .init(label: String(describing: EditProfileReducer.self))
 
     struct State: Equatable {
-        /// The currently selected profile section to edit
-        var currentProfileSection: ProfileSection
         var loggedInUserPostData: UserPostData
         var loggedInUserSensitiveMetadata: SensitiveUserMetadata = .init(
             email: "shadowfax@middleearth.com",
@@ -37,8 +35,6 @@ struct EditProfileReducer: ReducerProtocol {
     }
 
     enum Action {
-        /// Updates currentProfileSection
-        case updateCurrentProfileSection(ProfileSection)
         /// Updates loggedInUserPostData.userAvatarUIImage
         case updateUserAvatarUIImage(UIImage)
         /// Updates loggedInUserPostData.loggedInUserPostDatadisplayName
@@ -59,10 +55,6 @@ struct EditProfileReducer: ReducerProtocol {
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
-        case let .updateCurrentProfileSection(newCurrentProfileSection):
-            state.currentProfileSection = newCurrentProfileSection
-            return .none
-
         case let .updateUserAvatarUIImage(newUserAvatarUIImage):
             newUserAvatarUIImage
                 .toContentData()
@@ -127,10 +119,7 @@ struct EditProfileReducer: ReducerProtocol {
 
 /// Top navigation bar for EditProfileView
 struct EditProfileTopNavigationBar: ToolbarContent {
-    /// The currently selected profile section to edit
-    let currentProfileSection: ProfileSection
-    /// ViewStore for EditProfileView
-    let viewStore: ViewStore<EditProfileReducer.State, EditProfileReducer.Action>
+    let symbolWithDropDownMenu: SymbolWithDropDownMenu<ProfileSection>
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
@@ -139,15 +128,7 @@ struct EditProfileTopNavigationBar: ToolbarContent {
         }
 
         ToolbarItem(placement: .navigationBarTrailing) {
-            SymbolWithDropDownMenu(
-                symbolName: "line.3.horizontal.decrease.circle",
-                symbolSize: 20,
-                symbolColor: .gray,
-                menuOptions: ProfileSection.allCases,
-                initialMenuSelection: currentProfileSection
-            ) { profileSection in
-                viewStore.send(.updateCurrentProfileSection(profileSection))
-            }
+            symbolWithDropDownMenu.view
         }
     }
 }
@@ -326,34 +307,40 @@ struct EditPrivateProfileDataView: View {
 
 /// Display and edit profile data
 struct EditProfileView: View {
-    private let store: ComposableArchitecture.StoreOf<EditProfileReducer>
+    @ObservedObject private var symbolWithDropDownMenu: SymbolWithDropDownMenu<ProfileSection> = .init(
+        symbolName: "line.3.horizontal.decrease.circle",
+        symbolSize: 20,
+        symbolColor: .gray,
+        menuOptions: ProfileSection.allCases,
+        initialMenuSelection: .Public
+    )
+    @ObservedObject private var viewStore: ViewStore<EditProfileReducer.State, EditProfileReducer.Action>
 
     /// Inits a EditProfileView
     /// - Parameter loggedInUserPostData: UserPostData for the logged in user
     init(loggedInUserPostData: UserPostData) {
-        store = Store(
-            initialState: EditProfileReducer.State(
-                currentProfileSection: .Public,
-                loggedInUserPostData: loggedInUserPostData
-            ),
-            reducer: EditProfileReducer()
-        )
+        viewStore = {
+            let store = Store(
+                initialState: EditProfileReducer.State(
+                    loggedInUserPostData: loggedInUserPostData
+                ),
+                reducer: EditProfileReducer()
+            )
+            return .init(store)
+        }()
     }
 
     var body: some View {
-        WithViewStore(store) { viewStore in
-            VStack {
-                switch viewStore.currentProfileSection {
-                case .Public:
-                    EditPublicProfileDataView(viewStore: viewStore)
-                case .Private:
-                    EditPrivateProfileDataView(viewStore: viewStore)
-                }
+        VStack {
+            switch symbolWithDropDownMenu.currentSelection {
+            case .Public:
+                EditPublicProfileDataView(viewStore: viewStore)
+            case .Private:
+                EditPrivateProfileDataView(viewStore: viewStore)
             }
-            .toolbar { EditProfileTopNavigationBar(
-                currentProfileSection: viewStore.currentProfileSection,
-                viewStore: viewStore
-            ) }
         }
+        .toolbar { EditProfileTopNavigationBar(
+            symbolWithDropDownMenu: symbolWithDropDownMenu
+        ) }
     }
 }
