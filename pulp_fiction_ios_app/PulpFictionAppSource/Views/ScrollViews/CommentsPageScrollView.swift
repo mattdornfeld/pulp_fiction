@@ -8,6 +8,24 @@
 import Foundation
 import SwiftUI
 
+/// Navigation bar for CommentsPageScrollView
+struct CommentsPageTopNavigationBar: ToolbarContent {
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Title("Comments")
+                .foregroundColor(.gray)
+        }
+
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Symbol(
+                symbolName: "plus",
+                size: 20,
+                color: .gray
+            ).navigateOnTap(destination: CommentCreatorView())
+        }
+    }
+}
+
 /// View that scrolls through the comments page for a post
 struct CommentsPageScrollView: View {
     let imagePostView: ImagePostView
