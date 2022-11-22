@@ -484,10 +484,15 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val postId = row[Posts.postId] ?: shift(PostNotFoundError())
             val postUpdate = getPostUpdate(postId).bind()
             val postCreatorId = row[Posts.postCreatorId] ?: shift(UserNotFoundError("Null"))
+            val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
             val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
             post {
                 this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
-                this.imagePost = getPostData(postId, ImagePostData).bind().toProto(postInteractionAggregates)
+                this.imagePost = getPostData(postId, ImagePostData).bind()
+                    .toProto(
+                        loggedInUserPostInteractions,
+                        postInteractionAggregates
+                    )
             }
         }
     }
@@ -500,20 +505,21 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .from(Posts)
         val columns = listOf(Posts.postId, Posts.postCreatorId)
         when {
-            request.hasGetGlobalFeedRequest() -> {
+            request.hasGetGlobalPostFeedRequest() -> {
                 postsTable
                     .select(columns)
             }
-            request.hasGetUserFeedRequest() -> {
+            request.hasGetUserPostFeedRequest() -> {
                 postsTable
                     .select(columns)
                     .where { Posts.postCreatorId eq userId }
             }
-            request.hasGetFollowedFeedRequest() -> {
+            request.hasGetFollowingPostFeedRequest() -> {
                 database
                     .from(Followers)
                     .rightJoin(Posts, on = Followers.userId eq Posts.postCreatorId)
                     .select(columns)
+                    .where { Followers.followerId eq userId }
             }
             else -> { shift(RequestParsingError("Feed request received without valid instruction.")) }
         }
