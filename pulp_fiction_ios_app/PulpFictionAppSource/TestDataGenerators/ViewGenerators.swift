@@ -10,7 +10,10 @@ import BowEffects
 import Foundation
 
 extension ImagePostView {
-    static func generate(postFeedMessenger: PostFeedMessenger) -> IO<PulpFictionRequestError, ImagePostView> {
+    static func generate(
+        postFeedMessenger: PostFeedMessenger,
+        loggedInUserPostData: UserPostData
+    ) -> IO<PulpFictionRequestError, ImagePostView> {
         let imagePostDataIO = IO<PulpFictionRequestError, ImagePostData>.var()
         let userPostDataIO = IO<PulpFictionRequestError, UserPostData>.var()
         let imagePostViewIO = IO<PulpFictionRequestError, ImagePostView>.var()
@@ -22,7 +25,8 @@ extension ImagePostView {
                 postViewIndex: 0,
                 imagePostData: imagePostDataIO.get,
                 userPostData: userPostDataIO.get,
-                postFeedMessenger: postFeedMessenger
+                postFeedMessenger: postFeedMessenger,
+                loggedInUserPostData: loggedInUserPostData
             ).toIO(),
             yield: imagePostViewIO.get
         )^

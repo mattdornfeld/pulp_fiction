@@ -21,3 +21,4 @@ public typealias PulpFictionClientProtocol = PulpFiction_Protos_PulpFictionClien
 public typealias PulpFictionServiceClient = PulpFiction_Protos_PulpFictionClient
 public typealias PulpFictionTestClient = PulpFiction_Protos_PulpFictionTestClient
 public typealias UserMetadataProto = PulpFiction_Protos_User.UserMetadata
+public typealias SensitiveUserMetadataProto = PulpFiction_Protos_User.SensitiveUserMetadata

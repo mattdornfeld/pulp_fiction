@@ -10,7 +10,7 @@ import Foundation
 import SwiftUI
 
 /// Reducer for navigating for the app's main pages
-struct BottomNavigationBarViewReducer: ReducerProtocol {
+struct BottomNavigationBarReducer: ReducerProtocol {
     /// Signifies which app page is loaded into the main view
     enum MainView {
         case postFeedScrollView
@@ -18,18 +18,16 @@ struct BottomNavigationBarViewReducer: ReducerProtocol {
         case loggedInUserFollowedScrollView
     }
 
-    /// The colors of the navigation bar symbols. Blue corresponds to the currently selected view.
-    struct NavigationBarSymbolColor: Equatable {
-        var postFeedScrollView: Color = .blue
-        var loggedInUserProfileView: Color = .gray
-        var loggedInUserFollowedScrollView: Color = .gray
-    }
-
     struct State: Equatable {
         /// The page loaded into the main view
-        var currentMainView: MainView = .postFeedScrollView
-        /// The colors of the navigation bar symbols
-        var navigationBarSymbolColor: NavigationBarSymbolColor = .init()
+        var currentMainView: MainView
+
+        func getNavigationBarSymbolColor(mainView: MainView) -> Color {
+            if mainView == currentMainView {
+                return .blue
+            }
+            return .gray
+        }
     }
 
     enum Action {
@@ -41,28 +39,7 @@ struct BottomNavigationBarViewReducer: ReducerProtocol {
         switch action {
         case let .updateCurrentNavigationView(newMainView):
             state.currentMainView = newMainView
-            updateNavigationBarSymbolColors(
-                into: &state,
-                newMainView: newMainView
-            )
             return .none
-        }
-    }
-
-    private func updateNavigationBarSymbolColors(into state: inout State, newMainView: MainView) {
-        switch newMainView {
-        case .postFeedScrollView:
-            state.navigationBarSymbolColor.postFeedScrollView = .blue
-            state.navigationBarSymbolColor.loggedInUserProfileView = .gray
-            state.navigationBarSymbolColor.loggedInUserFollowedScrollView = .gray
-        case .loggedInUserProfileView:
-            state.navigationBarSymbolColor.postFeedScrollView = .gray
-            state.navigationBarSymbolColor.loggedInUserProfileView = .blue
-            state.navigationBarSymbolColor.loggedInUserFollowedScrollView = .gray
-        case .loggedInUserFollowedScrollView:
-            state.navigationBarSymbolColor.postFeedScrollView = .gray
-            state.navigationBarSymbolColor.loggedInUserProfileView = .gray
-            state.navigationBarSymbolColor.loggedInUserFollowedScrollView = .blue
         }
     }
 }
@@ -71,19 +48,33 @@ struct BottomNavigationBarViewReducer: ReducerProtocol {
 struct BottomNavigationBarView: View {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
-    private let store: ComposableArchitecture.StoreOf<BottomNavigationBarViewReducer> = Store(
-        initialState: BottomNavigationBarViewReducer.State(),
-        reducer: BottomNavigationBarViewReducer()
-    )
+    private let store: ComposableArchitecture.StoreOf<BottomNavigationBarReducer>
+
+    init(
+        loggedInUserPostData: UserPostData,
+        postFeedMessenger: PostFeedMessenger,
+        currentMainView: BottomNavigationBarReducer.MainView = .postFeedScrollView
+    ) {
+        self.loggedInUserPostData = loggedInUserPostData
+        self.postFeedMessenger = postFeedMessenger
+        store = Store(
+            initialState: BottomNavigationBarReducer.State(currentMainView: currentMainView),
+            reducer: BottomNavigationBarReducer()
+        )
+    }
 
     var body: some View {
         WithViewStore(store) { viewStore in
-            NavigationView { buildMainView(viewStore.state.currentMainView) }
-            buildBottomNavigationBar(viewStore)
+            NavigationView {
+                VStack {
+                    buildMainView(viewStore.state.currentMainView)
+                    buildBottomNavigationBar(viewStore)
+                }
+            }.accentColor(.black)
         }
     }
 
-    @ViewBuilder private func buildMainView(_ currentMainView: BottomNavigationBarViewReducer.MainView) -> some View {
+    @ViewBuilder private func buildMainView(_ currentMainView: BottomNavigationBarReducer.MainView) -> some View {
         switch currentMainView {
         case .postFeedScrollView:
             PostFeedScrollView(
@@ -92,6 +83,7 @@ struct BottomNavigationBarView: View {
             )
         case .loggedInUserProfileView:
             UserProfileView(
+                userProfileOwnerPostData: loggedInUserPostData,
                 loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger
             )
@@ -103,12 +95,12 @@ struct BottomNavigationBarView: View {
         }
     }
 
-    @ViewBuilder private func buildBottomNavigationBar(_ viewStore: ViewStore<BottomNavigationBarViewReducer.State, BottomNavigationBarViewReducer.Action>) -> some View {
+    @ViewBuilder private func buildBottomNavigationBar(_ viewStore: ViewStore<BottomNavigationBarReducer.State, BottomNavigationBarReducer.Action>) -> some View {
         HStack(alignment: .center) {
             Symbol(
                 symbolName: "house",
                 size: 28,
-                color: viewStore.state.navigationBarSymbolColor.postFeedScrollView
+                color: viewStore.state.getNavigationBarSymbolColor(mainView: .postFeedScrollView)
             )
             .padding(.horizontal)
             .padding(.bottom, 5)
@@ -118,7 +110,7 @@ struct BottomNavigationBarView: View {
             Symbol(
                 symbolName: "person.circle",
                 size: 28,
-                color: viewStore.state.navigationBarSymbolColor.loggedInUserProfileView
+                color: viewStore.state.getNavigationBarSymbolColor(mainView: .loggedInUserProfileView)
             )
             .padding(.horizontal)
             .padding(.bottom, 5)
@@ -128,7 +120,7 @@ struct BottomNavigationBarView: View {
             Symbol(
                 symbolName: "person.2",
                 size: 28,
-                color: viewStore.state.navigationBarSymbolColor.loggedInUserFollowedScrollView
+                color: viewStore.state.getNavigationBarSymbolColor(mainView: .loggedInUserFollowedScrollView)
             )
             .padding(.horizontal)
             .padding(.bottom, 5)
