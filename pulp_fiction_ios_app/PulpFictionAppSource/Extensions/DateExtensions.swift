@@ -56,31 +56,31 @@ public extension Date {
             return calendar
                 .dateComponents([.second], from: self, to: currentDate)
                 .second
-                .map { secondsAgo in "\(secondsAgo) seconds ago" }
+                .map { secondsAgo in "\(secondsAgo)s" }
                 .getOrElse(formattedDate)
         } else if currentDate.deltaFrom(self) < 2 * Date.hour {
             return calendar
                 .dateComponents([.minute], from: self, to: currentDate)
                 .minute
-                .map { minutesAgo in "\(minutesAgo) minutes ago" }
+                .map { minutesAgo in "\(minutesAgo)m" }
                 .getOrElse(formattedDate)
         } else if currentDate.deltaFrom(self) < 2 * Date.day {
             return calendar
                 .dateComponents([.hour], from: self, to: currentDate)
                 .hour
-                .map { hoursAgo in "\(hoursAgo) hours ago" }
+                .map { hoursAgo in "\(hoursAgo)h" }
                 .getOrElse(formattedDate)
         } else if currentDate.deltaFrom(self) < 2 * Date.week {
             return calendar
                 .dateComponents([.day], from: self, to: currentDate)
                 .day
-                .map { daysAgo in "\(daysAgo) days ago" }
+                .map { daysAgo in "\(daysAgo)d" }
                 .getOrElse(formattedDate)
         } else {
             return calendar
                 .dateComponents([.day], from: self, to: currentDate)
                 .day
-                .map { daysAgo in "\(daysAgo / 7) weeks ago" }
+                .map { daysAgo in "\(daysAgo / 7)w" }
                 .getOrElse(formattedDate)
         }
     }

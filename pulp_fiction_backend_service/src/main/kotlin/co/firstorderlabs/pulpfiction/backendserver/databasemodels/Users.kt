@@ -8,6 +8,7 @@ import arrow.core.none
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.sensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.UserKt.userMetadata
@@ -16,7 +17,6 @@ import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
-import com.google.protobuf.ByteString
 import com.password4j.Password
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
@@ -70,14 +70,15 @@ interface User : Entity<User> {
         }
     }
 
-    fun toCreatePostRequest(avatarJpg: ByteString): PulpFictionProtos.CreatePostRequest = createPostRequest {
+    fun toCreatePostRequest(request: CreateUserRequest): PulpFictionProtos.CreatePostRequest = createPostRequest {
         this.loginSession = loginSession {
             this.userId = this@User.userId.toString()
         }
         this.createUserPostRequest = createUserPostRequest {
             this.userId = this@User.userId.toString()
             this.displayName = this@User.currentDisplayName
-            this.avatarJpg = avatarJpg
+            this.avatarJpg = request.avatarJpg
+            this.bio = request.bio
         }
     }
 

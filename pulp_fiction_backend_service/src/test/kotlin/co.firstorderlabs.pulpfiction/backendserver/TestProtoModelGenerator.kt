@@ -48,6 +48,7 @@ object TestProtoModelGenerator {
         this.password = faker.unique.toString()
         this.optInToEmails = random.nextBoolean()
         this.avatarJpg = random.nextByteString(100)
+        this.bio = faker.lordOfTheRings.quotes()
     }
 
     fun generateRandomLoginRequest(userId: String, password: String): PulpFictionProtos.LoginRequest = loginRequest {

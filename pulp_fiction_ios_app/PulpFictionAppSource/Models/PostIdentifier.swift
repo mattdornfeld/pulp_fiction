@@ -25,7 +25,7 @@ public struct PostUpdateIdentifier: Codable, Identifiable, Equatable, Hashable {
     }
 
     static func create(_ postUpdateIdentifierProto: Post.PostUpdateIdentifier) -> Either<PulpFictionRequestError, PostUpdateIdentifier> {
-        postUpdateIdentifierProto.postID.toUUID().mapRight { postId in
+        return postUpdateIdentifierProto.postID.toUUID().mapRight { postId in
             PostUpdateIdentifier(
                 postId: postId,
                 updatedAt: postUpdateIdentifierProto.updatedAt.date

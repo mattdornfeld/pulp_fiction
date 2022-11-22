@@ -78,6 +78,7 @@ CREATE TABLE user_post_data
     user_id             UUID      NOT NULL REFERENCES users (user_id),
     display_name        VARCHAR   NOT NULL,
     avatar_image_s3_key VARCHAR   NOT NULL,
+    bio                 VARCHAR   NOT NULL,
     PRIMARY KEY (post_id, updated_at),
     FOREIGN KEY (post_id, updated_at) REFERENCES post_updates (post_id, updated_at)
 );

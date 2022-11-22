@@ -5,29 +5,41 @@
 //  Created by Matthew Dornfeld on 9/25/22.
 //
 
+import Bow
 import Foundation
 
 /// Comment post data is stored in this model. Used for rendering CommentView.
-public struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
-    public let id: PostUpdateIdentifier
-    public let postMetadata: PostMetadata
+struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
+    let body: String
+    let id: PostUpdateIdentifier
+    let parentPostId: UUID
+    let postMetadata: PostMetadata
+    let postInteractionAggregates: PostInteractionAggregates
+    let loggedInUserPostInteractions: LoggedInUserPostInteractions
 
-    public func toPostDataOneOf() -> PostDataOneOf {
+    func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.commentPostData(self)
     }
-}
 
-public extension CommentPostData {
-    init(_ postMetadata: PostMetadata) {
-        self.init(id: postMetadata.id, postMetadata: postMetadata)
+    static func create(_ postMetadata: PostMetadata, _ commentProto: Post.Comment) -> Either<PulpFictionRequestError, CommentPostData> {
+        commentProto.parentPostID.toUUID().mapRight { parentPostId in
+            CommentPostData(
+                body: commentProto.body,
+                id: postMetadata.postUpdateIdentifier,
+                parentPostId: parentPostId,
+                postMetadata: postMetadata,
+                postInteractionAggregates: commentProto
+                    .interactionAggregates
+                    .toPostInteractionAggregates(),
+                loggedInUserPostInteractions: commentProto
+                    .loggedInUserPostInteractions
+                    .toLoggedInUserPostInteractions()
+            )
+        }
     }
 }
 
-public extension Post.Comment {
-    func toPostData(_ postMetadata: PostMetadata) -> CommentPostData {
-        CommentPostData(postMetadata)
-    }
-
+extension Post.Comment {
     func toPost(_ postMetadata: Post.PostMetadata) -> Post {
         Post.with {
             $0.metadata = postMetadata

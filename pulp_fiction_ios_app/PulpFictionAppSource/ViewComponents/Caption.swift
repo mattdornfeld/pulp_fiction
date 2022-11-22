@@ -8,30 +8,70 @@
 import Foundation
 import SwiftUI
 
-public struct Caption: View {
-    public let text: String
+protocol TextView: View {
+    var text: Text { get }
+    var alignment: TextAlignment { get }
+}
 
-    public var body: some View {
-        Text(text).font(.caption)
+extension TextView {
+    func append(textView: any TextView, delimiter: String = " ") -> GenericText {
+        GenericText(text: text + Text(delimiter) + textView.text)
+    }
+
+    var body: some View {
+        self.text.multilineTextAlignment(alignment)
     }
 }
 
-public extension Caption {
+struct GenericText: TextView {
+    let text: Text
+    let alignment: TextAlignment = .leading
+}
+
+struct Caption: TextView {
+    let text: Text
+    let alignment: TextAlignment
+}
+
+extension Caption {
+    init(text: String, alignment: TextAlignment) {
+        self.text = Text(text).font(.caption)
+        self.alignment = alignment
+    }
+
     init(_ text: String) {
-        self.init(text: text)
+        self.init(text: text, alignment: .leading)
     }
 }
 
-public struct BoldCaption: View {
-    public let text: String
-
-    public var body: some View {
-        Text(text).fontWeight(.bold).font(.caption)
-    }
+struct BoldCaption: TextView {
+    let text: Text
+    let alignment: TextAlignment
 }
 
-public extension BoldCaption {
+extension BoldCaption {
+    init(text: String, alignment: TextAlignment) {
+        self.text = Text(text).fontWeight(.bold).font(.caption)
+        self.alignment = alignment
+    }
+
     init(_ text: String) {
-        self.init(text: text)
+        self.init(text: text, alignment: .leading)
+    }
+}
+
+struct Title: TextView {
+    let text: Text
+    let alignment: TextAlignment
+}
+
+extension Title {
+    init(text: String, alignment: TextAlignment) {
+        self.text = Text(text).font(.title).font(.caption)
+        self.alignment = alignment
+    }
+
+    init(_ text: String) {
+        self.init(text: text, alignment: .leading)
     }
 }

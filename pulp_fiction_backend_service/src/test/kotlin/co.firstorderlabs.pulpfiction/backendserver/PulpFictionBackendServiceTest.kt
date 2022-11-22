@@ -1,7 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.Either
-import co.firstorderlabs.protos.pulpfiction.PostKt.interactionAggregates
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
@@ -218,6 +217,7 @@ internal class PulpFictionBackendServiceTest {
                 .assertTrue { it.latestUserPostUpdateIdentifier.hasUpdatedAt() }
                 .assertEquals(post.metadata.postUpdateIdentifier) { it.latestUserPostUpdateIdentifier }
                 .assertEquals(createUserRequest.displayName) { it.displayName }
+                .assertEquals(createUserRequest.bio) { it.bio }
 
             // Check the value of avatarImageUrl corresponds to the uploaed image
             val loginRequest =
@@ -421,7 +421,8 @@ internal class PulpFictionBackendServiceTest {
         post
             .assertEquals(postMetadata) { it.metadata }
             .assertEquals(createPostRequest.createImagePostRequest.caption) { it.imagePost.caption }
-            .assertEquals(interactionAggregates {}) { it.imagePost.interactionAggregates }
+            .assertTrue { it.imagePost.hasInteractionAggregates() }
+            .assertTrue { it.imagePost.hasLoggedInUserPostInteractions() }
 
         s3Messenger
             .getObject(post.imagePost.imageUrl)
@@ -475,6 +476,8 @@ internal class PulpFictionBackendServiceTest {
         post
             .assertEquals(postMetadata) { it.metadata }
             .assertEquals(createCommentRequest.createCommentRequest.body) { it.comment.body }
+            .assertTrue { it.comment.hasInteractionAggregates() }
+            .assertTrue { it.comment.hasLoggedInUserPostInteractions() }
 
         listOf(
             tupleOf(EndpointName.createPost, 2.0),

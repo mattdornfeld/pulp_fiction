@@ -23,17 +23,38 @@ struct PulpFictionApp: App {
     private static func createExternalMessengers() -> Either<PulpFictionStartupError, ExternalMessengers> {
         let createPulpFictionClientProtocolIO = IO<PulpFictionStartupError, PulpFictionClientProtocol>.var()
         let createPostDataCacheIO = IO<PulpFictionStartupError, PostDataCache>.var()
+        let loggedInUserUserPostDataIO = IO<PulpFictionStartupError, UserPostData>.var()
 
         return binding(
             createPulpFictionClientProtocolIO <- GrpcUtils.buildPulpFictionClientProtocol(),
             createPostDataCacheIO <- PostDataCache.create(),
-            yield: ExternalMessengers(
-                backendMessenger: BackendMessenger(pulpFictionClientProtocol: createPulpFictionClientProtocolIO.get),
-                postDataMessenger: PostDataMessenger(
+            loggedInUserUserPostDataIO <- UserPostData.generate()
+                .mapError { PulpFictionStartupError($0) },
+            yield: {
+                let postDataMessenger = PostDataMessenger(
                     postDataCache: createPostDataCacheIO.get,
                     imageDataSupplier: { url in try Data(url: url) }
                 )
-            )
+
+                let loginSession = LoginSession(loggedInUserPostData: loggedInUserUserPostDataIO.get)
+
+                let postFeedMessenger = PostFeedMessenger(
+                    pulpFictionClientProtocol: createPulpFictionClientProtocolIO.get,
+                    postDataMessenger: postDataMessenger,
+                    loginSession: loginSession
+                )
+
+                return ExternalMessengers(
+                    backendMessenger: BackendMessenger(
+                        pulpFictionClientProtocol: createPulpFictionClientProtocolIO.get,
+                        loginSession: loginSession
+                    ),
+                    postDataMessenger: postDataMessenger,
+                    postFeedMessenger: postFeedMessenger,
+                    loginSession: loginSession
+                )
+
+            }()
         )^.unsafeRunSyncEither()
     }
 }

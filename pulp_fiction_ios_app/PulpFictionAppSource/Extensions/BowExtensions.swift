@@ -12,6 +12,10 @@ import Foundation
 import Logging
 import SwiftUI
 
+private struct BowExtensionLogger {
+    static let logger: Logger = .init(label: String(describing: BowExtensionLogger.self))
+}
+
 public extension IO {
     func mapRight<B>(_ f: @escaping (A) -> B) -> IO<E, B> {
         return map(f).map { b in b }^
@@ -47,10 +51,28 @@ public extension IO {
         return try unsafeRunSyncEither()
             .getOrThrow()
     }
-}
 
-struct EitherCompanion {
-    static let logger: Logger = .init(label: String(describing: EitherCompanion.self))
+    func logError(_ msg: String) -> IO<E, A> {
+        mapError { cause in
+            BowExtensionLogger.logger.error(
+                Logger.Message(stringLiteral: msg),
+                metadata: [
+                    "cause": "\(cause)",
+                ]
+            )
+            return cause
+        }
+        return self
+    }
+
+    func logSuccess(_ msgSupplier: @escaping (A) -> String) -> IO<E, A> {
+        mapRight { a in
+            BowExtensionLogger.logger.info(
+                Logger.Message(stringLiteral: msgSupplier(a))
+            )
+        }
+        return self
+    }
 }
 
 public extension Either {
@@ -61,12 +83,20 @@ public extension Either {
         case right(B)
     }
 
+    @discardableResult
     func mapRight<C>(_ f: (B) -> C) -> Either<A, C> {
         return bimap({ a in a }, f)
     }
 
+    @discardableResult
     func onError(_ f: (A) -> Void) -> Either<A, B> {
         mapLeft { a in f(a) }
+        return self
+    }
+
+    @discardableResult
+    func onSuccess(_ f: (B) -> Void) -> Either<A, B> {
+        mapRight { b in f(b) }
         return self
     }
 
@@ -83,9 +113,19 @@ public extension Either {
         }
     }
 
+    func logSuccess(_ msgSupplier: (B) -> String) -> Either<A, B> where A: Error {
+        mapRight { b in
+            BowExtensionLogger.logger.info(
+                Logger.Message(stringLiteral: msgSupplier(b))
+            )
+        }
+        return self
+    }
+
+    @discardableResult
     func logError(_ msg: String) -> Either<A, B> where A: Error {
         mapLeft { cause in
-            EitherCompanion.logger.error(
+            BowExtensionLogger.logger.error(
                 Logger.Message(stringLiteral: msg),
                 metadata: [
                     "cause": "\(cause)",
@@ -116,6 +156,13 @@ public extension Either {
     func toIO() -> IO<A, B> where A: Error {
         IO.invoke { try self.getOrThrow() }
     }
+
+    func toResult() -> Swift.Result<B, A> where A: Error {
+        return fold(
+            { error in Swift.Result.failure(error) },
+            { value in Swift.Result.success(value) }
+        )
+    }
 }
 
 public extension Option {
@@ -134,7 +181,18 @@ public extension Option {
             .getOrElse(Either<E, A>.left(error))
     }
 
+    func toEither() -> Either<Error, A> {
+        toEither(EmptyOptional())
+    }
+
+    @discardableResult
     func mapRight<B>(_ f: @escaping (A) -> B) -> Option<B> {
         map { f($0) }^
+    }
+
+    @discardableResult
+    func ifEmpty(_ f: @escaping () -> Void) -> Option<A> {
+        f()
+        return self
     }
 }

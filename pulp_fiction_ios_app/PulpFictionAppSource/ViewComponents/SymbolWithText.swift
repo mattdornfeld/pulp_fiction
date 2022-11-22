@@ -11,17 +11,18 @@ import SwiftUI
 public struct SymbolWithCaption: View {
     public let symbolName: String
     public let symbolCaption: String
+    public let color: Color
 
     public var body: some View {
         HStack {
-            Symbol(symbolName: symbolName)
-            Caption(symbolCaption).foregroundColor(.gray)
+            Image(systemName: symbolName).foregroundStyle(color)
+            Caption(symbolCaption).foregroundColor(color)
         }
     }
 }
 
 public extension SymbolWithCaption {
-    init(_ symbolName: String, _ symbolCaption: String) {
-        self.init(symbolName: symbolName, symbolCaption: symbolCaption)
+    init(symbolName: String, symbolCaption: String) {
+        self.init(symbolName: symbolName, symbolCaption: symbolCaption, color: .gray)
     }
 }
