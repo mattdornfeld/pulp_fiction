@@ -80,6 +80,7 @@ ios_application(
     deps = [
         ":build_app_executable_source",
     ],
+    tags = ["manual"],
 )
 
 filegroup(
@@ -105,6 +106,7 @@ ios_application(
         ":build_app_preview_source",
     ],
     provisioning_profile = "PulpFictionApp.mobileprovision",
+    tags = ["manual"],
 )
 
 ios_unit_test(

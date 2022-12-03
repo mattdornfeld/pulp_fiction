@@ -27,7 +27,7 @@ run_preview_app:
 	${BAZEL} run :build_preview_app --config=$(config)
 
 test_all:
-	${BAZEL} test ... --config=ios --test_output=all
+	${BAZEL} test ... --config=ios --test_output=all --test_tag_filters="-manual"
 
 test_unit:
-	${BAZEL} test :test_unit --config=ios --test_output=all
+	${BAZEL} test :test_unit --config=ios --test_output=all --test_tag_filters="-manual"
