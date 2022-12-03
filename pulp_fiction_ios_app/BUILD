@@ -18,11 +18,11 @@ swift_library(
     deps = [
         "//protos:pulp_fiction_grpc_stubs_swift",
         "//protos:pulp_fiction_grpc_swift",
-        "@com_github_hyperoslo_cache//:Cache",
-        "@com_github_pointfreeco_swift_composable_architecture//:ComposableArchitecture",
         "@com_github_bow_swift_bow//:Bow",
         "@com_github_bow_swift_bow//:BowEffects",
         "@com_github_bow_swift_bow//:BowOptics",
+        "@com_github_hyperoslo_cache//:Cache",
+        "@com_github_pointfreeco_swift_composable_architecture//:ComposableArchitecture",
     ],
     module_name = "PulpFictionAppSource"
 )
@@ -80,7 +80,6 @@ ios_application(
     deps = [
         ":build_app_executable_source",
     ],
-    provisioning_profile = "PulpFictionApp.mobileprovision",
 )
 
 filegroup(
@@ -119,6 +118,7 @@ ios_unit_test(
     ],
     env = {
         "resourceBundleFileIdentifier": "co.firstorderlabs.PulpFictionTests",
+        "isTestMode": "true",
     },
     minimum_os_version = "15.0",
     visibility = ["//visibility:public"],
