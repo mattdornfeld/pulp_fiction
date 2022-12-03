@@ -25,7 +25,7 @@ extension PostViewFeedIterator {
 
 class PostViewFeedTest: XCTestCase {
     func testRetrievingAllItemsFromPostViewFeed() async throws {
-        let expectedNumPostsInFeedResponse = 1
+        let expectedNumPostsInFeedResponse = 50
         let postViewFeedIterator = try DispatchQueue.global(qos: .userInitiated).sync {
             try ExternalMessengers.createForTests(numPostsInFeedResponse: expectedNumPostsInFeedResponse).mapRight { externalMessengers in
                 externalMessengers.postFeedMessenger.getGlobalPostFeed()
@@ -41,7 +41,7 @@ class PostViewFeedTest: XCTestCase {
     }
 
     func testRetrievingAllItemsFromCommentViewFeed() async throws {
-        let expectedNumPostsInFeedResponse = 1
+        let expectedNumPostsInFeedResponse = 50
         let expectedPostId = UUID()
         let postViewFeedIterator = try DispatchQueue.global(qos: .userInitiated).sync { try ExternalMessengers.createForTests(numPostsInFeedResponse: expectedNumPostsInFeedResponse).mapRight { externalMessengers in
             externalMessengers.postFeedMessenger.getCommentFeed(postId: expectedPostId)
