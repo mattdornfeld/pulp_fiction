@@ -167,14 +167,14 @@ jobs:
 
   build_and_test_ios_app:
     macos:
-      xcode: 14.0.0
+      xcode: 14.0.1
     steps:
       - checkout
       - run:
           name: Build and Test iOS App
           command: |
             ./sbin/add_bazelisk_to_bin
-            bazel test //pulp_fiction_ios_app/... --apple_platform_type=ios --test_output=all
+            bazel test //pulp_fiction_ios_app/... --config=ios --test_output=all --test_tag_filters="-manual"
 
 workflows:
   build_bazel_ci_image:

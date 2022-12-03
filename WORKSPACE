@@ -75,8 +75,10 @@ rules_proto_toolchains()
 load(
     "//bazel:pulp_fiction_swift_dependencies.bzl",
     "pulp_fiction_swift_dependencies",
-    )
+    "pulp_fiction_swift_spm_dependencies"
+)
 pulp_fiction_swift_dependencies()
+pulp_fiction_swift_spm_dependencies()
 
 load(
     "@cgrindel_rules_swiftformat//swiftformat:deps.bzl",

@@ -1,5 +1,6 @@
 *.idea
 *.ijwb
+*.mobileprovision
 *.tulsiconf-user
 *.xcodeproj
 .DS_Store
