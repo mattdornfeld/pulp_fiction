@@ -18,6 +18,23 @@ struct PhotoAlbumView: UIViewControllerRepresentable {
     typealias PhotoAlbumImage = NSItemProviderReading
     let viewStore: ViewStore<ImageSelectorReducer.State, ImageSelectorReducer.Action>
 
+    func makeCoordinator() -> PhotoAlbumView.Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration(photoLibrary: PHPhotoLibrary.shared())
+        config.filter = .images
+
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_: PHPickerViewController, context _: Context) {}
+}
+
+extension PhotoAlbumView {
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
         var parent: PhotoAlbumView
 
@@ -49,19 +66,4 @@ struct PhotoAlbumView: UIViewControllerRepresentable {
             }
         }
     }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var config = PHPickerConfiguration(photoLibrary: PHPhotoLibrary.shared())
-        config.filter = .images
-
-        let picker = PHPickerViewController(configuration: config)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_: PHPickerViewController, context _: Context) {}
 }

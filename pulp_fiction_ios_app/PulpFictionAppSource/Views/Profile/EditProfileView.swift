@@ -319,7 +319,7 @@ struct EditProfileView: View {
     /// Inits a EditProfileView
     /// - Parameter loggedInUserPostData: UserPostData for the logged in user
     init(loggedInUserPostData: UserPostData) {
-        self.store = Store(
+        store = Store(
             initialState: EditProfileReducer.State(
                 loggedInUserPostData: loggedInUserPostData
             ),

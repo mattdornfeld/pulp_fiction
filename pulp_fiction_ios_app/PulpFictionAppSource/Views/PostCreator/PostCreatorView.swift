@@ -50,7 +50,7 @@ struct PostCreatorView: View {
         symbolSize: 20,
         symbolColor: .gray,
         menuOptions: ImageSourceType.allCases,
-        initialMenuSelection: .Album
+        initialMenuSelection: .Camera
     )
 
     var body: some View {
@@ -63,7 +63,8 @@ struct PostCreatorView: View {
                     postFeedMessenger: postFeedMessenger,
                     imageSourceTypeDropDownMenuView: imageSourceTypeDropDownMenu.view
                 )
-            }
+            },
+            imageSourceType: imageSourceTypeDropDownMenu.currentSelection
         )
     }
 }

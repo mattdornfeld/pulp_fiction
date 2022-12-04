@@ -41,6 +41,10 @@ struct ImageSelectorReducer: ReducerProtocol {
         case updateShowImagePicker(Bool)
         /// Action that's executed when an image is picked from the library
         case pickImageFromLibrary(Result<PhotoAlbumView.PhotoAlbumImage, PulpFictionRequestError>)
+        /// Action that's executed when an image is picked from the camera
+        case pickImageFromCamera(Result<UIImage, PulpFictionRequestError>)
+        /// Logs an error along with its cause
+        case logError(PulpFictionRequestError)
         /// Action that's executed to unselect an image
         case unpickImage
     }
@@ -49,6 +53,8 @@ struct ImageSelectorReducer: ReducerProtocol {
         class ErrorPickingImageFromLibrary: PulpFictionRequestError {}
         class CancelledWithOutPickingImage: ErrorPickingImageFromLibrary {}
         class ErrorConvertingPhotoAlbumImageToUIImage: ErrorPickingImageFromLibrary {}
+
+        class ErrorPickingImageFromCamera: PulpFictionRequestError {}
 
         class ErrorCreatingPost: PulpFictionRequestError {}
         class ImageNotSelected: PulpFictionRequestError {}
@@ -60,6 +66,7 @@ struct ImageSelectorReducer: ReducerProtocol {
         case let .updateShowImagePicker(newShowImagePicker):
             state.showImagePicker = newShowImagePicker
             return .none
+
         case let .pickImageFromLibrary(.success(photoAlbumImageMaybe)):
             if let uiImage = photoAlbumImageMaybe as? UIImage {
                 state.postUIImageMaybe = uiImage
@@ -73,6 +80,19 @@ struct ImageSelectorReducer: ReducerProtocol {
             return .none
 
         case let .pickImageFromLibrary(.failure(error)):
+            return .task { .logError(error) }
+
+        case let .pickImageFromCamera(.success(uiImage)):
+            state.postUIImageMaybe = uiImage
+            return .none
+
+        case .pickImageFromCamera(.failure(_ as Error.CancelledWithOutPickingImage)):
+            return .none
+
+        case let .pickImageFromCamera(.failure(error)):
+            return .task { .logError(error) }
+
+        case let .logError(error):
             logger.error(
                 "Error picking image",
                 metadata: [
@@ -91,6 +111,7 @@ struct ImageSelectorReducer: ReducerProtocol {
 /// View for selecting images
 struct ImageSelectorView<TopNavigationBar: ToolbarContent>: View {
     let topNavigationBarSupplier: (ViewStore<ImageSelectorReducer.State, ImageSelectorReducer.Action>) -> TopNavigationBar
+    let imageSourceType: ImageSourceType
     private let store: ComposableArchitecture.StoreOf<ImageSelectorReducer> = Store(
         initialState: ImageSelectorReducer.State(),
         reducer: ImageSelectorReducer()
@@ -103,7 +124,7 @@ struct ImageSelectorView<TopNavigationBar: ToolbarContent>: View {
 
                 VStack {
                     BoldCaption(
-                        text: "Select a photo from your photo album",
+                        text: getPrompt(),
                         color: .gray
                     )
                     Symbol(
@@ -131,10 +152,24 @@ struct ImageSelectorView<TopNavigationBar: ToolbarContent>: View {
                 get: \.showImagePicker,
                 send: .updateShowImagePicker(false)
             )) {
-                PhotoAlbumView(viewStore: viewStore)
+                switch imageSourceType {
+                case .Camera:
+                    CameraView(viewStore: viewStore)
+                case .Album:
+                    PhotoAlbumView(viewStore: viewStore)
+                }
             }
             .padding([.horizontal, .bottom])
             .toolbar { topNavigationBarSupplier(viewStore) }
+        }
+    }
+
+    private func getPrompt() -> String {
+        switch imageSourceType {
+        case .Camera:
+            return "Select a photo from your camera"
+        case .Album:
+            return "Select a photo from your photo album"
         }
     }
 }
