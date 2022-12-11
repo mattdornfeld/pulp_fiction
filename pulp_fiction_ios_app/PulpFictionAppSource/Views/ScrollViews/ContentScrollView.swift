@@ -32,69 +32,117 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
     private let logger: Logger = .init(label: String(describing: ContentScrollViewReducer.self))
 
     struct State: Equatable {
+        /// Queue for storing ScrollableContentViews that will be rendered in the feed
         var postViews: Queue<A> = .init(maxSize: PostFeedConfigs.postFeedMaxQueueSize)
         /// Indicator that shows new content is being loaded into the feed
         var feedLoadProgressIndicatorOpacity: Double = 0.0
+        /// Post indices for which loadMorePosts was called. We keep track of this to make sure we don't double load posts
+        var lastVisiblePostIndices: Set<Int> = .init()
     }
 
     enum Action {
-        /// This action is called on view load. It starts the postStreamIterator and begins loading posts into the view.
-        case startScroll
-        /// Refreshes the feed scroll with new content
-        case refreshScroll
-        case enqueuePost(Int, Post)
+        /// Enqueue posts into the scroll.
+        case enqueuePostsToScroll([(Int, Post)])
+        /// Called every time a post appears in the scroll. Checks to see if old posts should be removed from a scroll and loads new posts into the scroll if necessary.
+        case refreshScrollIfNecessary(Int, PostStream<A>)
+        /// Dequeus old posts from scroll if necessary
+        case dequeuePostsFromScrollIfNecessary(Int, PostStream<A>)
+        /// Updates the opacity of progress indicator. Set to 1.0 if posts are being loaded into the scroll and 0.0 otherwise.
         case updateFeedLoadProgressIndicatorOpacity(CGFloat)
-    }
-
-    enum PostScrollErrors {
-        class postStreamIteratorNotStarted: PulpFictionRequestError {}
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
-        case .startScroll:
-            state.feedLoadProgressIndicatorOpacity = 0.0
-            return .none
-
-        case .refreshScroll:
+        case let .enqueuePostsToScroll(postIndicesAndPosts):
             state.feedLoadProgressIndicatorOpacity = 1.0
-//            state.refreshpostStream()
-            state.feedLoadProgressIndicatorOpacity = 0.0
-            return .task {
-                .startScroll
-            }
+            let scrollableContentViews = postIndicesAndPosts.map { postIndex, post in
+                postViewEitherSupplier(postIndex, post)
+                    .onSuccess { _ in
+                        self.logger.debug(
+                            "Successfully built PostView",
+                            metadata: [
+                                "queueSize": "\(state.postViews.elements.count)",
+                                "postId": "\(post.metadata.postUpdateIdentifier.postID)",
+                                "currentPostIndex": "\(postIndex)",
+                            ]
+                        )
+                    }
+                    .onError { cause in
+                        self.logger.error(
+                            "Error building PostView",
+                            metadata: [
+                                "cause": "\(cause)",
+                                "postId": "\(post.metadata.postUpdateIdentifier.postID)",
+                                "postIndex": "\(postIndex)",
+                            ]
+                        )
+                    }
+            }.flattenError()
 
-        case let .enqueuePost(currentPostIndex, post):
+            state.postViews.enqueue(scrollableContentViews)
+
+            return .task { .updateFeedLoadProgressIndicatorOpacity(0.0) }
+
+        case let .refreshScrollIfNecessary(currentPostIndex, postStream):
             state.feedLoadProgressIndicatorOpacity = 1.0
-            postViewEitherSupplier(currentPostIndex, post).mapRight { scrollableContentView in
-                state.postViews.enqueue(scrollableContentView)
-            }
-            .onSuccess {
-                self.logger.debug(
-                    "Enqueued post from feed",
+            return .task { .dequeuePostsFromScrollIfNecessary(currentPostIndex, postStream) }
+
+        case let .dequeuePostsFromScrollIfNecessary(currentPostIndex, postStream):
+            let alreadyLoadedForPostIndex = state
+                .lastVisiblePostIndices
+                .contains(currentPostIndex)
+
+            let isLastPostVisible = state
+                .postViews
+                .elements
+                .last
+                .map { $0.id == currentPostIndex }^
+                .getOrElse(true)
+
+            let shouldClearPosts = state.postViews.elements.count == PostFeedConfigs.postFeedMaxQueueSize
+
+            let shouldLoadMorePosts = !alreadyLoadedForPostIndex && isLastPostVisible
+
+            if shouldClearPosts, shouldLoadMorePosts {
+                logger.debug(
+                    "Queue is full. Making room.",
                     metadata: [
                         "queueSize": "\(state.postViews.elements.count)",
-                        "postId": "\(post.metadata.postUpdateIdentifier.postID)",
                         "currentPostIndex": "\(currentPostIndex)",
                     ]
                 )
+
+                let dequeuedPosts = state.postViews.dequeue(numElements: PostFeedConfigs.numPostReturnedPerRequest)
+                postStream.loadMorePosts(state: &state, currentPostIndex: currentPostIndex)
+            } else if shouldLoadMorePosts {
+                postStream.loadMorePosts(state: &state, currentPostIndex: currentPostIndex)
             }
-            .onError { cause in
-                self.logger.error(
-                    "Error building PostView",
-                    metadata: [
-                        "cause": "\(cause)",
-                        "postId": "\(post.metadata.postUpdateIdentifier.postID)",
-                        "postIndex": "\(currentPostIndex)",
-                    ]
-                )
-            }
+
             return .task { .updateFeedLoadProgressIndicatorOpacity(0.0) }
 
         case let .updateFeedLoadProgressIndicatorOpacity(newFeedLoadProgressIndicatorOpacity):
             state.feedLoadProgressIndicatorOpacity = newFeedLoadProgressIndicatorOpacity
             return .none
         }
+    }
+}
+
+private extension PostStream {
+    /// Send request to backend server to load more posts into stream.
+    /// - Parameters:
+    ///   - state: The current state of the ViewStore
+    ///   - currentPostIndex: The post index that last appeared
+    func loadMorePosts(state: inout ContentScrollViewReducer<A>.State, currentPostIndex: Int) {
+        logger.debug(
+            "Loading more posts",
+            metadata: [
+                "queueSize": "\(state.postViews.elements.count)",
+                "currentPostIndex": "\(currentPostIndex)",
+            ]
+        )
+
+        loadMorePosts()
+        state.lastVisiblePostIndices.insert(currentPostIndex)
     }
 }
 
@@ -124,17 +172,10 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
                 initialState: ContentScrollViewReducer<A>.State(),
                 reducer: ContentScrollViewReducer<A>(postViewEitherSupplier: postViewEitherSupplier)
             )
-            let viewStore = ViewStore(store)
-            viewStore.send(.startScroll)
-            return viewStore
+            return ViewStore(store)
         }()
         self.viewStore = viewStore
         postStream = postStreamSupplier(viewStore)
-    }
-
-    func startScroll(_ viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>) -> some View {
-        viewStore.send(.startScroll)
-        return EmptyView()
     }
 
     var body: some View {
@@ -149,7 +190,9 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
 
                     LazyVStack(alignment: .leading) {
                         ForEach(viewStore.postViews.elements) { currentPost in
-                            currentPost
+                            currentPost.onAppear {
+                                viewStore.send(.refreshScrollIfNecessary(currentPost.id, self.postStream))
+                            }
                         }
                     }
 
@@ -164,7 +207,7 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
                 }
                 .frame(minHeight: geometryProxy.size.height)
             }
-            .onDragUp { viewStore.send(.refreshScroll) }
+//            .onDragUp { viewStore.send(.refreshScroll) }
         }
     }
 }

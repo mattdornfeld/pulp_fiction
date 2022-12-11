@@ -36,10 +36,6 @@ class Queue<A>: Equatable where A: Equatable {
         }
     }
 
-    func blockIfNotEmpty() {
-        isEmpty.lock(whenCondition: 1)
-    }
-
     /// Returns true if queue is locked because it's empty
     func checkLockedBecauseEmpty() -> Bool {
         isEmpty.condition == 1
@@ -50,41 +46,51 @@ class Queue<A>: Equatable where A: Equatable {
         isFull.condition == 1
     }
 
-    /// Enqueue an element to the queue. Blocks if full. No-op if closed.
+    /// Enqueue a elements to the queue. Blocks if full. No-op if closed.
     @discardableResult
     func enqueue(_ value: A) -> Queue<A> {
+        enqueue([value])
+    }
+
+    /// Enqueue a elements to the queue. Blocks if full. No-op if closed.
+    @discardableResult
+    func enqueue(_ values: [A]) -> Queue<A> {
         if isClosed.getValue() {
             logger.debug("Attempted to enqueue element to closed queue")
             return self
         }
 
         logger.debug(
-            "Enqueueing element",
+            "Enqueueing elements",
             metadata: [
                 "lockedBecauseEmpty": "\(checkLockedBecauseEmpty())",
                 "lockedBecauseFull": "\(checkLockedBecauseFull())",
                 "count": "\(elements.count)",
                 "maxSize": "\(maxSize)",
+                "numElements": "\(values.count)",
             ]
         )
 
         isFull.lock(whenCondition: 0)
         queue.sync {
-            self.elements.append(value)
+            values.map { self.elements.append($0) }
         }
 
         isEmpty.unlock(withCondition: 0)
-        if getSize() == maxSize {
+        if getSize() >= maxSize {
             isFull.unlock(withCondition: 1)
         } else {
             isFull.unlock(withCondition: 0)
         }
 
         logger.debug(
-            "Finished Enqueueing element",
+            "Finished enqueueing element",
             metadata: [
                 "lockedBecauseEmpty": "\(checkLockedBecauseEmpty())",
                 "lockedBecauseFull": "\(checkLockedBecauseFull())",
+                "count": "\(elements.count)",
+                "maxSize": "\(maxSize)",
+                "numElements": "\(values.count)",
             ]
         )
         return self
@@ -97,7 +103,16 @@ class Queue<A>: Equatable where A: Equatable {
         logger.debug("Queue is closed")
     }
 
+    /// Dequeues elements from the queue. Blocks if empty. No-op if closed.
+    @discardableResult
+    func dequeue(numElements: Int) -> [A] {
+        (1 ... numElements)
+            .map { _ in dequeue().toOption() }
+            .flattenOption()
+    }
+
     /// Dequeues an element from the queue. Blocks if empty. No-op if closed.
+    @discardableResult
     func dequeue() -> A? {
         if isClosed.getValue() {
             logger.debug("Attempted to dequeue element from closed queue")
@@ -119,6 +134,8 @@ class Queue<A>: Equatable where A: Equatable {
         isFull.unlock(withCondition: 0)
         if getSize() == 0 {
             isEmpty.unlock(withCondition: 1)
+        } else {
+            isEmpty.unlock(withCondition: 0)
         }
 
         logger.debug("Finished dequeueing element")

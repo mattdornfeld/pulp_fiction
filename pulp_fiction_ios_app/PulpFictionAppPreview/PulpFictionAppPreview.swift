@@ -14,7 +14,7 @@ import SwiftUI
 @main
 struct PulpFictionAppPreview: App {
     private let pulpFictionAppViewBuilder: PulpFictionAppViewBuilder = {
-        let externalMessengersEither = ExternalMessengers.createForTests(numPostsInFeedResponse: PreviewAppConfigs.numPostsInFeedResponse)
+        let externalMessengersEither = ExternalMessengers.createForTests()
         return .init(externalMessengersEither)
     }()
 

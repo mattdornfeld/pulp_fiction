@@ -12,14 +12,12 @@ import PulpFictionAppSource
 
 extension ExternalMessengers {
     /// Create the ExternalMessengers for tests and running the preview app
-    static func createForTests(numPostsInFeedResponse: Int) -> Either<PulpFictionStartupError, ExternalMessengers> {
+    static func createForTests() -> Either<PulpFictionStartupError, ExternalMessengers> {
         let createPostDataCacheIO = IO<PulpFictionStartupError, PostDataCache>.var()
         let fakeImageDataSupplierIO = IO<PulpFictionStartupError, FakeImageDataSupplier>.var()
         let loggedInUserUserPostDataIO = IO<PulpFictionStartupError, UserPostData>.var()
 
-        let pulpFictionClientProtocol = PulpFictionTestClientWithFakeData(
-            numPostsInFeedResponse: numPostsInFeedResponse
-        )
+        let pulpFictionClientProtocol = PulpFictionTestClientWithFakeData()
 
         return binding(
             createPostDataCacheIO <- PostDataCache.create(),

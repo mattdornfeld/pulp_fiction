@@ -14,19 +14,17 @@ import protos_pulp_fiction_grpc_swift
 public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     private let fakeChannel: FakeChannel
     private let logger: Logger = .init(label: String(describing: PulpFictionTestClientWithFakeData.self))
-    public let numPostsInFeedResponse: Int
     public var channel: GRPC.GRPCChannel
     public var defaultCallOptions: GRPC.CallOptions = CallOptions()
     public var interceptors: PulpFiction_Protos_PulpFictionClientInterceptorFactoryProtocol?
 
-    public init(numPostsInFeedResponse: Int) {
+    public init() {
         fakeChannel = .init()
         channel = fakeChannel
-        self.numPostsInFeedResponse = numPostsInFeedResponse
     }
 
     private func generatePostsForFeed(_ postGenerator: () -> Post) -> [Post] {
-        (0 ..< numPostsInFeedResponse).map { _ in postGenerator() }
+        (0 ..< PostFeedConfigs.numPostReturnedPerRequest).map { _ in postGenerator() }
     }
 
     private func generateImagePostsForFeed() -> [Post] {
