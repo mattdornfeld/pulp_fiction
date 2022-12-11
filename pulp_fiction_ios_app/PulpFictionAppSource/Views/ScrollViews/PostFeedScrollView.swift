@@ -5,6 +5,8 @@
 //  Created by Matthew Dornfeld on 10/23/22.
 //
 
+import Bow
+import ComposableArchitecture
 import Foundation
 import SwiftUI
 
@@ -45,7 +47,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
 }
 
 /// View that scrolls through a feed of posts
-struct PostFeedScrollView: View {
+struct PostFeedScrollView: ImagePostScrollView {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     @ObservedObject private var postFeedFilterDropDownMenu: SymbolWithDropDownMenu<PostFeedFilter> = .init(
@@ -57,9 +59,13 @@ struct PostFeedScrollView: View {
     )
 
     var body: some View {
-        ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
-            getPostFeed(postFeedFilterDropDownMenu.currentSelection)
-                .makeIterator()
+        ContentScrollView(
+            postViewEitherSupplier: postViewEitherSupplier
+        ) { viewStore in
+            getPostFeed(
+                postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
+                viewStore: viewStore
+            )
         }
         .toolbar {
             PostFeedTopNavigationBar(
@@ -71,14 +77,17 @@ struct PostFeedScrollView: View {
         }
     }
 
-    func getPostFeed(_ postFeedFilter: PostFeedFilter) -> PostViewFeed<ImagePostView> {
+    private func getPostFeed(
+        postFeedFilter: PostFeedFilter,
+        viewStore: ViewStore<ContentScrollViewReducer<ImagePostView>.State, ContentScrollViewReducer<ImagePostView>.Action>
+    ) -> PostStream<ImagePostView> {
         switch postFeedFilter {
         case .Global:
             return postFeedMessenger
-                .getGlobalPostFeed()
+                .getGlobalPostFeed(viewStore: viewStore)
         case .Following:
             return postFeedMessenger
-                .getFollowingPostFeed(userId: loggedInUserPostData.userId)
+                .getFollowingPostFeed(userId: loggedInUserPostData.userId, viewStore: viewStore)
         }
     }
 }

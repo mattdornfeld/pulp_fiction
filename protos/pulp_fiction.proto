@@ -318,7 +318,7 @@ message UpdatePostResponse {
 service PulpFiction {
   rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {}
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
-  rpc GetFeed (GetFeedRequest) returns (stream GetFeedResponse) {}
+  rpc GetFeed (stream GetFeedRequest) returns (stream GetFeedResponse) {}
   rpc GetPost (GetPostRequest) returns (GetPostResponse) {}
   rpc GetUser (GetUserRequest) returns (GetUserResponse) {}
   rpc Login (LoginRequest) returns (LoginResponse) {}

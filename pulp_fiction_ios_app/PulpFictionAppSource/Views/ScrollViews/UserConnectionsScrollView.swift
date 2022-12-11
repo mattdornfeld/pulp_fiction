@@ -5,6 +5,8 @@
 //  Created by Matthew Dornfeld on 10/23/22.
 //
 
+import Bow
+import ComposableArchitecture
 import Foundation
 import SwiftUI
 
@@ -33,9 +35,10 @@ struct UserConnectionsTopNavigationBar: ToolbarContent {
 }
 
 /// View thay scrolls through a user's connections (e.g. their followers and followees)
-struct UserConnectionsScrollView: View {
+struct UserConnectionsScrollView: ScrollViewParent {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, UserConnectionView>
     @ObservedObject private var userConnectionsFilterDropDownMenu: SymbolWithDropDownMenu<UserConnectionsFilter> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
         symbolSize: 25,
@@ -44,23 +47,49 @@ struct UserConnectionsScrollView: View {
         initialMenuSelection: .Following
     )
 
+    init(loggedInUserPostData: UserPostData, postFeedMessenger: PostFeedMessenger) {
+        self.loggedInUserPostData = loggedInUserPostData
+        self.postFeedMessenger = postFeedMessenger
+        postViewEitherSupplier = { postViewIndex, postProto in
+            let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
+
+            return binding(
+                userPostDataEither <- postFeedMessenger.postDataMessenger
+                    .getPostData(postProto)
+                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
+                    .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
+                yield: UserConnectionView(
+                    id: postViewIndex,
+                    userPostData: userPostDataEither.get,
+                    postFeedMessenger: postFeedMessenger,
+                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData
+                )
+            )^
+        }
+    }
+
     var body: some View {
-        ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<UserConnectionView> in
-            buildPostViewFeed(userConnectionsFilterDropDownMenu.currentSelection)
-                .makeIterator()
+        ContentScrollView(postViewEitherSupplier: postViewEitherSupplier) { viewStore in
+            buildPostViewFeed(
+                userConnectionsFilter: userConnectionsFilterDropDownMenu.currentSelection,
+                viewStore: viewStore
+            )
         }.toolbar {
             UserConnectionsTopNavigationBar(userConnectionsFilterDropDownMenu: userConnectionsFilterDropDownMenu)
         }
     }
 
-    private func buildPostViewFeed(_ userConnectionsFilter: UserConnectionsFilter) -> PostViewFeed<UserConnectionView> {
+    private func buildPostViewFeed(
+        userConnectionsFilter: UserConnectionsFilter,
+        viewStore: ViewStore<ContentScrollViewReducer<UserConnectionView>.State, ContentScrollViewReducer<UserConnectionView>.Action>
+    ) -> PostStream<UserConnectionView> {
         switch userConnectionsFilter {
         case .Following:
             return postFeedMessenger
-                .getFollowingScrollFeed(userId: loggedInUserPostData.userId)
+                .getFollowingScrollFeed(userId: loggedInUserPostData.userId, viewStore: viewStore)
         case .Followers:
             return postFeedMessenger
-                .getFollowersScrollFeed(userId: loggedInUserPostData.userId)
+                .getFollowersScrollFeed(userId: loggedInUserPostData.userId, viewStore: viewStore)
         }
     }
 }

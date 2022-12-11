@@ -7,18 +7,20 @@
 
 import Foundation
 import GRPC
+import Logging
 import protos_pulp_fiction_grpc_swift
 
 /// Backend client used during testing and for the preview version of the app. Generates fake data on each request then returns it.
 public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     private let fakeChannel: FakeChannel
+    private let logger: Logger = .init(label: String(describing: PulpFictionTestClientWithFakeData.self))
     public let numPostsInFeedResponse: Int
     public var channel: GRPC.GRPCChannel
     public var defaultCallOptions: GRPC.CallOptions = CallOptions()
     public var interceptors: PulpFiction_Protos_PulpFictionClientInterceptorFactoryProtocol?
 
     public init(numPostsInFeedResponse: Int) {
-        fakeChannel = FakeChannel()
+        fakeChannel = .init()
         channel = fakeChannel
         self.numPostsInFeedResponse = numPostsInFeedResponse
     }
@@ -45,50 +47,79 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     }
 
     public func getFeed(
-        _ request: GetFeedRequest,
         callOptions: CallOptions? = nil,
         handler: @escaping (GetFeedResponse) -> Void
-    ) -> ServerStreamingCall<GetFeedRequest, GetFeedResponse> {
+    ) -> BidirectionalStreamingCall<GetFeedRequest, GetFeedResponse> {
         let path = "/pulp_fiction.protos.PulpFiction/GetFeed"
+        var responseBuffer: Queue<GetFeedResponse> = .init(maxSize: 1)
         let stream: FakeStreamingResponse<GetFeedRequest, GetFeedResponse> = fakeChannel.makeFakeStreamingResponse(
             path: path,
-            requestHandler: { _ in }
-        )
+            requestHandler: { fakeRequestPart in
+                switch fakeRequestPart {
+                case let .message(getFeedRequest):
+                    self.logger.debug(
+                        "Received getFeedRequest",
+                        metadata: [
+                            "thread": "\(Thread.current.hashValue)",
+                            "getFeedRequest": "\(getFeedRequest.getFeedRequest)",
+                        ]
+                    )
 
-        request.getFeedRequest.map { getFeedRequest in
-            var posts: [Post] {
-                switch getFeedRequest {
-                case .getUserPostFeedRequest:
-                    return generateImagePostsForFeed()
-                case .getGlobalPostFeedRequest:
-                    return generateImagePostsForFeed()
-                case .getFollowingPostFeedRequest:
-                    return generateImagePostsForFeed()
-                case .getFollowingFeedRequest:
-                    return generateUserPostsForFeed()
-                case .getFollowersFeedRequest:
-                    return generateUserPostsForFeed()
-                case .getCommentFeedRequest:
-                    let parentPostId = request
-                        .getCommentFeedRequest
-                        .postID
-                        .toUUID()
-                        .getOrElse(UUID())
-                    return generateCommentPostsForFeed(parentPostId)
+                    var posts: [Post] {
+                        switch getFeedRequest.getFeedRequest {
+                        case .getUserPostFeedRequest:
+                            return self.generateImagePostsForFeed()
+                        case .getGlobalPostFeedRequest:
+                            return self.generateImagePostsForFeed()
+                        case .getFollowingPostFeedRequest:
+                            return self.generateImagePostsForFeed()
+                        case .getFollowingFeedRequest:
+                            return self.generateUserPostsForFeed()
+                        case .getFollowersFeedRequest:
+                            return self.generateUserPostsForFeed()
+                        case .getCommentFeedRequest:
+                            let parentPostId = getFeedRequest
+                                .getCommentFeedRequest
+                                .postID
+                                .toUUID()
+                                .getOrElse(UUID())
+                            return self.generateCommentPostsForFeed(parentPostId)
+                        case .none:
+                            return []
+                        }
+                    }
+
+                    let getFeedResponse = GetFeedResponse.with {
+                        $0.posts = posts
+                    }
+
+                    responseBuffer.enqueue(getFeedResponse)
+
+                case .metadata:
+                    return
+                case .end:
+                    return
                 }
             }
+        )
 
-            let getFeedResponse = GetFeedResponse.with {
-                $0.posts = posts
+        DispatchQueue.global(qos: .userInitiated).async {
+            while true {
+                responseBuffer.dequeue().map { getFeedResponse in
+                    self.logger.debug(
+                        "Sending getFeedResponse",
+                        metadata: [
+                            "thread": "\(Thread.current.hashValue)",
+                            "numPosts": "\(getFeedResponse.posts.count)",
+                        ]
+                    )
+                    try! stream.sendMessage(getFeedResponse)
+                }
             }
-
-            try! stream.sendMessage(getFeedResponse)
-            try! stream.sendEnd()
         }
 
-        return makeServerStreamingCall(
+        return makeBidirectionalStreamingCall(
             path: path,
-            request: request,
             callOptions: callOptions ?? defaultCallOptions,
             interceptors: interceptors?.makeGetFeedInterceptors() ?? [],
             handler: handler
@@ -100,15 +131,14 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
 /// This is because the real client method's are implemented using extension methods
 public extension PulpFictionClientProtocol {
     func getFeed(
-        _ request: GetFeedRequest,
         callOptions: CallOptions? = nil,
         handler: @escaping (GetFeedResponse) -> Void
-    ) -> ServerStreamingCall<GetFeedRequest, GetFeedResponse> {
+    ) -> BidirectionalStreamingCall<GetFeedRequest, GetFeedResponse> {
         switch self {
         case let pulpFictionTestClientWithFakeData as PulpFictionTestClientWithFakeData:
-            return pulpFictionTestClientWithFakeData.getFeed(request, handler: handler)
+            return pulpFictionTestClientWithFakeData.getFeed(handler: handler)
         default:
-            return getFeed(request, callOptions: callOptions, handler: handler)
+            return getFeed(callOptions: callOptions, handler: handler)
         }
     }
 }
