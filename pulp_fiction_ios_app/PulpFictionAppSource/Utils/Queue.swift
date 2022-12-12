@@ -14,7 +14,7 @@ class Queue<A>: Equatable where A: Equatable {
     private let queue = DispatchQueue(label: "queue.operations")
     private let logger = Logger(label: String(describing: Queue.self))
     private(set) var elements: [A] = []
-    private var isClosed: AtomicBoolean = .init(value: false)
+    private var isClosedAtomicBoolean: AtomicBoolean = .init(value: false)
     private var isEmpty: NSConditionLock = .init(condition: 1)
     private var isFull: NSConditionLock = .init(condition: 0)
 
@@ -25,9 +25,9 @@ class Queue<A>: Equatable where A: Equatable {
     static func == (lhs: Queue<A>, rhs: Queue<A>) -> Bool {
         lhs.elements == rhs.elements
             && lhs.maxSize == rhs.maxSize
-            && lhs.isClosed == rhs.isClosed
-//            && lhs.isEmpty == rhs.isEmpty
-//            && lhs.isFull == rhs.isFull
+            && lhs.isClosedAtomicBoolean == rhs.isClosedAtomicBoolean
+            && lhs.isEmpty == rhs.isEmpty
+            && lhs.isFull == rhs.isFull
     }
 
     func getSize() -> Int {
@@ -55,7 +55,7 @@ class Queue<A>: Equatable where A: Equatable {
     /// Enqueue a elements to the queue. Blocks if full. No-op if closed.
     @discardableResult
     func enqueue(_ values: [A]) -> Queue<A> {
-        if isClosed.getValue() {
+        if isClosedAtomicBoolean.getValue() {
             logger.debug("Attempted to enqueue element to closed queue")
             return self
         }
@@ -98,9 +98,14 @@ class Queue<A>: Equatable where A: Equatable {
 
     /// Closes the queue. No new elements can be enqueued or dequeued.
     func close() {
-        isClosed.setValue(true)
+        isClosedAtomicBoolean.setValue(true)
         isEmpty.unlock(withCondition: 0)
         logger.debug("Queue is closed")
+    }
+
+    /// Returns true if queue is closed
+    func isClosed() -> Bool {
+        return isClosedAtomicBoolean.getValue()
     }
 
     /// Dequeues elements from the queue. Blocks if empty. No-op if closed.
@@ -114,16 +119,24 @@ class Queue<A>: Equatable where A: Equatable {
     /// Dequeues an element from the queue. Blocks if empty. No-op if closed.
     @discardableResult
     func dequeue() -> A? {
-        if isClosed.getValue() {
+        if isClosedAtomicBoolean.getValue() {
             logger.debug("Attempted to dequeue element from closed queue")
             return nil
         }
 
-        logger.debug("Dequeueing element")
+        logger.debug(
+            "Dequeueing element",
+            metadata: [
+                "lockedBecauseEmpty": "\(checkLockedBecauseEmpty())",
+                "lockedBecauseFull": "\(checkLockedBecauseFull())",
+                "count": "\(elements.count)",
+                "maxSize": "\(maxSize)",
+            ]
+        )
         isEmpty.lock(whenCondition: 0)
 
         // Check if closed a second time in case queue is closed while stuck in above lock
-        if isClosed.getValue() {
+        if isClosedAtomicBoolean.getValue() {
             return nil
         }
 
@@ -138,7 +151,15 @@ class Queue<A>: Equatable where A: Equatable {
             isEmpty.unlock(withCondition: 0)
         }
 
-        logger.debug("Finished dequeueing element")
+        logger.debug(
+            "Finished dequeueing element",
+            metadata: [
+                "lockedBecauseEmpty": "\(checkLockedBecauseEmpty())",
+                "lockedBecauseFull": "\(checkLockedBecauseFull())",
+                "count": "\(elements.count)",
+                "maxSize": "\(maxSize)",
+            ]
+        )
 
         return element
     }

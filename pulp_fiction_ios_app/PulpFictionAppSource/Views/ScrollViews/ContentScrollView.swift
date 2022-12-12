@@ -10,34 +10,36 @@ import ComposableArchitecture
 import Logging
 import SwiftUI
 
-private let logger: Logger = .init(label: String(describing: "ScrollableContentView"))
-
 /// A protocol from which which all Views that can be embedded in a scroll should inherit
 public protocol ScrollableContentView: View, Identifiable, Equatable {
     var id: Int { get }
-}
-
-@propertyWrapper
-struct EquatableIgnore<Value>: Equatable {
-    var wrappedValue: Value
-
-    static func == (_: EquatableIgnore<Value>, _: EquatableIgnore<Value>) -> Bool {
-        true
-    }
 }
 
 /// Reducer that manages scrolling through an infinite list of content
 struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
     let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, A>
     private let logger: Logger = .init(label: String(describing: ContentScrollViewReducer.self))
+    private let restartScrollOffsetThreshold = 10.0
 
     struct State: Equatable {
         /// Queue for storing ScrollableContentViews that will be rendered in the feed
-        var postViews: Queue<A> = .init(maxSize: PostFeedConfigs.postFeedMaxQueueSize)
+        var postViews: Queue<A> = .init()
         /// Indicator that shows new content is being loaded into the feed
-        var feedLoadProgressIndicatorOpacity: Double = 0.0
+        private(set) var feedLoadProgressIndicatorOpacity: Double = 0.0
         /// Post indices for which loadMorePosts was called. We keep track of this to make sure we don't double load posts
         var lastVisiblePostIndices: Set<Int> = .init()
+
+        mutating func hideFeedLoadProgressIndicator() {
+            feedLoadProgressIndicatorOpacity = 0.0
+        }
+
+        func isFeedLoadProgressIndicatorShowing() -> Bool {
+            abs(feedLoadProgressIndicatorOpacity - 1.0) < 1e-10
+        }
+
+        mutating func showFeedLoadProgressIndicator() {
+            feedLoadProgressIndicatorOpacity = 1.0
+        }
     }
 
     enum Action {
@@ -48,13 +50,19 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
         /// Dequeus old posts from scroll if necessary
         case dequeuePostsFromScrollIfNecessary(Int, PostStream<A>)
         /// Updates the opacity of progress indicator. Set to 1.0 if posts are being loaded into the scroll and 0.0 otherwise.
-        case updateFeedLoadProgressIndicatorOpacity(CGFloat)
+        case updateFeedLoadProgressIndicatorOpacity(Bool)
+        /// Called when there are no more posts left to scroll through
+        case stopScroll
+        /// Restarts the scroll on a drag up action if offset is greater than threshold
+        case restartScrollIfOffsetGreaterThanThreshold(CGFloat, PostStream<A>)
+        /// Restarts the scroll
+        case restartScroll(PostStream<A>)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
         case let .enqueuePostsToScroll(postIndicesAndPosts):
-            state.feedLoadProgressIndicatorOpacity = 1.0
+            state.showFeedLoadProgressIndicator()
             let scrollableContentViews = postIndicesAndPosts.map { postIndex, post in
                 postViewEitherSupplier(postIndex, post)
                     .onSuccess { _ in
@@ -81,13 +89,19 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
 
             state.postViews.enqueue(scrollableContentViews)
 
-            return .task { .updateFeedLoadProgressIndicatorOpacity(0.0) }
+            return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
 
         case let .refreshScrollIfNecessary(currentPostIndex, postStream):
-            state.feedLoadProgressIndicatorOpacity = 1.0
+            state.showFeedLoadProgressIndicator()
             return .task { .dequeuePostsFromScrollIfNecessary(currentPostIndex, postStream) }
 
         case let .dequeuePostsFromScrollIfNecessary(currentPostIndex, postStream):
+            if state.postViews.isClosed() {
+                return .none
+            }
+
+            state.showFeedLoadProgressIndicator()
+
             let alreadyLoadedForPostIndex = state
                 .lastVisiblePostIndices
                 .contains(currentPostIndex)
@@ -99,8 +113,9 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
                 .map { $0.id == currentPostIndex }^
                 .getOrElse(true)
 
-            let shouldClearPosts = state.postViews.elements.count == PostFeedConfigs.postFeedMaxQueueSize
+            let isQueueFull = state.postViews.elements.count == PostFeedConfigs.postFeedMaxQueueSize
 
+            let shouldClearPosts = isQueueFull
             let shouldLoadMorePosts = !alreadyLoadedForPostIndex && isLastPostVisible
 
             if shouldClearPosts, shouldLoadMorePosts {
@@ -112,18 +127,47 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
                     ]
                 )
 
-                let dequeuedPosts = state.postViews.dequeue(numElements: PostFeedConfigs.numPostReturnedPerRequest)
+                state.postViews.dequeue(numElements: PostFeedConfigs.numPostReturnedPerRequest)
                 postStream.loadMorePosts(state: &state, currentPostIndex: currentPostIndex)
             } else if shouldLoadMorePosts {
                 postStream.loadMorePosts(state: &state, currentPostIndex: currentPostIndex)
             }
 
-            return .task { .updateFeedLoadProgressIndicatorOpacity(0.0) }
+            return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
 
-        case let .updateFeedLoadProgressIndicatorOpacity(newFeedLoadProgressIndicatorOpacity):
-            state.feedLoadProgressIndicatorOpacity = newFeedLoadProgressIndicatorOpacity
+        case let .updateFeedLoadProgressIndicatorOpacity(shouldShowFeedLoadProgressIndicator):
+            if shouldShowFeedLoadProgressIndicator {
+                state.showFeedLoadProgressIndicator()
+            } else {
+                state.hideFeedLoadProgressIndicator()
+            }
             return .none
+
+        case .stopScroll:
+            state.postViews.close()
+            return .none
+
+        case let .restartScrollIfOffsetGreaterThanThreshold(newOffset, postStream):
+            if newOffset >= restartScrollOffsetThreshold, !state.isFeedLoadProgressIndicatorShowing() {
+                return .task { .restartScroll(postStream) }
+            } else if newOffset <= 1.0, state.isFeedLoadProgressIndicatorShowing() {
+                return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
+            }
+
+            return .none
+
+        case let .restartScroll(postStream):
+            state.showFeedLoadProgressIndicator()
+            postStream.restartStream()
+            state.postViews = .init()
+            return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
         }
+    }
+}
+
+private extension Queue {
+    convenience init() {
+        self.init(maxSize: PostFeedConfigs.postFeedMaxQueueSize)
     }
 }
 
@@ -180,12 +224,8 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
 
     var body: some View {
         GeometryReader { geometryProxy in
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .center) {
-                    ProgressView()
-                        .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
-                        .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
-
                     prependToBeginningOfScroll
 
                     LazyVStack(alignment: .leading) {
@@ -204,10 +244,29 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
                         color: .gray
                     )
                     .padding()
+                    .opacity(viewStore.state.isFeedLoadProgressIndicatorShowing() ? 0.0 : 1.0)
                 }
                 .frame(minHeight: geometryProxy.size.height)
+                .anchorPreference(key: OffsetPreferenceKey.self, value: .top) {
+                    geometryProxy[$0].y
+                }
+                .onPreferenceChange(OffsetPreferenceKey.self) { newOffset in
+                    viewStore.send(.restartScrollIfOffsetGreaterThanThreshold(newOffset, postStream))
+                }
+            }.overlay {
+                ProgressView()
+                    .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
+                    .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
             }
-//            .onDragUp { viewStore.send(.refreshScroll) }
         }
+    }
+}
+
+private struct OffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static let threshold: CGFloat = 10.0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
