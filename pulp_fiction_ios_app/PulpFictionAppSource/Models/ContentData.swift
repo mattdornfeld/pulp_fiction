@@ -31,17 +31,17 @@ public class ContentData: Codable, Equatable {
     public let data: Data
     public let contentDataType: ContentDataType
     public let urlMaybe: URL?
-    
+
     public init(data: Data, contentDataType: ContentData.ContentDataType, urlMaybe: URL? = nil) {
         self.data = data
         self.contentDataType = contentDataType
         self.urlMaybe = urlMaybe
     }
-    
+
     public static func == (lhs: ContentData, rhs: ContentData) -> Bool {
         lhs.data == rhs.data &&
-        lhs.contentDataType == rhs.contentDataType &&
-        lhs.urlMaybe == rhs.urlMaybe
+            lhs.contentDataType == rhs.contentDataType &&
+            lhs.urlMaybe == rhs.urlMaybe
     }
 
     static func create(_ fromUrl: String, _ dataSupplier: @escaping (URL) throws -> Data) -> IO<PulpFictionRequestError, ContentData> {
@@ -78,7 +78,7 @@ public extension ContentData {
         self.init(data: data, contentDataType: contentDataType, urlMaybe: url)
     }
 
-    convenience  init(data: Data, contentDataType: ContentDataType) {
+    convenience init(data: Data, contentDataType: ContentDataType) {
         self.init(data: data, contentDataType: contentDataType, urlMaybe: nil)
     }
 }

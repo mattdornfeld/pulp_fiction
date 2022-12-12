@@ -16,7 +16,7 @@ class CommentPostData: PostData, PostDataIdentifiable, Equatable {
     let postMetadata: PostMetadata
     let postInteractionAggregates: PostInteractionAggregates
     let loggedInUserPostInteractions: LoggedInUserPostInteractions
-    
+
     init(body: String, id: PostUpdateIdentifier, parentPostId: UUID, postMetadata: PostMetadata, postInteractionAggregates: PostInteractionAggregates, loggedInUserPostInteractions: LoggedInUserPostInteractions) {
         self.body = body
         self.id = id
@@ -25,14 +25,14 @@ class CommentPostData: PostData, PostDataIdentifiable, Equatable {
         self.postInteractionAggregates = postInteractionAggregates
         self.loggedInUserPostInteractions = loggedInUserPostInteractions
     }
-    
+
     static func == (lhs: CommentPostData, rhs: CommentPostData) -> Bool {
         lhs.body == rhs.body &&
-        lhs.id == rhs.id &&
-        lhs.parentPostId == rhs.parentPostId &&
-        lhs.postMetadata == rhs.postMetadata &&
-        lhs.postInteractionAggregates == rhs.postInteractionAggregates &&
-        lhs.loggedInUserPostInteractions == rhs.loggedInUserPostInteractions
+            lhs.id == rhs.id &&
+            lhs.parentPostId == rhs.parentPostId &&
+            lhs.postMetadata == rhs.postMetadata &&
+            lhs.postInteractionAggregates == rhs.postInteractionAggregates &&
+            lhs.loggedInUserPostInteractions == rhs.loggedInUserPostInteractions
     }
 
     func toPostDataOneOf() -> PostDataOneOf {

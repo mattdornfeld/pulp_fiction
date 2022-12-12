@@ -19,7 +19,7 @@ public class UserPostData: PostData, PostDataIdentifiable, Equatable, AutoSetter
     var bio: String
     let userId: UUID
     @CodableUIImage var userAvatarUIImage: UIImage
-    
+
     public init(id: PostUpdateIdentifier, postMetadata: PostMetadata, userPostContentData: ContentData, userDisplayName: String, bio: String, userId: UUID, userAvatarUIImage: UIImage) {
         self.id = id
         self.postMetadata = postMetadata
@@ -29,15 +29,15 @@ public class UserPostData: PostData, PostDataIdentifiable, Equatable, AutoSetter
         self.userId = userId
         self.userAvatarUIImage = userAvatarUIImage
     }
-    
+
     public static func == (lhs: UserPostData, rhs: UserPostData) -> Bool {
         lhs.id == rhs.id &&
-        lhs.postMetadata == rhs.postMetadata &&
-        lhs.userPostContentData == rhs.userPostContentData &&
-        lhs.userDisplayName == rhs.userDisplayName &&
-        lhs.bio == rhs.bio &&
-        lhs.userId == rhs.userId &&
-        lhs.userAvatarUIImage == rhs.userAvatarUIImage
+            lhs.postMetadata == rhs.postMetadata &&
+            lhs.userPostContentData == rhs.userPostContentData &&
+            lhs.userDisplayName == rhs.userDisplayName &&
+            lhs.bio == rhs.bio &&
+            lhs.userId == rhs.userId &&
+            lhs.userAvatarUIImage == rhs.userAvatarUIImage
     }
 
     func toPostDataOneOf() -> PostDataOneOf {

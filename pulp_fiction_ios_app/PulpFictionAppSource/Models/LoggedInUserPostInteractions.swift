@@ -9,12 +9,12 @@ import Foundation
 
 public class LoggedInUserPostInteractions: Codable, Equatable {
     public let postLikeStatus: Post.PostLike
-    
+
     public init(postLikeStatus: Post.PostLike) {
         self.postLikeStatus = postLikeStatus
     }
-    
-    required public convenience init(from decoder: Decoder) throws {
+
+    public required convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let postLikeRawValue = try values.decode(Int.self, forKey: .postLike)
 
@@ -22,7 +22,7 @@ public class LoggedInUserPostInteractions: Codable, Equatable {
             postLikeStatus: Post.PostLike(rawValue: postLikeRawValue) ?? Post.PostLike.UNRECOGNIZED(postLikeRawValue)
         )
     }
-    
+
     public static func == (lhs: LoggedInUserPostInteractions, rhs: LoggedInUserPostInteractions) -> Bool {
         lhs.postLikeStatus == rhs.postLikeStatus
     }
