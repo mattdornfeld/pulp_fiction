@@ -9,13 +9,31 @@ import Bow
 import Foundation
 
 /// Comment post data is stored in this model. Used for rendering CommentView.
-struct CommentPostData: PostData, PostDataIdentifiable, Equatable {
+class CommentPostData: PostData, PostDataIdentifiable, Equatable {
     let body: String
     let id: PostUpdateIdentifier
     let parentPostId: UUID
     let postMetadata: PostMetadata
     let postInteractionAggregates: PostInteractionAggregates
     let loggedInUserPostInteractions: LoggedInUserPostInteractions
+    
+    init(body: String, id: PostUpdateIdentifier, parentPostId: UUID, postMetadata: PostMetadata, postInteractionAggregates: PostInteractionAggregates, loggedInUserPostInteractions: LoggedInUserPostInteractions) {
+        self.body = body
+        self.id = id
+        self.parentPostId = parentPostId
+        self.postMetadata = postMetadata
+        self.postInteractionAggregates = postInteractionAggregates
+        self.loggedInUserPostInteractions = loggedInUserPostInteractions
+    }
+    
+    static func == (lhs: CommentPostData, rhs: CommentPostData) -> Bool {
+        lhs.body == rhs.body &&
+        lhs.id == rhs.id &&
+        lhs.parentPostId == rhs.parentPostId &&
+        lhs.postMetadata == rhs.postMetadata &&
+        lhs.postInteractionAggregates == rhs.postInteractionAggregates &&
+        lhs.loggedInUserPostInteractions == rhs.loggedInUserPostInteractions
+    }
 
     func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.commentPostData(self)

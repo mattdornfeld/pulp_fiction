@@ -11,7 +11,7 @@ import Foundation
 import UIKit
 
 /// Downloads and contains a piece of content data from a url
-public struct ContentData: Codable, Equatable {
+public class ContentData: Codable, Equatable {
     public class InvalidURL: PulpFictionRequestError {}
     public class UnsupportedFileType: PulpFictionRequestError {}
     public class ErrorDeserializingImage: PulpFictionRequestError {}
@@ -31,6 +31,18 @@ public struct ContentData: Codable, Equatable {
     public let data: Data
     public let contentDataType: ContentDataType
     public let urlMaybe: URL?
+    
+    public init(data: Data, contentDataType: ContentData.ContentDataType, urlMaybe: URL? = nil) {
+        self.data = data
+        self.contentDataType = contentDataType
+        self.urlMaybe = urlMaybe
+    }
+    
+    public static func == (lhs: ContentData, rhs: ContentData) -> Bool {
+        lhs.data == rhs.data &&
+        lhs.contentDataType == rhs.contentDataType &&
+        lhs.urlMaybe == rhs.urlMaybe
+    }
 
     static func create(_ fromUrl: String, _ dataSupplier: @escaping (URL) throws -> Data) -> IO<PulpFictionRequestError, ContentData> {
         IO.invoke {
@@ -62,11 +74,11 @@ public struct ContentData: Codable, Equatable {
 }
 
 public extension ContentData {
-    init(data: Data, contentDataType: ContentDataType, url: URL) {
+    convenience init(data: Data, contentDataType: ContentDataType, url: URL) {
         self.init(data: data, contentDataType: contentDataType, urlMaybe: url)
     }
 
-    init(data: Data, contentDataType: ContentDataType) {
+    convenience  init(data: Data, contentDataType: ContentDataType) {
         self.init(data: data, contentDataType: contentDataType, urlMaybe: nil)
     }
 }

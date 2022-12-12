@@ -15,7 +15,7 @@ public struct PostUpdateIdentifier: Codable, Identifiable, Equatable, Hashable {
     public let updatedAt: Date
 
     public init(postId: UUID, updatedAt: Date) {
-        id = PostUpdateIdentifier.getUniqueId(postId, updatedAt)
+        self.id = PostUpdateIdentifier.getUniqueId(postId, updatedAt)
         self.postId = postId
         self.updatedAt = updatedAt
     }
