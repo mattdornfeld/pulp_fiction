@@ -82,7 +82,7 @@ struct UserConnectionsScrollView: ScrollViewParent {
     private func buildPostViewFeed(
         userConnectionsFilter: UserConnectionsFilter,
         viewStore: ViewStore<ContentScrollViewReducer<UserConnectionView>.State, ContentScrollViewReducer<UserConnectionView>.Action>
-    ) -> PostStream<UserConnectionView> {
+    ) -> PostStream {
         switch userConnectionsFilter {
         case .Following:
             return postFeedMessenger

@@ -6,8 +6,9 @@
 //
 
 import Foundation
-import PulpFictionAppSource
 import XCTest
+
+@testable import PulpFictionAppSource
 
 class QueueTests: XCTestCase {
     func testQueueEmptyWhenCreated() {

@@ -23,6 +23,7 @@ extension ExternalMessengers {
             createPostDataCacheIO <- PostDataCache.create(),
             fakeImageDataSupplierIO <- FakeImageDataSupplier.create(),
             loggedInUserUserPostDataIO <- UserPostData.generate()
+                .logError("Error generating UserPostData")
                 .mapError { PulpFictionStartupError($0) },
             yield: {
                 let postDataMessenger = PostDataMessenger(

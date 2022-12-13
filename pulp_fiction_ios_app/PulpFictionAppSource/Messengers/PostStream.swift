@@ -13,11 +13,11 @@ import GRPC
 import Logging
 
 /// Stream Post protos from the backend API and stores them in a ViewStore
-class PostStream<A: ScrollableContentView> {
+class PostStream {
     private let getFeedRequest: GetFeedRequest
     internal let logger: Logger = .init(label: String(describing: PostStream.self))
     private let pulpFictionClientProtocol: PulpFictionClientProtocol
-    private let viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>
+    private let enqueueAction: ([(Int, Post)]) -> Void
     private var stream: BidirectionalStreamingCall<GetFeedRequest, GetFeedResponse>
 
     /// - Parameters:
@@ -27,15 +27,15 @@ class PostStream<A: ScrollableContentView> {
     init(
         pulpFictionClientProtocol: PulpFictionClientProtocol,
         getFeedRequest: GetFeedRequest,
-        viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>
+        enqueueAction: @escaping ([(Int, Post)]) -> Void
     ) {
         self.getFeedRequest = getFeedRequest
         self.pulpFictionClientProtocol = pulpFictionClientProtocol
-        self.viewStore = viewStore
+        self.enqueueAction = enqueueAction
         stream = PostStream.buildStream(
             logger: logger,
             pulpFictionClientProtocol: pulpFictionClientProtocol,
-            viewStore: viewStore
+            enqueueAction: enqueueAction
         )
         loadMorePosts()
     }
@@ -43,7 +43,7 @@ class PostStream<A: ScrollableContentView> {
     private static func buildStream(
         logger: Logger,
         pulpFictionClientProtocol: PulpFictionClientProtocol,
-        viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>
+        enqueueAction: @escaping ([(Int, Post)]) -> Void
     ) -> BidirectionalStreamingCall<GetFeedRequest, GetFeedResponse> {
         let currentPostIndex: AtomicCounter = .init()
         logger.debug("Starting stream")
@@ -62,7 +62,7 @@ class PostStream<A: ScrollableContentView> {
                 return (currentPostIndex.getValue(), post)
             }
 
-            DispatchQueue.main.sync { viewStore.send(.enqueuePostsToScroll(postIndicesAndPosts)) }
+            enqueueAction(postIndicesAndPosts)
         }
 
         stream.status.whenComplete { result in
@@ -88,20 +88,24 @@ class PostStream<A: ScrollableContentView> {
         return stream
     }
 
+    @discardableResult
     /// Send request to backend server to load more posts into stream
-    func loadMorePosts() {
-        stream.sendMessage(getFeedRequest)
+    func loadMorePosts() -> PostStream {
+        try! stream.sendMessage(getFeedRequest).wait()
+        return self
     }
 
+    @discardableResult
     /// Ends the current stream and starts a new one
-    func restartStream() {
+    func restartStream() -> PostStream {
         logger.debug("Restarting stream")
         stream.sendEnd()
         stream = PostStream.buildStream(
             logger: logger,
             pulpFictionClientProtocol: pulpFictionClientProtocol,
-            viewStore: viewStore
+            enqueueAction: enqueueAction
         )
         loadMorePosts()
+        return self
     }
 }

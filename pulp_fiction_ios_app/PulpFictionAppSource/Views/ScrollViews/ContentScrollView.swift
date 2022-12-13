@@ -46,17 +46,17 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
         /// Enqueue posts into the scroll.
         case enqueuePostsToScroll([(Int, Post)])
         /// Called every time a post appears in the scroll. Checks to see if old posts should be removed from a scroll and loads new posts into the scroll if necessary.
-        case refreshScrollIfNecessary(Int, PostStream<A>)
+        case refreshScrollIfNecessary(Int, PostStream)
         /// Dequeus old posts from scroll if necessary
-        case dequeuePostsFromScrollIfNecessary(Int, PostStream<A>)
+        case dequeuePostsFromScrollIfNecessary(Int, PostStream)
         /// Updates the opacity of progress indicator. Set to 1.0 if posts are being loaded into the scroll and 0.0 otherwise.
         case updateFeedLoadProgressIndicatorOpacity(Bool)
         /// Called when there are no more posts left to scroll through
         case stopScroll
         /// Restarts the scroll on a drag up action if offset is greater than threshold
-        case restartScrollIfOffsetGreaterThanThreshold(CGFloat, PostStream<A>)
+        case restartScrollIfOffsetGreaterThanThreshold(CGFloat, PostStream)
         /// Restarts the scroll
-        case restartScroll(PostStream<A>)
+        case restartScroll(PostStream)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
@@ -176,7 +176,7 @@ private extension PostStream {
     /// - Parameters:
     ///   - state: The current state of the ViewStore
     ///   - currentPostIndex: The post index that last appeared
-    func loadMorePosts(state: inout ContentScrollViewReducer<A>.State, currentPostIndex: Int) {
+    func loadMorePosts<A: ScrollableContentView>(state: inout ContentScrollViewReducer<A>.State, currentPostIndex: Int) {
         logger.debug(
             "Loading more posts",
             metadata: [
@@ -195,7 +195,7 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
     private let progressIndicatorScaleFactor: CGFloat = 2.0
     private let refreshFeedOnScrollUpSensitivity: CGFloat = 10.0
     private let prependToBeginningOfScroll: B
-    private let postStream: PostStream<A>
+    private let postStream: PostStream
     @GestureState private var dragOffset: CGFloat = -100
     @ObservedObject private var viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>
 
@@ -207,7 +207,7 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
     init(
         prependToBeginningOfScroll: B = EmptyView(),
         postViewEitherSupplier: @escaping (Int, Post) -> Either<PulpFictionRequestError, A>,
-        postStreamSupplier: @escaping (ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>) -> PostStream<A>
+        postStreamSupplier: @escaping (ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>) -> PostStream
 
     ) {
         self.prependToBeginningOfScroll = prependToBeginningOfScroll

@@ -80,7 +80,7 @@ struct PostFeedScrollView: ImagePostScrollView {
     private func getPostFeed(
         postFeedFilter: PostFeedFilter,
         viewStore: ViewStore<ContentScrollViewReducer<ImagePostView>.State, ContentScrollViewReducer<ImagePostView>.Action>
-    ) -> PostStream<ImagePostView> {
+    ) -> PostStream {
         switch postFeedFilter {
         case .Global:
             return postFeedMessenger
