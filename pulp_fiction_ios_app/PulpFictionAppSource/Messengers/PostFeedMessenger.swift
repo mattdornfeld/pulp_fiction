@@ -39,7 +39,8 @@ public struct PostFeedMessenger {
                     postViewIndex: postViewIndex,
                     imagePostData: imagePostDataEither.get,
                     userPostData: userPostDataEither.get,
-                    postFeedMessenger: self
+                    postFeedMessenger: self,
+                    loggedInUserPostData: loginSession.loggedInUserPostData
                 ),
                 yield: imagePostViewEither.get
             )^
@@ -113,7 +114,8 @@ public struct PostFeedMessenger {
                     postViewIndex: postViewIndex,
                     commentPostData: commentPostDataEither.get,
                     userPostData: userPostDataEither.get,
-                    postFeedMessenger: self
+                    postFeedMessenger: self,
+                    loggedInUserPostData: loginSession.loggedInUserPostData
                 ),
                 yield: commentViewEither.get
             )^
@@ -141,7 +143,8 @@ public struct PostFeedMessenger {
                 yield: UserConnectionView(
                     id: postViewIndex,
                     userPostData: userPostDataEither.get,
-                    postFeedMessenger: self
+                    postFeedMessenger: self,
+                    loggedInUserPostData: loginSession.loggedInUserPostData
                 )
             )^
         }

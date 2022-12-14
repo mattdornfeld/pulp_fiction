@@ -199,9 +199,9 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
 
                         Caption(
                             text: "You have reached the end\nTry refreshing the feed to see new posts",
-                            alignment: .center
+                            alignment: .center,
+                            color: .gray
                         )
-                        .foregroundColor(.gray)
                         .padding()
                     }
                     .frame(minHeight: geometryProxy.size.height)

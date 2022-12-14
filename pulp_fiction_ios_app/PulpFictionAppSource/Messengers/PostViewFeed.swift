@@ -76,7 +76,17 @@ public class PostViewFeedIterator<A: ScrollableContentView>: IteratorProtocol, E
                 getFeedResponse.posts.forEach { post in
 
                     let currentPostIndex = self.currentPostIndex.getValue()
-                    self.postViewEitherSupplier(currentPostIndex, post).mapRight { postView in
+                    /// In unit tests postViewEitherSupplier. This likely has something to do with runnng with the DEBUG config.
+                    /// Will try to find a way to remove this in the future.
+                    let postViewEither = {
+                        if ApplicationConfigs.isTestMode {
+                            return DispatchQueue.main.sync { self.postViewEitherSupplier(currentPostIndex, post) }
+                        } else {
+                            return self.postViewEitherSupplier(currentPostIndex, post)
+                        }
+                    }()
+
+                    postViewEither.mapRight { postView in
                         self.postViews.enqueue(postView)
                     }.onError { cause in
                         self.logger.error(

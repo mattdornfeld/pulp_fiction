@@ -45,13 +45,15 @@ extension ImagePostView {
         postUIImage: UIImage,
         creatorUserPostData: UserPostData,
         id: Int,
-        imagePostData: ImagePostData
+        imagePostData: ImagePostData,
+        loggedInUserPostData: UserPostData
     ) {
         self.postFeedMessenger = postFeedMessenger
         self.postUIImage = postUIImage
         self.creatorUserPostData = creatorUserPostData
         self.id = id
         self.imagePostData = imagePostData
+        self.loggedInUserPostData = loggedInUserPostData
         store = Store(
             initialState: ImagePostViewReducer.State(),
             reducer: ImagePostViewReducer()
@@ -65,11 +67,12 @@ extension ImagePostView {
 
 /// Renders an image post
 struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
-    private let postFeedMessenger: PostFeedMessenger
-    private let postUIImage: UIImage
     let creatorUserPostData: UserPostData
     let id: Int
     let imagePostData: ImagePostData
+    let postFeedMessenger: PostFeedMessenger
+    let postUIImage: UIImage
+    let loggedInUserPostData: UserPostData
     private var isForCommentsScrollView: Bool = false
     private let store: ComposableArchitecture.StoreOf<ImagePostViewReducer>
     internal let swipablePostStore: ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer>
@@ -113,12 +116,11 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                 HStack(alignment: .bottom) {
                     UserPostView(
                         userPostData: creatorUserPostData,
-                        postFeedMessenger: postFeedMessenger
+                        postFeedMessenger: postFeedMessenger,
+                        loggedInUserPostData: loggedInUserPostData
                     )
                     Spacer()
-                    Symbol(symbolName: "ellipsis")
-                        .padding(.trailing, 10)
-                        .padding(.bottom, 4)
+                    ExtraOptionsDropDownMenuView(postMetadata: imagePostData.postMetadata)
                 }
                 postUIImage.toImage().resizable().scaledToFit()
                 HStack {
@@ -137,7 +139,10 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                             BoldCaption(creatorUserPostData.userDisplayName)
                                 .append(textView: Caption(imagePostData.caption))
                         }
-                        Caption(imagePostData.postMetadata.createdAt.formatAsStringForView()).foregroundColor(.gray)
+                        Caption(
+                            text: imagePostData.postMetadata.createdAt.formatAsStringForView(),
+                            color: .gray
+                        )
                     }.padding(.leading, 4)
                     Spacer()
                 }
@@ -149,20 +154,20 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
         postViewIndex: Int,
         imagePostData: ImagePostData,
         userPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger
+        postFeedMessenger: PostFeedMessenger,
+        loggedInUserPostData: UserPostData
     ) -> Either<PulpFictionRequestError, ImagePostView> {
         let createPostUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
-        let createUserAvatarUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
         return binding(
             createPostUIImageEither <- imagePostData.imagePostContentData.toUIImage(),
-            createUserAvatarUIImageEither <- userPostData.userPostContentData.toUIImage(),
             yield: ImagePostView(
                 postFeedMessenger: postFeedMessenger,
                 postUIImage: createPostUIImageEither.get,
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
-                imagePostData: imagePostData
+                imagePostData: imagePostData,
+                loggedInUserPostData: loggedInUserPostData
             )
         )^.onError { cause in
             logger.error(

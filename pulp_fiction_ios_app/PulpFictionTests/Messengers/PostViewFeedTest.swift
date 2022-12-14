@@ -24,13 +24,15 @@ extension PostViewFeedIterator {
 }
 
 class PostViewFeedTest: XCTestCase {
-    func testRetrievingAllItemsFromPostViewFeed() throws {
-        let expectedNumPostsInFeedResponse = 50
-        let postViewFeedIterator = try ExternalMessengers.createForTests(numPostsInFeedResponse: expectedNumPostsInFeedResponse).mapRight { externalMessengers in
-            externalMessengers.postFeedMessenger.getGlobalPostFeed()
+    func testRetrievingAllItemsFromPostViewFeed() async throws {
+        let expectedNumPostsInFeedResponse = 1
+        let postViewFeedIterator = try DispatchQueue.global(qos: .userInitiated).sync {
+            try ExternalMessengers.createForTests(numPostsInFeedResponse: expectedNumPostsInFeedResponse).mapRight { externalMessengers in
+                externalMessengers.postFeedMessenger.getGlobalPostFeed()
+            }
+            .getOrThrow()
+            .makeIterator()
         }
-        .getOrThrow()
-        .makeIterator()
         let postViews = postViewFeedIterator.takeAll()
 
         XCTAssertEqual(expectedNumPostsInFeedResponse, postViews.count)
@@ -38,14 +40,15 @@ class PostViewFeedTest: XCTestCase {
         XCTAssertTrue(postViewFeedIterator.isDone)
     }
 
-    func testRetrievingAllItemsFromCommentViewFeed() throws {
-        let expectedNumPostsInFeedResponse = 50
+    func testRetrievingAllItemsFromCommentViewFeed() async throws {
+        let expectedNumPostsInFeedResponse = 1
         let expectedPostId = UUID()
-        let postViewFeedIterator = try ExternalMessengers.createForTests(numPostsInFeedResponse: expectedNumPostsInFeedResponse).mapRight { externalMessengers in
+        let postViewFeedIterator = try DispatchQueue.global(qos: .userInitiated).sync { try ExternalMessengers.createForTests(numPostsInFeedResponse: expectedNumPostsInFeedResponse).mapRight { externalMessengers in
             externalMessengers.postFeedMessenger.getCommentFeed(postId: expectedPostId)
         }
         .getOrThrow()
         .makeIterator()
+        }
         let postViews = postViewFeedIterator.takeAll()
 
         let comments = Set(postViews.map { postView in postView.commentPostData.body })

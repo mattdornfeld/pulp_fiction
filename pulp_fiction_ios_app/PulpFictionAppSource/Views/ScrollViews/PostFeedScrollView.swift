@@ -5,7 +5,6 @@
 //  Created by Matthew Dornfeld on 10/23/22.
 //
 
-import ComposableArchitecture
 import Foundation
 import SwiftUI
 
@@ -14,20 +13,33 @@ enum PostFeedFilter: String, DropDownMenuOption {
     case Following
 }
 
-struct PostFeedScrollReducer: ReducerProtocol {
-    struct State: Equatable {
-        var currentPostFeedFilter: PostFeedFilter = .Global
-    }
+struct PostFeedTopNavigationBar: ToolbarContent {
+    let postFeedFilter: PostFeedFilter
+    let postFeedMessenger: PostFeedMessenger
+    let loggedInUserPostData: UserPostData
+    let postFeedFilterDropDownMenuView: SymbolWithDropDownMenuView<PostFeedFilter>
 
-    enum Action {
-        case updateCurrentPostFeedFilter(PostFeedFilter)
-    }
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            Title("Pulp Fiction")
+                .foregroundColor(.gray)
+        }
 
-    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
-        switch action {
-        case let .updateCurrentPostFeedFilter(newPostFeedFilter):
-            state.currentPostFeedFilter = newPostFeedFilter
-            return .none
+        ToolbarItem(placement: .navigationBarTrailing) {
+            HStack(spacing: 0.001) {
+                Symbol(
+                    symbolName: "plus",
+                    size: 20,
+                    color: .gray
+                ).navigateOnTap(
+                    destination: PostCreatorView(
+                        loggedInUserPostData: loggedInUserPostData,
+                        postFeedMessenger: postFeedMessenger
+                    )
+                )
+
+                postFeedFilterDropDownMenuView
+            }
         }
     }
 }
@@ -36,24 +48,26 @@ struct PostFeedScrollReducer: ReducerProtocol {
 struct PostFeedScrollView: View {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
-    private let store: ComposableArchitecture.StoreOf<PostFeedScrollReducer> = Store(
-        initialState: PostFeedScrollReducer.State(),
-        reducer: PostFeedScrollReducer()
+    @ObservedObject private var postFeedFilterDropDownMenu: SymbolWithDropDownMenu<PostFeedFilter> = .init(
+        symbolName: "line.3.horizontal.decrease.circle",
+        symbolSize: 20,
+        symbolColor: .gray,
+        menuOptions: PostFeedFilter.allCases,
+        initialMenuSelection: .Global
     )
 
     var body: some View {
-        WithViewStore(store) { viewStore in
-            TopNavigationBarView(topNavigationBarViewBuilder: { PostFeedTopNavigationBar(
-                postFeedFilter: viewStore.state.currentPostFeedFilter)
-            { newPostFeedFilter in
-                viewStore.send(.updateCurrentPostFeedFilter(newPostFeedFilter))
-            }
-            }) {
-                ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
-                    getPostFeed(viewStore.state.currentPostFeedFilter)
-                        .makeIterator()
-                }
-            }
+        ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
+            getPostFeed(postFeedFilterDropDownMenu.currentSelection)
+                .makeIterator()
+        }
+        .toolbar {
+            PostFeedTopNavigationBar(
+                postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
+                postFeedMessenger: postFeedMessenger,
+                loggedInUserPostData: loggedInUserPostData,
+                postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view
+            )
         }
     }
 

@@ -5,7 +5,6 @@
 //  Created by Matthew Dornfeld on 10/23/22.
 //
 
-import ComposableArchitecture
 import Foundation
 import SwiftUI
 
@@ -17,23 +16,18 @@ enum UserConnectionsFilter: String, DropDownMenuOption {
     case Followers
 }
 
-/// Reducer for UserConnectionsScrollView
-struct UserConnectionsScrollReducer: ReducerProtocol {
-    struct State: Equatable {
-        /// The currently selected UserConnectionsFilter
-        var currentUserConnectionsFilter: UserConnectionsFilter = .Following
-    }
+/// Top navigation bar view for the user connections page
+struct UserConnectionsTopNavigationBar: ToolbarContent {
+    @ObservedObject var userConnectionsFilterDropDownMenu: SymbolWithDropDownMenu<UserConnectionsFilter>
 
-    enum Action {
-        /// Updates currentUserConnectionsFilter
-        case updateCurrentUserConnectionsFilter(UserConnectionsFilter)
-    }
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Title(userConnectionsFilterDropDownMenu.currentSelection.rawValue)
+                .foregroundColor(.gray)
+        }
 
-    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
-        switch action {
-        case let .updateCurrentUserConnectionsFilter(newUserConnectionsFilter):
-            state.currentUserConnectionsFilter = newUserConnectionsFilter
-            return .none
+        ToolbarItem(placement: .navigationBarTrailing) {
+            userConnectionsFilterDropDownMenu.view.padding(.trailing, 7.5)
         }
     }
 }
@@ -42,23 +36,20 @@ struct UserConnectionsScrollReducer: ReducerProtocol {
 struct UserConnectionsScrollView: View {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
-    private let store: ComposableArchitecture.StoreOf<UserConnectionsScrollReducer> = Store(
-        initialState: UserConnectionsScrollReducer.State(),
-        reducer: UserConnectionsScrollReducer()
+    @ObservedObject private var userConnectionsFilterDropDownMenu: SymbolWithDropDownMenu<UserConnectionsFilter> = .init(
+        symbolName: "line.3.horizontal.decrease.circle",
+        symbolSize: 25,
+        symbolColor: .gray,
+        menuOptions: UserConnectionsFilter.allCases,
+        initialMenuSelection: .Following
     )
 
     var body: some View {
-        WithViewStore(store) { viewStore in
-            TopNavigationBarView(topNavigationBarViewBuilder: { UserConnectionsTopNavigationBar(userConnectionsFilter: viewStore.state.currentUserConnectionsFilter) { newUserConnectionsFilter in
-                viewStore.send(.updateCurrentUserConnectionsFilter(newUserConnectionsFilter))
-            }
-
-            }) {
-                ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<UserConnectionView> in
-                    buildPostViewFeed(viewStore.state.currentUserConnectionsFilter)
-                        .makeIterator()
-                }
-            }
+        ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<UserConnectionView> in
+            buildPostViewFeed(userConnectionsFilterDropDownMenu.currentSelection)
+                .makeIterator()
+        }.toolbar {
+            UserConnectionsTopNavigationBar(userConnectionsFilterDropDownMenu: userConnectionsFilterDropDownMenu)
         }
     }
 

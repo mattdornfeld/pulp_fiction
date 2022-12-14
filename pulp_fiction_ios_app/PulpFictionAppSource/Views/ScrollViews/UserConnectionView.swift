@@ -35,6 +35,7 @@ struct UserConnectionView: ScrollableContentView {
     let id: Int
     let userPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let loggedInUserPostData: UserPostData
     private let store: ComposableArchitecture.StoreOf<SwipablePostViewReducer<UserConnectionViewReducer>> = Store(
         initialState: SwipablePostViewReducer.State(viewComponentsState: UserConnectionViewReducer.State()),
         reducer: SwipablePostViewReducer(
@@ -66,7 +67,8 @@ struct UserConnectionView: ScrollableContentView {
                 HStack {
                     UserPostView(
                         userPostData: userPostData,
-                        postFeedMessenger: postFeedMessenger
+                        postFeedMessenger: postFeedMessenger,
+                        loggedInUserPostData: loggedInUserPostData
                     )
                     Spacer()
                     buildFollowingNotFolowingCaption(viewStore.state.viewComponentsState.isFollowing)
@@ -80,14 +82,18 @@ struct UserConnectionView: ScrollableContentView {
         let notFollowingOpacity = !isFollowing ? 1.0 : 0.0
         let backgroundColor: Color = isFollowing ? .orange : .blue
         ZStack {
-            Caption("Following")
-                .padding()
-                .foregroundColor(.white)
-                .opacity(followingOpacity)
-            Caption("Not Following")
-                .padding()
-                .foregroundColor(.white)
-                .opacity(notFollowingOpacity)
+            Caption(
+                text: "Following",
+                color: .white
+            )
+            .padding()
+            .opacity(followingOpacity)
+            Caption(
+                text: "Not Following",
+                color: .white
+            )
+            .padding()
+            .opacity(notFollowingOpacity)
         }.background(backgroundColor)
     }
 }
