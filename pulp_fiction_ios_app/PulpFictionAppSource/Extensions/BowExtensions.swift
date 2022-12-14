@@ -163,6 +163,17 @@ public extension Either {
             { value in Swift.Result.success(value) }
         )
     }
+
+    static func invoke(
+        _ errorSupplier: @escaping (Error) -> A,
+        _ f: @escaping () throws -> B
+    ) -> Either<A, B> where A: Error {
+        do {
+            return try Either.right(f())
+        } catch {
+            return Either.left(errorSupplier(error))
+        }
+    }
 }
 
 public extension Option {

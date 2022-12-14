@@ -5,7 +5,7 @@
 //  Created by Matthew Dornfeld on 8/28/22.
 //
 
-import BowEffects
+import Bow
 import Foundation
 import protos_pulp_fiction_grpc_swift
 
@@ -21,13 +21,13 @@ public struct BackendMessenger {
 
     class ErrorLikingPost: PulpFictionRequestError {}
 
-    private func buildUpdatePostResponse(updatePostRequest: UpdatePostRequest) -> IO<PulpFictionRequestError, UpdatePostResponse> {
-        IO<PulpFictionRequestError, UpdatePostResponse>.invokeAndConvertError({ cause in ErrorLikingPost(cause) }) {
+    private func buildUpdatePostResponse(updatePostRequest: UpdatePostRequest) async -> Either<PulpFictionRequestError, UpdatePostResponse> {
+        Either<PulpFictionRequestError, UpdatePostResponse>.invoke({ cause in ErrorLikingPost(cause) }) {
             try pulpFictionClientProtocol.updatePost(updatePostRequest).response.wait()
         }
     }
 
-    func updatePostLikeStatus(postId: UUID, newPostLikeStatus: Post.PostLike) -> IO<PulpFictionRequestError, UpdatePostResponse> {
+    func updatePostLikeStatus(postId: UUID, newPostLikeStatus: Post.PostLike) async -> Either<PulpFictionRequestError, UpdatePostResponse> {
         let updatePostRequest = UpdatePostRequest.with {
             $0.loginSession = loginSession.toProto()
             $0.postID = postId.uuidString
@@ -36,6 +36,6 @@ public struct BackendMessenger {
             }
         }
 
-        return buildUpdatePostResponse(updatePostRequest: updatePostRequest)
+        return await buildUpdatePostResponse(updatePostRequest: updatePostRequest)
     }
 }
