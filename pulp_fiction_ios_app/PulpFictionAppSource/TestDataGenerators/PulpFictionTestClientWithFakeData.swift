@@ -96,13 +96,17 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
                 case .metadata:
                     return
                 case .end:
-                    return
+                    responseBuffer.close()
                 }
             }
         )
 
         DispatchQueue.global(qos: .userInitiated).async {
             while true {
+                if responseBuffer.isClosed() {
+                    break
+                }
+
                 responseBuffer.dequeue().map { getFeedResponse in
                     self.logger.debug(
                         "Sending getFeedResponse",
@@ -123,20 +127,63 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
             handler: handler
         )
     }
+
+    public func updatePost(
+        _ request: UpdatePostRequest,
+        callOptions _: CallOptions? = nil
+    ) -> UnaryCall<UpdatePostRequest, UpdatePostResponse> {
+        let path = "/pulp_fiction.protos.PulpFiction/UpdatePost"
+        let responseBuffer: Queue<UpdatePostResponse> = .init(maxSize: 1)
+        let stream: FakeUnaryResponse<UpdatePostRequest, UpdatePostResponse> = fakeChannel.makeFakeUnaryResponse(
+            path: path,
+            requestHandler: { fakeRequestPart in
+                switch fakeRequestPart {
+                case .message:
+                    responseBuffer.enqueue(UpdatePostResponse())
+                case .end:
+                    responseBuffer.close()
+                default:
+                    return
+                }
+            }
+        )
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            responseBuffer.dequeue().map { response in
+                try! stream.sendMessage(response)
+            }
+        }
+
+        return makeUnaryCall(
+            path: path,
+            request: request
+        )
+    }
 }
 
 /// This is the only way to get the code to use the test clients methods during test time.
 /// This is because the real client method's are implemented using extension methods
 public extension PulpFictionClientProtocol {
+    private func getClient() -> PulpFictionClientProtocol {
+        switch self {
+        case let pulpFictionTestClientWithFakeData as PulpFictionTestClientWithFakeData:
+            return pulpFictionTestClientWithFakeData
+        default:
+            return self
+        }
+    }
+
     func getFeed(
         callOptions: CallOptions? = nil,
         handler: @escaping (GetFeedResponse) -> Void
     ) -> BidirectionalStreamingCall<GetFeedRequest, GetFeedResponse> {
-        switch self {
-        case let pulpFictionTestClientWithFakeData as PulpFictionTestClientWithFakeData:
-            return pulpFictionTestClientWithFakeData.getFeed(handler: handler)
-        default:
-            return getFeed(callOptions: callOptions, handler: handler)
-        }
+        getClient().getFeed(callOptions: callOptions, handler: handler)
+    }
+
+    func updatePost(
+        _ request: UpdatePostRequest,
+        callOptions: CallOptions? = nil
+    ) -> UnaryCall<UpdatePostRequest, UpdatePostResponse> {
+        getClient().updatePost(request, callOptions: callOptions)
     }
 }
