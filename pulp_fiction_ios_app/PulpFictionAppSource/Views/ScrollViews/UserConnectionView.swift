@@ -35,6 +35,7 @@ struct UserConnectionView: ScrollableContentView {
     let id: Int
     let userPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     let loggedInUserPostData: UserPostData
     private let store: ComposableArchitecture.StoreOf<SwipablePostViewReducer<UserConnectionViewReducer>> = Store(
         initialState: SwipablePostViewReducer.State(viewComponentsState: UserConnectionViewReducer.State()),
@@ -68,7 +69,8 @@ struct UserConnectionView: ScrollableContentView {
                     UserPostView(
                         userPostData: userPostData,
                         postFeedMessenger: postFeedMessenger,
-                        loggedInUserPostData: loggedInUserPostData
+                        loggedInUserPostData: loggedInUserPostData,
+                        backendMessenger: backendMessenger
                     )
                     Spacer()
                     buildFollowingNotFolowingCaption(viewStore.state.viewComponentsState.isFollowing)

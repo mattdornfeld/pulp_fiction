@@ -31,6 +31,7 @@ struct UserPostView: View {
     let userPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let loggedInUserPostData: UserPostData
+    let backendMessenger: BackendMessenger
     private let store: ComposableArchitecture.StoreOf<UserPostViewReducer> = Store(
         initialState: UserPostViewReducer.State(),
         reducer: UserPostViewReducer()
@@ -60,7 +61,8 @@ struct UserPostView: View {
                 destination: UserProfileView(
                     userProfileOwnerPostData: userPostData,
                     loggedInUserPostData: loggedInUserPostData,
-                    postFeedMessenger: postFeedMessenger
+                    postFeedMessenger: postFeedMessenger,
+                    backendMessenger: backendMessenger
                 )
             ) {
                 viewStore.send(.updateShouldLoadUserProfileView(true))

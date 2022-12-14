@@ -48,15 +48,18 @@ struct BottomNavigationBarReducer: ReducerProtocol {
 struct BottomNavigationBarView: View {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     private let store: ComposableArchitecture.StoreOf<BottomNavigationBarReducer>
 
     init(
         loggedInUserPostData: UserPostData,
         postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
         currentMainView: BottomNavigationBarReducer.MainView = .postFeedScrollView
     ) {
         self.loggedInUserPostData = loggedInUserPostData
         self.postFeedMessenger = postFeedMessenger
+        self.backendMessenger = backendMessenger
         store = Store(
             initialState: BottomNavigationBarReducer.State(currentMainView: currentMainView),
             reducer: BottomNavigationBarReducer()
@@ -79,18 +82,21 @@ struct BottomNavigationBarView: View {
         case .postFeedScrollView:
             PostFeedScrollView(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger
+                postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger
             )
         case .loggedInUserProfileView:
             UserProfileView(
                 userProfileOwnerPostData: loggedInUserPostData,
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger
+                postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger
             )
         case .loggedInUserFollowedScrollView:
             UserConnectionsScrollView(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger
+                postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger
             )
         }
     }

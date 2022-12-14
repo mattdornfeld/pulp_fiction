@@ -18,7 +18,8 @@ public struct PulpFictionAppViewBuilder {
         case let .success(externalMessengers):
             BottomNavigationBarView(
                 loggedInUserPostData: externalMessengers.loginSession.loggedInUserPostData,
-                postFeedMessenger: externalMessengers.postFeedMessenger
+                postFeedMessenger: externalMessengers.postFeedMessenger,
+                backendMessenger: externalMessengers.backendMessenger
             )
         case .failure:
             NavigationView {}

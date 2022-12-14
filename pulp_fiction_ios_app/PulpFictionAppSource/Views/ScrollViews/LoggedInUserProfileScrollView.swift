@@ -12,6 +12,7 @@ import SwiftUI
 struct LoggedInUserProfileScrollView<Content: View>: ImagePostScrollView {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     @ViewBuilder let userProfileViewBuilder: () -> Content
 
     var body: some View {
@@ -29,7 +30,8 @@ struct LoggedInUserProfileScrollView<Content: View>: ImagePostScrollView {
         .toolbar {
             LoggedInUserProfileTopNavigationBar(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger
+                postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger
             )
         }
     }

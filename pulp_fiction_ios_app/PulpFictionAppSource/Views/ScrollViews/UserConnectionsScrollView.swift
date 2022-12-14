@@ -38,6 +38,7 @@ struct UserConnectionsTopNavigationBar: ToolbarContent {
 struct UserConnectionsScrollView: ScrollViewParent {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, UserConnectionView>
     @ObservedObject private var userConnectionsFilterDropDownMenu: SymbolWithDropDownMenu<UserConnectionsFilter> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
@@ -47,9 +48,10 @@ struct UserConnectionsScrollView: ScrollViewParent {
         initialMenuSelection: .Following
     )
 
-    init(loggedInUserPostData: UserPostData, postFeedMessenger: PostFeedMessenger) {
+    init(loggedInUserPostData: UserPostData, postFeedMessenger: PostFeedMessenger, backendMessenger: BackendMessenger) {
         self.loggedInUserPostData = loggedInUserPostData
         self.postFeedMessenger = postFeedMessenger
+        self.backendMessenger = backendMessenger
         postViewEitherSupplier = { postViewIndex, postProto in
             let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
 
@@ -62,6 +64,7 @@ struct UserConnectionsScrollView: ScrollViewParent {
                     id: postViewIndex,
                     userPostData: userPostDataEither.get,
                     postFeedMessenger: postFeedMessenger,
+                    backendMessenger: backendMessenger,
                     loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData
                 )
             )^

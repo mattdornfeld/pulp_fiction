@@ -13,6 +13,7 @@ import SwiftUI
 protocol ScrollViewParent: View {
     associatedtype A: ScrollableContentView
     var postFeedMessenger: PostFeedMessenger { get }
+    var backendMessenger: BackendMessenger { get }
     var postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, A> { get }
 }
 
@@ -39,7 +40,8 @@ extension ImagePostScrollView {
                 imagePostData: imagePostDataEither.get,
                 userPostData: userPostDataEither.get,
                 postFeedMessenger: postFeedMessenger,
-                loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData
+                loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
+                backendMessenger: backendMessenger
             ),
             yield: imagePostViewEither.get
         )^

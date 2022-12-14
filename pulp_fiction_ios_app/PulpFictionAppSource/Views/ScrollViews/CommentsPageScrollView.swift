@@ -30,11 +30,17 @@ struct CommentsPageTopNavigationBar: ToolbarContent {
 struct CommentsPageScrollView: ScrollViewParent {
     let imagePostView: ImagePostView
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, CommentView>
 
-    init(imagePostView: ImagePostView, postFeedMessenger: PostFeedMessenger) {
+    init(
+        imagePostView: ImagePostView,
+        postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger
+    ) {
         self.imagePostView = imagePostView
         self.postFeedMessenger = postFeedMessenger
+        self.backendMessenger = backendMessenger
         postViewEitherSupplier = { postViewIndex, postProto in
             let commentPostDataEither = Either<PulpFictionRequestError, CommentPostData>.var()
             let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
@@ -54,6 +60,7 @@ struct CommentsPageScrollView: ScrollViewParent {
                     commentPostData: commentPostDataEither.get,
                     userPostData: userPostDataEither.get,
                     postFeedMessenger: postFeedMessenger,
+                    backendMessenger: backendMessenger,
                     loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData
                 ),
                 yield: commentViewEither.get

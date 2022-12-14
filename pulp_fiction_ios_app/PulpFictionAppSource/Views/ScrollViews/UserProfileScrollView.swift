@@ -12,6 +12,7 @@ import SwiftUI
 struct UserProfileScrollView<Content: View>: ImagePostScrollView {
     let userProfileOwnerPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     @ViewBuilder let userProfileViewBuilder: () -> Content
 
     var body: some View {

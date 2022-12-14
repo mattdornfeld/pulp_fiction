@@ -35,6 +35,7 @@ struct CommentView: PostLikeOnSwipeView {
     let id: Int
     let postFeedMessenger: PostFeedMessenger
     let loggedInUserPostData: UserPostData
+    let backendMessenger: BackendMessenger
     private static let logger = Logger(label: String(describing: CommentView.self))
     internal let swipablePostStore: ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer>
     private let store: ComposableArchitecture.StoreOf<CommentViewReducer>
@@ -44,6 +45,7 @@ struct CommentView: PostLikeOnSwipeView {
         creatorUserPostData: UserPostData,
         id: Int,
         postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
         loggedInUserPostData: UserPostData
     ) {
         self.commentPostData = commentPostData
@@ -51,7 +53,10 @@ struct CommentView: PostLikeOnSwipeView {
         self.id = id
         self.postFeedMessenger = postFeedMessenger
         self.loggedInUserPostData = loggedInUserPostData
+        self.backendMessenger = backendMessenger
         swipablePostStore = CommentView.buildStore(
+            backendMessenger: backendMessenger,
+            postMetadata: commentPostData.postMetadata,
             postInteractionAggregates: commentPostData.postInteractionAggregates,
             loggedInUserPostInteractions: commentPostData.loggedInUserPostInteractions
         )
@@ -81,7 +86,8 @@ struct CommentView: PostLikeOnSwipeView {
                             destination: UserProfileView(
                                 userProfileOwnerPostData: creatorUserPostData,
                                 loggedInUserPostData: loggedInUserPostData,
-                                postFeedMessenger: postFeedMessenger
+                                postFeedMessenger: postFeedMessenger,
+                                backendMessenger: backendMessenger
                             )
                         ) { viewStore.send(.updateShouldLoadUserProfileView(true)) }
                     buildPostLikeArrowView()
@@ -104,6 +110,7 @@ struct CommentView: PostLikeOnSwipeView {
         commentPostData: CommentPostData,
         userPostData: UserPostData,
         postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
         loggedInUserPostData: UserPostData
     ) -> Either<PulpFictionRequestError, CommentView> {
         return binding(
@@ -112,6 +119,7 @@ struct CommentView: PostLikeOnSwipeView {
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
                 postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger,
                 loggedInUserPostData: loggedInUserPostData
             )
         )^.onError { cause in

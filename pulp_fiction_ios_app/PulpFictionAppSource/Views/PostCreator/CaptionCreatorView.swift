@@ -17,6 +17,7 @@ struct CaptionCreatorView: View {
     init(
         loggedInUserPostData: UserPostData,
         postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
         uiImageMaybeSupplier: @escaping () -> UIImage?
     ) {
         self.uiImageMaybeSupplier = uiImageMaybeSupplier
@@ -24,6 +25,7 @@ struct CaptionCreatorView: View {
             destination: BottomNavigationBarView(
                 loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger,
                 currentMainView: .loggedInUserProfileView
             )
         )

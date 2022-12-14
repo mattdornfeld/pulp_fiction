@@ -20,6 +20,7 @@ struct PostCreatorTopNavigationBar: ToolbarContent {
     let postFeedMessenger: PostFeedMessenger
     /// Dropdown menu for selecting the image source type
     let imageSourceTypeDropDownMenuView: SymbolWithDropDownMenuView<ImageSourceType>
+    let backendMessenger: BackendMessenger
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
@@ -34,6 +35,7 @@ struct PostCreatorTopNavigationBar: ToolbarContent {
                     .navigateOnTap(destination: CaptionCreatorView(
                         loggedInUserPostData: loggedInUserPostData,
                         postFeedMessenger: postFeedMessenger,
+                        backendMessenger: backendMessenger,
                         uiImageMaybeSupplier: uiImageMaybeSupplier
                     ))
             }
@@ -45,6 +47,7 @@ struct PostCreatorTopNavigationBar: ToolbarContent {
 struct PostCreatorView: View {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     @ObservedObject private var imageSourceTypeDropDownMenu: SymbolWithDropDownMenu<ImageSourceType> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
         symbolSize: 20,
@@ -61,7 +64,8 @@ struct PostCreatorView: View {
                     uiImageMaybeSupplier: { viewStore.postUIImageMaybe },
                     loggedInUserPostData: loggedInUserPostData,
                     postFeedMessenger: postFeedMessenger,
-                    imageSourceTypeDropDownMenuView: imageSourceTypeDropDownMenu.view
+                    imageSourceTypeDropDownMenuView: imageSourceTypeDropDownMenu.view,
+                    backendMessenger: backendMessenger
                 )
             },
             imageSourceType: imageSourceTypeDropDownMenu.currentSelection

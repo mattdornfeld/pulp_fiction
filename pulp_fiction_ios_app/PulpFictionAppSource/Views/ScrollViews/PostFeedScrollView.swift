@@ -18,6 +18,7 @@ enum PostFeedFilter: String, DropDownMenuOption {
 struct PostFeedTopNavigationBar: ToolbarContent {
     let postFeedFilter: PostFeedFilter
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     let loggedInUserPostData: UserPostData
     let postFeedFilterDropDownMenuView: SymbolWithDropDownMenuView<PostFeedFilter>
 
@@ -36,7 +37,8 @@ struct PostFeedTopNavigationBar: ToolbarContent {
                 ).navigateOnTap(
                     destination: PostCreatorView(
                         loggedInUserPostData: loggedInUserPostData,
-                        postFeedMessenger: postFeedMessenger
+                        postFeedMessenger: postFeedMessenger,
+                        backendMessenger: backendMessenger
                     )
                 )
 
@@ -50,6 +52,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
 struct PostFeedScrollView: ImagePostScrollView {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     @ObservedObject private var postFeedFilterDropDownMenu: SymbolWithDropDownMenu<PostFeedFilter> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
         symbolSize: 20,
@@ -71,6 +74,7 @@ struct PostFeedScrollView: ImagePostScrollView {
             PostFeedTopNavigationBar(
                 postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
                 postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger,
                 loggedInUserPostData: loggedInUserPostData,
                 postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view
             )
