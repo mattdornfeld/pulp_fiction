@@ -88,6 +88,11 @@ class PostStream {
         return stream
     }
 
+    /// Closes the connection to the backend service
+    func closeStream() {
+        try! stream.sendEnd()
+    }
+
     @discardableResult
     /// Send request to backend server to load more posts into stream
     func loadMorePosts() -> PostStream {

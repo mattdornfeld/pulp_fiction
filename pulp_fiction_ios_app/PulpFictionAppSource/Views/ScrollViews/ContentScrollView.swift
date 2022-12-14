@@ -258,6 +258,8 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
                     .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
                     .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
             }
+        }.onDisappear {
+            postStream.closeStream()
         }
     }
 }
