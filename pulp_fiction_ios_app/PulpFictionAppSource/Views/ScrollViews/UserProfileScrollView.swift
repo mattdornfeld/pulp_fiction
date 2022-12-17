@@ -5,6 +5,7 @@
 //  Created by Matthew Dornfeld on 10/23/22.
 //
 
+import ComposableArchitecture
 import Foundation
 import SwiftUI
 
@@ -13,6 +14,7 @@ struct UserProfileScrollView<Content: View>: ImagePostScrollView {
     let userProfileOwnerPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ViewBuilder let userProfileViewBuilder: () -> Content
 
     var body: some View {

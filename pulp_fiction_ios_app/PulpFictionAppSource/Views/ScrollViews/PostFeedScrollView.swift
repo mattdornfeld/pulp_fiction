@@ -53,6 +53,7 @@ struct PostFeedScrollView: ImagePostScrollView {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var postFeedFilterDropDownMenu: SymbolWithDropDownMenu<PostFeedFilter> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
         symbolSize: 20,

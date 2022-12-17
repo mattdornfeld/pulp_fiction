@@ -16,19 +16,22 @@ struct UserProfileView: View {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     var body: some View {
         if userProfileOwnerPostData == loggedInUserPostData {
             LoggedInUserProfileScrollView(
                 loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
             ) { userProfileViewBuilder() }
         } else {
             UserProfileScrollView(
                 userProfileOwnerPostData: userProfileOwnerPostData,
                 postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
             ) { userProfileViewBuilder() }
         }
     }

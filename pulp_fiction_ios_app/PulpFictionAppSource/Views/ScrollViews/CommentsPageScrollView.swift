@@ -5,6 +5,7 @@
 //  Created by Matthew Dornfeld on 10/23/22.
 //
 import Bow
+import ComposableArchitecture
 import Foundation
 import SwiftUI
 
@@ -31,16 +32,19 @@ struct CommentsPageScrollView: ScrollViewParent {
     let imagePostView: ImagePostView
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, CommentView>
 
     init(
         imagePostView: ImagePostView,
         postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) {
         self.imagePostView = imagePostView
         self.postFeedMessenger = postFeedMessenger
         self.backendMessenger = backendMessenger
+        self.notificationBannerViewStore = notificationBannerViewStore
         postViewEitherSupplier = { postViewIndex, postProto in
             let commentPostDataEither = Either<PulpFictionRequestError, CommentPostData>.var()
             let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
@@ -61,7 +65,8 @@ struct CommentsPageScrollView: ScrollViewParent {
                     userPostData: userPostDataEither.get,
                     postFeedMessenger: postFeedMessenger,
                     backendMessenger: backendMessenger,
-                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData
+                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
+                    notificationBannerViewStore: notificationBannerViewStore
                 ),
                 yield: commentViewEither.get
             )^

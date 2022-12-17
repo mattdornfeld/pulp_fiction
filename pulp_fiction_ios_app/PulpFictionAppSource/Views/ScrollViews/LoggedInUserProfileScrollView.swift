@@ -13,6 +13,7 @@ struct LoggedInUserProfileScrollView<Content: View>: ImagePostScrollView {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ViewBuilder let userProfileViewBuilder: () -> Content
 
     var body: some View {

@@ -47,7 +47,8 @@ extension ImagePostView {
         id: Int,
         imagePostData: ImagePostData,
         loggedInUserPostData: UserPostData,
-        backendMessenger: BackendMessenger
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) {
         self.postFeedMessenger = postFeedMessenger
         self.backendMessenger = backendMessenger
@@ -56,6 +57,7 @@ extension ImagePostView {
         self.id = id
         self.imagePostData = imagePostData
         self.loggedInUserPostData = loggedInUserPostData
+        self.notificationBannerViewStore = notificationBannerViewStore
         store = Store(
             initialState: ImagePostViewReducer.State(),
             reducer: ImagePostViewReducer()
@@ -64,7 +66,8 @@ extension ImagePostView {
             backendMessenger: backendMessenger,
             postMetadata: imagePostData.postMetadata,
             postInteractionAggregates: imagePostData.postInteractionAggregates,
-            loggedInUserPostInteractions: imagePostData.loggedInUserPostInteractions
+            loggedInUserPostInteractions: imagePostData.loggedInUserPostInteractions,
+            notificationBannerViewStore: notificationBannerViewStore
         )
     }
 }
@@ -78,6 +81,7 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
     let postUIImage: UIImage
     let loggedInUserPostData: UserPostData
     let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     private var isForCommentsScrollView: Bool = false
     private let store: ComposableArchitecture.StoreOf<ImagePostViewReducer>
     internal let swipablePostStore: ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer>
@@ -100,7 +104,9 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
         )
     }
 
-    private func buildCommentsIconWithNavigation(_ viewStore: ViewStore<ImagePostViewReducer.State, ImagePostViewReducer.Action>) -> some View {
+    private func buildCommentsIconWithNavigation(
+        _ viewStore: ViewStore<ImagePostViewReducer.State, ImagePostViewReducer.Action>
+    ) -> some View {
         return buildCommentsIcon(viewStore).navigateOnTap(
             isActive: viewStore.binding(
                 get: \.shouldLoadCommentScrollView,
@@ -111,7 +117,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                     .setter(for: \.isForCommentsScrollView)
                     .set(self, true),
                 postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
             )
         ) { viewStore.send(.loadCommentScrollView) }
     }
@@ -124,7 +131,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                         userPostData: creatorUserPostData,
                         postFeedMessenger: postFeedMessenger,
                         loggedInUserPostData: loggedInUserPostData,
-                        backendMessenger: backendMessenger
+                        backendMessenger: backendMessenger,
+                        notificationBannerViewStore: notificationBannerViewStore
                     )
                     Spacer()
                     ExtraOptionsDropDownMenuView(postMetadata: imagePostData.postMetadata)
@@ -163,7 +171,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
         userPostData: UserPostData,
         postFeedMessenger: PostFeedMessenger,
         loggedInUserPostData: UserPostData,
-        backendMessenger: BackendMessenger
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) -> Either<PulpFictionRequestError, ImagePostView> {
         let createPostUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
@@ -176,7 +185,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                 id: postViewIndex,
                 imagePostData: imagePostData,
                 loggedInUserPostData: loggedInUserPostData,
-                backendMessenger: backendMessenger
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
             )
         )^.onError { cause in
             logger.error(

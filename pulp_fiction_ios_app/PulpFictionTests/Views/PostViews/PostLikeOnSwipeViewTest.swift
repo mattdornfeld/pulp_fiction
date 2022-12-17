@@ -30,7 +30,8 @@ class PostLikeOnSwipeViewTest: XCTestCase {
                 .mapLeft { PulpFictionRequestError($0) },
             yield: PostLikeArrowReducer(
                 backendMessenger: externalMessengersEither.get.backendMessenger,
-                postMetadata: imagePostDataEither.get.postMetadata
+                postMetadata: imagePostDataEither.get.postMetadata,
+                notificationBannerViewStore: NotificationBanner.buildViewStore()
             )
         )^
     }
@@ -38,8 +39,8 @@ class PostLikeOnSwipeViewTest: XCTestCase {
     private func getTestStore(
         reducer: PostLikeArrowReducer,
         loggedInUserPostLikeStatus: Post.PostLike
-    ) throws -> TestStore<PostLikeArrowReducer.State, PostLikeArrowReducer.Action, PostLikeArrowReducer.State, PostLikeArrowReducer.Action, Void> {
-        return TestStore(
+    ) -> PulpFictionTestStore<PostLikeArrowReducer> {
+        TestStore(
             initialState: PostLikeArrowReducer.State(
                 loggedInUserPostLikeStatus: loggedInUserPostLikeStatus,
                 postNumNetLikes: 0
@@ -105,15 +106,5 @@ class PostLikeOnSwipeViewTest: XCTestCase {
                 $0.loggedInUserPostLikeStatus = .like
                 $0.postNumNetLikes = 1
             }
-    }
-}
-
-extension Sequence {
-    func asyncForEach(
-        _ operation: (Element) async throws -> Void
-    ) async rethrows {
-        for element in self {
-            try await operation(element)
-        }
     }
 }

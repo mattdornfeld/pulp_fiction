@@ -28,7 +28,8 @@ extension ImagePostView {
                 userPostData: userPostDataIO.get,
                 postFeedMessenger: postFeedMessenger,
                 loggedInUserPostData: loggedInUserPostData,
-                backendMessenger: backendMessenger
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: NotificationBanner.buildViewStore()
             ).toIO(),
             yield: imagePostViewIO.get
         )^

@@ -6,6 +6,7 @@
 //
 
 import Bow
+import ComposableArchitecture
 import Foundation
 import SwiftUI
 
@@ -15,6 +16,7 @@ protocol ScrollViewParent: View {
     var postFeedMessenger: PostFeedMessenger { get }
     var backendMessenger: BackendMessenger { get }
     var postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, A> { get }
+    var notificationBannerViewStore: NotificationnotificationBannerViewStore { get }
 }
 
 /// Parent for all views for scrolling through image posts
@@ -41,7 +43,8 @@ extension ImagePostScrollView {
                 userPostData: userPostDataEither.get,
                 postFeedMessenger: postFeedMessenger,
                 loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
-                backendMessenger: backendMessenger
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
             ),
             yield: imagePostViewEither.get
         )^

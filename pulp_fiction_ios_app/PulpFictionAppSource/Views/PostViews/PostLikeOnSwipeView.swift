@@ -19,6 +19,8 @@ typealias PostLikeOnSwipeReducer = SwipablePostViewReducer<PostLikeArrowReducer>
 struct PostLikeArrowReducer: ReducerProtocol {
     let backendMessenger: BackendMessenger
     let postMetadata: PostMetadata
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
+
     private let logger = Logger(label: String(describing: PostLikeArrowReducer.self))
 
     struct State: Equatable {
@@ -112,7 +114,9 @@ struct PostLikeArrowReducer: ReducerProtocol {
                                  "error": "\(error)",
                                  "cause": "\(String(describing: error.causeMaybe.orNil))",
                              ])
-                return .task { .updateShowErrorCommunicatingWithServerAlert(true) }
+
+                notificationBannerViewStore.send(.showNotificationBanner("Error contacting server. Please try again later.", .error))
+                return .none
             case .right:
                 state.loggedInUserPostLikeStatus = postLikeUpdate.0
                 state.postNumNetLikes += postLikeUpdate.1
@@ -146,11 +150,11 @@ struct PostLikeArrowView: View {
         WithViewStore(store) { viewStore in
             buildPostLikeArrow(viewStore.state)
                 .onTapGesture { viewStore.send(.tapPostLikeArrow) }
-                .alert("Error contacting server. Please try again later.", isPresented: viewStore.binding(
-                    get: \.showErrorCommunicatingWithServerAlert,
-                    send: .updateShowErrorCommunicatingWithServerAlert(false))) {
-                        Button("OK", role: .cancel) {}
-                }
+//            .alert("Error contacting server. Please try again later.", isPresented: viewStore.binding(
+//                get: \.showErrorCommunicatingWithServerAlert,
+//                send: .updateShowErrorCommunicatingWithServerAlert(false))) {
+//                    Button("OK", role: .cancel) {}
+//            }
         }
     }
 
@@ -213,7 +217,8 @@ extension PostLikeOnSwipeView {
         backendMessenger: BackendMessenger,
         postMetadata: PostMetadata,
         postInteractionAggregates: PostInteractionAggregates,
-        loggedInUserPostInteractions: LoggedInUserPostInteractions
+        loggedInUserPostInteractions: LoggedInUserPostInteractions,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) -> ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer> {
         Store(
             initialState: PostLikeOnSwipeReducer.State(
@@ -225,7 +230,8 @@ extension PostLikeOnSwipeView {
             reducer: PostLikeOnSwipeReducer(
                 viewComponentsReducerSuplier: { PostLikeArrowReducer(
                     backendMessenger: backendMessenger,
-                    postMetadata: postMetadata
+                    postMetadata: postMetadata,
+                    notificationBannerViewStore: notificationBannerViewStore
                 ) },
                 updateViewComponentsActionSupplier: { _, dragOffset in
                     if (dragOffset.width + 1e-6) < 0 {
