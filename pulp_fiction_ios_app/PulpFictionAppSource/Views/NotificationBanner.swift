@@ -7,10 +7,12 @@
 
 import ComposableArchitecture
 import Foundation
+import Logging
 import SwiftUI
 
 /// Reducer for NotifcationBanner
 struct NotificationBannerReducer: ReducerProtocol {
+    private let logger: Logger = .init(label: String(describing: NotificationBannerReducer.self))
     struct State: Equatable {
         /// If true will show NotificationBanner
         var shouldShowNotification: Bool = false
@@ -43,12 +45,28 @@ struct NotificationBannerReducer: ReducerProtocol {
             state.shouldShowNotification = true
             state.notificationTextMaybe = newAlertText
             state.bannerTypeMaybe = bannerType
+
+            logger.info(
+                "Showing NotificationBanner",
+                metadata: [
+                    "state": "\(state)",
+                ]
+            )
+
             return .none
 
         case .hideNotificationBanner:
             state.shouldShowNotification = false
             state.notificationTextMaybe = nil
             state.bannerTypeMaybe = nil
+
+            logger.info(
+                "Hiding NotificationBanner",
+                metadata: [
+                    "state": "\(state)",
+                ]
+            )
+
             return .none
         }
     }
@@ -130,13 +148,15 @@ struct NotificationBanner: View {
         .animation(.easeInOut)
         .transition(AnyTransition.opacity)
         .onTapGesture {
-            withAnimation { () in
+            withAnimation {
                 self.viewStore.send(.hideNotificationBanner)
+                return ()
             }
         }.onAppear(perform: {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                withAnimation { () in
+                withAnimation {
                     self.viewStore.send(.hideNotificationBanner)
+                    return ()
                 }
             }
         })

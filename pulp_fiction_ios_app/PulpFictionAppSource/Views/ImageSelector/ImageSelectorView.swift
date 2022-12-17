@@ -19,6 +19,25 @@ enum ImageSourceType: String, DropDownMenuOption {
     case Camera
     /// Imafe source is the photo album
     case Album
+
+    var prompt: String {
+        switch self {
+        case .Camera:
+            return "Tap to select a photo from your camera"
+        case .Album:
+            return "Tap to select a photo from your photo album"
+        }
+    }
+
+    @ViewBuilder
+    func getImageSourceView(viewStore: PulpFictionViewStore<ImageSelectorReducer>) -> some View {
+        switch self {
+        case .Camera:
+            CameraView(viewStore: viewStore)
+        case .Album:
+            PhotoAlbumView(viewStore: viewStore)
+        }
+    }
 }
 
 /// Reducer for the PostCreatorView
@@ -124,7 +143,7 @@ struct ImageSelectorView<TopNavigationBar: ToolbarContent>: View {
 
                 VStack {
                     BoldCaption(
-                        text: getPrompt(),
+                        text: imageSourceType.prompt,
                         color: .gray
                     )
                     Symbol(
@@ -151,25 +170,9 @@ struct ImageSelectorView<TopNavigationBar: ToolbarContent>: View {
             .sheet(isPresented: viewStore.binding(
                 get: \.showImagePicker,
                 send: .updateShowImagePicker(false)
-            )) {
-                switch imageSourceType {
-                case .Camera:
-                    CameraView(viewStore: viewStore)
-                case .Album:
-                    PhotoAlbumView(viewStore: viewStore)
-                }
-            }
+            )) { imageSourceType.getImageSourceView(viewStore: viewStore) }
             .padding([.horizontal, .bottom])
             .toolbar { topNavigationBarSupplier(viewStore) }
-        }
-    }
-
-    private func getPrompt() -> String {
-        switch imageSourceType {
-        case .Camera:
-            return "Select a photo from your camera"
-        case .Album:
-            return "Select a photo from your photo album"
         }
     }
 }

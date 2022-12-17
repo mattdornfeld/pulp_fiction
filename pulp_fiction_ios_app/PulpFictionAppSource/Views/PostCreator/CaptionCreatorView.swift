@@ -12,15 +12,20 @@ import SwiftUI
 /// View for creating and posting images + captions
 struct CaptionCreatorView: View {
     private let uiImageMaybeSupplier: () -> UIImage?
+    private let displayBannerNotificationCallback: () -> Void
     @ObservedObject private var emptyNavigationLink: EmptyNavigationLink<BottomNavigationBarView>
 
     init(
         loggedInUserPostData: UserPostData,
         postFeedMessenger: PostFeedMessenger,
         backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
         uiImageMaybeSupplier: @escaping () -> UIImage?
     ) {
         self.uiImageMaybeSupplier = uiImageMaybeSupplier
+        displayBannerNotificationCallback = {
+            notificationBannerViewStore.send(.showNotificationBanner("Your post has been created!", .success))
+        }
         emptyNavigationLink = EmptyNavigationLink(
             destination: BottomNavigationBarView(
                 loggedInUserPostData: loggedInUserPostData,
@@ -47,7 +52,7 @@ struct CaptionCreatorView: View {
                     print("caption: \(caption)")
                     print("image: \(uiImage)")
                 }
-                self.emptyNavigationLink.viewStore.send(.updateShouldLoadDestionationView(true))
+                self.emptyNavigationLink.viewStore.send(.navigateToDestionationView(displayBannerNotificationCallback))
             }
         )
     }

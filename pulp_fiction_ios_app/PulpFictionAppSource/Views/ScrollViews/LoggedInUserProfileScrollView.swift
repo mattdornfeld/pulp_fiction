@@ -32,7 +32,8 @@ struct LoggedInUserProfileScrollView<Content: View>: ImagePostScrollView {
             LoggedInUserProfileTopNavigationBar(
                 loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
             )
         }
     }

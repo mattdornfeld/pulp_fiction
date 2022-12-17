@@ -21,6 +21,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
     let backendMessenger: BackendMessenger
     let loggedInUserPostData: UserPostData
     let postFeedFilterDropDownMenuView: SymbolWithDropDownMenuView<PostFeedFilter>
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
@@ -38,7 +39,8 @@ struct PostFeedTopNavigationBar: ToolbarContent {
                     destination: PostCreatorView(
                         loggedInUserPostData: loggedInUserPostData,
                         postFeedMessenger: postFeedMessenger,
-                        backendMessenger: backendMessenger
+                        backendMessenger: backendMessenger,
+                        notificationBannerViewStore: notificationBannerViewStore
                     )
                 )
 
@@ -77,7 +79,8 @@ struct PostFeedScrollView: ImagePostScrollView {
                 postFeedMessenger: postFeedMessenger,
                 backendMessenger: backendMessenger,
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view
+                postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view,
+                notificationBannerViewStore: notificationBannerViewStore
             )
         }
     }
