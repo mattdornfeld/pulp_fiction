@@ -75,7 +75,16 @@ extension PulpFictionError: LocalizedError {
     }
 }
 
-open class PulpFictionStartupError: PulpFictionError {}
-open class PulpFictionRequestError: PulpFictionError {}
+open class PulpFictionStartupError: PulpFictionError, Equatable {
+    public static func == (lhs: PulpFictionStartupError, rhs: PulpFictionStartupError) -> Bool {
+        lhs.equals(rhs)
+    }
+}
+
+open class PulpFictionRequestError: PulpFictionError, Equatable {
+    public static func == (lhs: PulpFictionRequestError, rhs: PulpFictionRequestError) -> Bool {
+        lhs.equals(rhs)
+    }
+}
 
 class RequestParsingError: PulpFictionRequestError {}

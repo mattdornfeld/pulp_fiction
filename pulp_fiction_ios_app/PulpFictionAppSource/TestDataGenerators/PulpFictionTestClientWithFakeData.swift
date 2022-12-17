@@ -18,6 +18,14 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     public var defaultCallOptions: GRPC.CallOptions = CallOptions()
     public var interceptors: PulpFiction_Protos_PulpFictionClientInterceptorFactoryProtocol?
 
+    private enum Path: String {
+        case getFeed = "/pulp_fiction.protos.PulpFiction/GetFeed"
+        case updatePost = "/pulp_fiction.protos.PulpFiction/UpdatePost"
+    }
+
+    var getFeedRequests: [GetFeedRequest] = .init()
+    var updatePostRequests: [UpdatePostRequest] = .init()
+
     public init() {
         fakeChannel = .init()
         channel = fakeChannel
@@ -48,10 +56,9 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         callOptions: CallOptions? = nil,
         handler: @escaping (GetFeedResponse) -> Void
     ) -> BidirectionalStreamingCall<GetFeedRequest, GetFeedResponse> {
-        let path = "/pulp_fiction.protos.PulpFiction/GetFeed"
         var responseBuffer: Queue<GetFeedResponse> = .init(maxSize: 1)
         let stream: FakeStreamingResponse<GetFeedRequest, GetFeedResponse> = fakeChannel.makeFakeStreamingResponse(
-            path: path,
+            path: Path.getFeed.rawValue,
             requestHandler: { fakeRequestPart in
                 switch fakeRequestPart {
                 case let .message(getFeedRequest):
@@ -62,6 +69,8 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
                             "getFeedRequest": "\(getFeedRequest.getFeedRequest)",
                         ]
                     )
+
+                    self.getFeedRequests.append(getFeedRequest)
 
                     var posts: [Post] {
                         switch getFeedRequest.getFeedRequest {
@@ -121,7 +130,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         }
 
         return makeBidirectionalStreamingCall(
-            path: path,
+            path: Path.getFeed.rawValue,
             callOptions: callOptions ?? defaultCallOptions,
             interceptors: interceptors?.makeGetFeedInterceptors() ?? [],
             handler: handler
@@ -132,30 +141,44 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         _ request: UpdatePostRequest,
         callOptions _: CallOptions? = nil
     ) -> UnaryCall<UpdatePostRequest, UpdatePostResponse> {
-        let path = "/pulp_fiction.protos.PulpFiction/UpdatePost"
-        let responseBuffer: Queue<UpdatePostResponse> = .init(maxSize: 1)
-        let stream: FakeUnaryResponse<UpdatePostRequest, UpdatePostResponse> = fakeChannel.makeFakeUnaryResponse(
-            path: path,
-            requestHandler: { fakeRequestPart in
-                switch fakeRequestPart {
-                case .message:
-                    responseBuffer.enqueue(UpdatePostResponse())
-                case .end:
-                    responseBuffer.close()
-                default:
-                    return
-                }
-            }
+        logger.debug(
+            "Received UpdatePostRequest",
+            metadata: [
+                "request": "\(request)",
+            ]
         )
+
+        let responseBuffer: Queue<UpdatePostResponse> = .init(maxSize: 1)
+        let stream: FakeUnaryResponse<UpdatePostRequest, UpdatePostResponse> = fakeChannel.makeFakeUnaryResponse(path: Path.updatePost.rawValue) { fakeRequestPart in
+            switch fakeRequestPart {
+            case let .message(updatePostRequest):
+                self.updatePostRequests.append(updatePostRequest)
+                responseBuffer.enqueue(UpdatePostResponse())
+                /// TODO (matt): For some reason tests fails if you take out this sleep. Unclear why.
+                /// Figure out in future. This code block is only run in tests.
+                Thread.sleep(forTimeInterval: 0.05)
+            case .end:
+                responseBuffer.close()
+            default:
+                return
+            }
+        }
 
         DispatchQueue.global(qos: .userInitiated).async {
             responseBuffer.dequeue().map { response in
+                self.logger.debug(
+                    "Sending UpdatePostResponse",
+                    metadata: [
+                        "response": "\(response)",
+                    ]
+                )
+
                 try! stream.sendMessage(response)
             }
         }
 
         return makeUnaryCall(
-            path: path,
+            path: Path.updatePost.rawValue,
             request: request
         )
     }

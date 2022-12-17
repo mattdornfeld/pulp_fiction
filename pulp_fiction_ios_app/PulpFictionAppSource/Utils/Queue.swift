@@ -71,10 +71,14 @@ class Queue<A>: Equatable where A: Equatable {
             ]
         )
 
+//        Thread.sleep(forTimeInterval: 0.1)
+
         isFull.lock(whenCondition: 0)
-        queue.sync {
-            values.map { self.elements.append($0) }
-        }
+        isEmpty.lock()
+        values.map { self.elements.append($0) }
+//        queue.sync {
+//            values.map { self.elements.append($0) }
+//        }
 
         isEmpty.unlock(withCondition: 0)
         if getSize() >= maxSize {
@@ -84,7 +88,7 @@ class Queue<A>: Equatable where A: Equatable {
         }
 
         logger.debug(
-            "Finished enqueueing element",
+            "Finished enqueueing elements",
             metadata: [
                 "lockedBecauseEmpty": "\(checkLockedBecauseEmpty())",
                 "lockedBecauseFull": "\(checkLockedBecauseFull())",
@@ -97,10 +101,11 @@ class Queue<A>: Equatable where A: Equatable {
     }
 
     /// Closes the queue. No new elements can be enqueued or dequeued.
-    func close() {
+    func close() -> Queue<A> {
         isClosedAtomicBoolean.setValue(true)
         isEmpty.unlock(withCondition: 0)
         logger.debug("Queue is closed")
+        return self
     }
 
     /// Returns true if queue is closed
@@ -125,7 +130,7 @@ class Queue<A>: Equatable where A: Equatable {
         }
 
         logger.debug(
-            "Dequeueing element",
+            "Dequeueing elements",
             metadata: [
                 "lockedBecauseEmpty": "\(checkLockedBecauseEmpty())",
                 "lockedBecauseFull": "\(checkLockedBecauseFull())",
@@ -134,15 +139,18 @@ class Queue<A>: Equatable where A: Equatable {
             ]
         )
         isEmpty.lock(whenCondition: 0)
+        isFull.lock()
 
         // Check if closed a second time in case queue is closed while stuck in above lock
         if isClosedAtomicBoolean.getValue() {
             return nil
         }
 
-        let element = queue.sync {
-            self.elements.removeFirst()
-        }
+        let element = elements.removeFirst()
+
+//        let element = queue.sync {
+//            self.elements.removeFirst()
+//        }
 
         isFull.unlock(withCondition: 0)
         if getSize() == 0 {
@@ -152,7 +160,7 @@ class Queue<A>: Equatable where A: Equatable {
         }
 
         logger.debug(
-            "Finished dequeueing element",
+            "Finished dequeueing elements",
             metadata: [
                 "lockedBecauseEmpty": "\(checkLockedBecauseEmpty())",
                 "lockedBecauseFull": "\(checkLockedBecauseFull())",

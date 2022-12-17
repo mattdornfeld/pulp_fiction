@@ -113,13 +113,24 @@ public extension Either {
         }
     }
 
-    func logSuccess(_ msgSupplier: (B) -> String) -> Either<A, B> where A: Error {
+    @discardableResult
+    func logSuccess(level: Logger.Level = .info, _ msgSupplier: (B) -> String) -> Either<A, B> where A: Error {
+        Logger.Level.debug
         mapRight { b in
-            BowExtensionLogger.logger.info(
-                Logger.Message(stringLiteral: msgSupplier(b))
+            BowExtensionLogger.logger.log(
+                level: level,
+                Logger.Message(stringLiteral: msgSupplier(b)),
+                metadata: [
+                    "right": "\(b)",
+                ]
             )
         }
         return self
+    }
+
+    @discardableResult
+    func logSuccess(_ msg: String, level: Logger.Level = .info) -> Either<A, B> where A: Error {
+        logSuccess(level: level) { _ in msg }
     }
 
     @discardableResult

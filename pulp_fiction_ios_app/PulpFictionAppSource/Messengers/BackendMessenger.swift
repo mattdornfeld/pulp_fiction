@@ -25,6 +25,8 @@ public struct BackendMessenger {
         Either<PulpFictionRequestError, UpdatePostResponse>.invoke({ cause in ErrorLikingPost(cause) }) {
             try pulpFictionClientProtocol.updatePost(updatePostRequest).response.wait()
         }
+        .logSuccess(level: .debug) { _ in "Successfuly called updatePost" }
+        .logError("Error calling updatePost")
     }
 
     func updatePostLikeStatus(postId: UUID, newPostLikeStatus: Post.PostLike) async -> Either<PulpFictionRequestError, UpdatePostResponse> {

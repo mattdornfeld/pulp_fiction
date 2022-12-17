@@ -16,7 +16,7 @@ struct UserConnectionViewReducer: ReducerProtocol {
         var isFollowing: Bool = true
     }
 
-    enum Action {
+    enum Action: Equatable {
         /// Updates the following status of a user connection
         case updateIsFollowing(Bool)
     }

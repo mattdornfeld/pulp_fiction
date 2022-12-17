@@ -12,7 +12,7 @@ import Foundation
 import SwiftUI
 
 /// Reducer that manages updating a view while it's being swiped
-struct SwipablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: ReducerProtocol where ViewComponentsReducer.State: Equatable {
+struct SwipablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: ReducerProtocol where ViewComponentsReducer.State: Equatable, ViewComponentsReducer.Action: Equatable {
     /// Function that supplies a reducer that's used to update the components when a swipe action occurs
     let viewComponentsReducerSuplier: () -> ViewComponentsReducer
     /// Function that's called on swipe end. This is where the logic to call ViewComponentsReducer is specified.
@@ -29,7 +29,7 @@ struct SwipablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: ReducerP
         var viewComponentsState: ViewComponentsReducer.State
     }
 
-    enum Action {
+    enum Action: Equatable {
         /// Called when post is being moved via a swipe
         case translate(CGSize)
         /// Called when post is moved back to neutral position
@@ -42,6 +42,25 @@ struct SwipablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: ReducerP
         case endSwipeGesture(CGSize)
         /// Called to update the view components
         case updateViewComponents(ViewComponentsReducer.Action?)
+
+        static func == (lhs: SwipablePostViewReducer<ViewComponentsReducer>.Action, rhs: SwipablePostViewReducer<ViewComponentsReducer>.Action) -> Bool {
+            switch (lhs, rhs) {
+            case let (.translate(lhsTranslation), .translate(rhsTranslation)):
+                return lhsTranslation == rhsTranslation
+            case (.neutral, .neutral):
+                return true
+            case (.swipeLeft, .swipeLeft):
+                return true
+            case (.swipeRight, .swipeRight):
+                return true
+            case let (.endSwipeGesture(lhsTranslation), .endSwipeGesture(rhsTranslation)):
+                return lhsTranslation == rhsTranslation
+            case let (.updateViewComponents(lhsAction), .updateViewComponents(rhsAction)):
+                return lhsAction == rhsAction
+            default:
+                return false
+            }
+        }
     }
 
     var body: some ReducerProtocol<State, Action> {
@@ -92,7 +111,7 @@ struct SwipablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: ReducerP
 }
 
 /// A wrapper view that introduces functionality for interacting with a post via swiping
-struct SwipableContentView<Content: View, SwipableSwipeViewReducer: ReducerProtocol>: View where SwipableSwipeViewReducer.State: Equatable {
+struct SwipableContentView<Content: View, SwipableSwipeViewReducer: ReducerProtocol>: View where SwipableSwipeViewReducer.State: Equatable, SwipableSwipeViewReducer.Action: Equatable {
     /// View that is wrapped in the swipe functionality
     let postView: Content
     /// Symbol that appears on the right side of postView when a left swipe occurs
