@@ -15,6 +15,7 @@ import XCTest
 
 @MainActor
 class PostLikeOnSwipeViewTest: XCTestCase {
+    private let expectedUpdatePostResponse: Either<PulpFictionRequestError, UpdatePostResponse> = .right(UpdatePostResponse())
     var reducerEither: Either<PulpFictionRequestError, PostLikeArrowReducer> {
         let imagePostDataEither = Either<PulpFictionRequestError, ImagePostData>.var()
         let externalMessengersEither = Either<PulpFictionRequestError, ExternalMessengers>.var()
@@ -34,7 +35,10 @@ class PostLikeOnSwipeViewTest: XCTestCase {
         )^
     }
 
-    private func getTestStore(reducer: PostLikeArrowReducer, loggedInUserPostLikeStatus: Post.PostLike) throws -> TestStore<PostLikeArrowReducer.State, PostLikeArrowReducer.Action, PostLikeArrowReducer.State, PostLikeArrowReducer.Action, Void> {
+    private func getTestStore(
+        reducer: PostLikeArrowReducer,
+        loggedInUserPostLikeStatus: Post.PostLike
+    ) throws -> TestStore<PostLikeArrowReducer.State, PostLikeArrowReducer.Action, PostLikeArrowReducer.State, PostLikeArrowReducer.Action, Void> {
         return TestStore(
             initialState: PostLikeArrowReducer.State(
                 loggedInUserPostLikeStatus: loggedInUserPostLikeStatus,
@@ -63,9 +67,8 @@ class PostLikeOnSwipeViewTest: XCTestCase {
             (.dislike, .swipeLeft, .like, 1),
             (.like, .swipeRight, .dislike, -2),
         ]
-        let expectedUpdatePostResponse = Either<PulpFictionRequestError, UpdatePostResponse>.right(UpdatePostResponse())
 
-        try await testData.asyncForEach { initialPostLikeStatus, postSwipAction, expectedPostLikeStatus, expectedPostNumNetLikes in
+        try await testData.asyncForEach { initialPostLikeStatus, postSwipeAction, expectedPostLikeStatus, expectedPostNumNetLikes in
             let reducer = try reducerEither.getOrThrow()
 
             let store = try getTestStore(
@@ -73,7 +76,7 @@ class PostLikeOnSwipeViewTest: XCTestCase {
                 loggedInUserPostLikeStatus: initialPostLikeStatus
             )
 
-            await store.send(.updatePostLikeStatus(postSwipAction))
+            await store.send(.updatePostLikeStatus(postSwipeAction))
 
             await store.receive(
                 .processUpdatePostLikeStatusResponseFromBackend((expectedPostLikeStatus, expectedPostNumNetLikes), expectedUpdatePostResponse)
@@ -87,6 +90,21 @@ class PostLikeOnSwipeViewTest: XCTestCase {
             XCTAssertEqual(reducer.postMetadata.postUpdateIdentifier.postId.uuidString, updatePostResponse.postID)
             XCTAssertEqual(expectedPostLikeStatus, updatePostResponse.updatePostLikeStatus.newPostLikeStatus)
         }
+    }
+
+    func testTapPostLikeArrow() async throws {
+        let store = try getTestStore(
+            reducer: try reducerEither.getOrThrow(),
+            loggedInUserPostLikeStatus: .neutral
+        )
+
+        await store.send(.tapPostLikeArrow)
+        await store.receive(.updatePostLikeStatus(.swipeLeft))
+        await store
+            .receive(.processUpdatePostLikeStatusResponseFromBackend((.like, 1), expectedUpdatePostResponse)) {
+                $0.loggedInUserPostLikeStatus = .like
+                $0.postNumNetLikes = 1
+            }
     }
 }
 
