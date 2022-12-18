@@ -101,7 +101,11 @@ struct CommentView: PostLikeOnSwipeView {
                         text: commentPostData.postMetadata.createdAt.formatAsStringForView(),
                         color: .gray
                     )
-                    ExtraOptionsDropDownMenuView(postMetadata: commentPostData.postMetadata)
+                    ExtraOptionsDropDownMenuView(
+                        postMetadata: commentPostData.postMetadata,
+                        backendMessenger: backendMessenger,
+                        notificationBannerViewStore: notificationBannerViewStore
+                    )
                 }
                 Caption(commentPostData.body)
             }

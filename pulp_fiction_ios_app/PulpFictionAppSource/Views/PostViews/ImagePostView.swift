@@ -135,7 +135,11 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                         notificationBannerViewStore: notificationBannerViewStore
                     )
                     Spacer()
-                    ExtraOptionsDropDownMenuView(postMetadata: imagePostData.postMetadata)
+                    ExtraOptionsDropDownMenuView(
+                        postMetadata: imagePostData.postMetadata,
+                        backendMessenger: backendMessenger,
+                        notificationBannerViewStore: notificationBannerViewStore
+                    )
                 }
                 postUIImage.toImage().resizable().scaledToFit()
                 HStack {

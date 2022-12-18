@@ -16,7 +16,7 @@ struct TextCreatorTopNavigationBar: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
-            NavigationBarText(createButtonLabel)
+            NavigationText(createButtonLabel)
                 .font(.system(size: 25))
                 .foregroundColor(.gray)
                 .padding(.trailing, 5)

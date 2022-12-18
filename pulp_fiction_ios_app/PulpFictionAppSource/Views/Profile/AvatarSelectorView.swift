@@ -18,7 +18,7 @@ struct AvatarSelectorTopNavigationBar: ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
             HStack {
                 imageSourceTypeDropDownMenuView
-                NavigationBarText("Update")
+                NavigationText("Update")
                     .font(.system(size: 25))
                     .foregroundColor(.gray)
                     .padding(.trailing, 5)
