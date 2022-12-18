@@ -43,7 +43,7 @@ struct ExtraOptionsDropDownMenuView: View {
     let postMetadata: PostMetadata
     let backendMessenger: BackendMessenger
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
-    private let store: ComposableArchitecture.StoreOf<ExtraOptionsDropDownMenuReducer>
+    @ObservedObject private var viewStore: PulpFictionViewStore<ExtraOptionsDropDownMenuReducer>
 
     /// Enumeration of the extra post action
     enum ExtraOptions: String, NavigationDropDownMenuOption {
@@ -101,35 +101,38 @@ struct ExtraOptionsDropDownMenuView: View {
         self.postMetadata = postMetadata
         self.backendMessenger = backendMessenger
         self.notificationBannerViewStore = notificationBannerViewStore
-        store = Store(
+        viewStore = ExtraOptionsDropDownMenuView.buildViewStore()
+    }
+
+    static func buildViewStore() -> PulpFictionViewStore<ExtraOptionsDropDownMenuReducer> {
+        let store = Store(
             initialState: ExtraOptionsDropDownMenuReducer.State(),
             reducer: ExtraOptionsDropDownMenuReducer()
         )
+        return ViewStore(store)
     }
 
     var body: some View {
-        WithViewStore(store) { viewStore in
-            LabelWithDropDownNavigationMenu(
-                label: Symbol(symbolName: "ellipsis")
-                    .padding(.trailing, 10)
-                    .padding(.bottom, 4),
-                menuOptions: ExtraOptions.allCases,
-                destinationSupplier: { menuOption in
-                    menuOption.destinationViewBuilder(postMetadata: postMetadata)
-                }
-            ) { menuOption in
-                menuOption.getNavigationAction(viewStore: viewStore)
-            }.sheet(isPresented: viewStore.binding(
-                get: \.showShowDeletePostMenu,
-                send: .updateShowShowDeletePostMenu(false)
-            )) {
-                DeletePostMenu(
-                    postMetadata: postMetadata,
-                    extraOptionsDropDownMenuViewStore: viewStore,
-                    backendMessenger: backendMessenger,
-                    notificationBannerViewStore: notificationBannerViewStore
-                )
+        LabelWithDropDownNavigationMenu(
+            label: Symbol(symbolName: "ellipsis")
+                .padding(.trailing, 10)
+                .padding(.bottom, 4),
+            menuOptions: ExtraOptions.allCases,
+            destinationSupplier: { menuOption in
+                menuOption.destinationViewBuilder(postMetadata: postMetadata)
             }
+        ) { menuOption in
+            menuOption.getNavigationAction(viewStore: viewStore)
+        }.sheet(isPresented: viewStore.binding(
+            get: \.showShowDeletePostMenu,
+            send: .updateShowShowDeletePostMenu(false)
+        )) {
+            DeletePostMenu(
+                postMetadata: postMetadata,
+                extraOptionsDropDownMenuViewStore: viewStore,
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
+            )
         }
     }
 }
