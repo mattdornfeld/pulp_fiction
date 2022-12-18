@@ -35,6 +35,7 @@ public class FakeImageDataSupplier {
                 FakeData.userAvatarJpgUrl: userPostDataIO.get.userPostContentData.data,
             ]
         )^
+            .logError("Error generating FakeImageDataSupplier")
             .mapError { pulpFictionRequestError in PulpFictionStartupError(pulpFictionRequestError) }
             .mapRight { urlToImageData in
                 FakeImageDataSupplier(urlToImageData: urlToImageData)

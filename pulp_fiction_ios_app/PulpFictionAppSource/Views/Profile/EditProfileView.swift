@@ -314,33 +314,32 @@ struct EditProfileView: View {
         menuOptions: ProfileSection.allCases,
         initialMenuSelection: .Public
     )
-    @ObservedObject private var viewStore: ViewStore<EditProfileReducer.State, EditProfileReducer.Action>
+    private var store: StoreOf<EditProfileReducer>
 
     /// Inits a EditProfileView
     /// - Parameter loggedInUserPostData: UserPostData for the logged in user
     init(loggedInUserPostData: UserPostData) {
-        viewStore = {
-            let store = Store(
-                initialState: EditProfileReducer.State(
-                    loggedInUserPostData: loggedInUserPostData
-                ),
-                reducer: EditProfileReducer()
-            )
-            return .init(store)
-        }()
+        store = Store(
+            initialState: EditProfileReducer.State(
+                loggedInUserPostData: loggedInUserPostData
+            ),
+            reducer: EditProfileReducer()
+        )
     }
 
     var body: some View {
-        VStack {
-            switch symbolWithDropDownMenu.currentSelection {
-            case .Public:
-                EditPublicProfileDataView(viewStore: viewStore)
-            case .Private:
-                EditPrivateProfileDataView(viewStore: viewStore)
+        WithViewStore(store) { viewStore in
+            VStack {
+                switch symbolWithDropDownMenu.currentSelection {
+                case .Public:
+                    EditPublicProfileDataView(viewStore: viewStore)
+                case .Private:
+                    EditPrivateProfileDataView(viewStore: viewStore)
+                }
             }
+            .toolbar { EditProfileTopNavigationBar(
+                symbolWithDropDownMenu: symbolWithDropDownMenu
+            ) }
         }
-        .toolbar { EditProfileTopNavigationBar(
-            symbolWithDropDownMenu: symbolWithDropDownMenu
-        ) }
     }
 }

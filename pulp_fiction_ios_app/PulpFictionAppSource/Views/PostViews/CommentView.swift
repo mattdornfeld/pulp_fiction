@@ -35,25 +35,34 @@ struct CommentView: PostLikeOnSwipeView {
     let id: Int
     let postFeedMessenger: PostFeedMessenger
     let loggedInUserPostData: UserPostData
+    let backendMessenger: BackendMessenger
     private static let logger = Logger(label: String(describing: CommentView.self))
     internal let swipablePostStore: ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer>
     private let store: ComposableArchitecture.StoreOf<CommentViewReducer>
+    private let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     init(
         commentPostData: CommentPostData,
         creatorUserPostData: UserPostData,
         id: Int,
         postFeedMessenger: PostFeedMessenger,
-        loggedInUserPostData: UserPostData
+        backendMessenger: BackendMessenger,
+        loggedInUserPostData: UserPostData,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) {
         self.commentPostData = commentPostData
         self.creatorUserPostData = creatorUserPostData
         self.id = id
         self.postFeedMessenger = postFeedMessenger
         self.loggedInUserPostData = loggedInUserPostData
+        self.backendMessenger = backendMessenger
+        self.notificationBannerViewStore = notificationBannerViewStore
         swipablePostStore = CommentView.buildStore(
+            backendMessenger: backendMessenger,
+            postMetadata: commentPostData.postMetadata,
             postInteractionAggregates: commentPostData.postInteractionAggregates,
-            loggedInUserPostInteractions: commentPostData.loggedInUserPostInteractions
+            loggedInUserPostInteractions: commentPostData.loggedInUserPostInteractions,
+            notificationBannerViewStore: notificationBannerViewStore
         )
         store = Store(
             initialState: CommentViewReducer.State(),
@@ -81,7 +90,9 @@ struct CommentView: PostLikeOnSwipeView {
                             destination: UserProfileView(
                                 userProfileOwnerPostData: creatorUserPostData,
                                 loggedInUserPostData: loggedInUserPostData,
-                                postFeedMessenger: postFeedMessenger
+                                postFeedMessenger: postFeedMessenger,
+                                backendMessenger: backendMessenger,
+                                notificationBannerViewStore: notificationBannerViewStore
                             )
                         ) { viewStore.send(.updateShouldLoadUserProfileView(true)) }
                     buildPostLikeArrowView()
@@ -90,7 +101,11 @@ struct CommentView: PostLikeOnSwipeView {
                         text: commentPostData.postMetadata.createdAt.formatAsStringForView(),
                         color: .gray
                     )
-                    ExtraOptionsDropDownMenuView(postMetadata: commentPostData.postMetadata)
+                    ExtraOptionsDropDownMenuView(
+                        postMetadata: commentPostData.postMetadata,
+                        backendMessenger: backendMessenger,
+                        notificationBannerViewStore: notificationBannerViewStore
+                    )
                 }
                 Caption(commentPostData.body)
             }
@@ -104,7 +119,9 @@ struct CommentView: PostLikeOnSwipeView {
         commentPostData: CommentPostData,
         userPostData: UserPostData,
         postFeedMessenger: PostFeedMessenger,
-        loggedInUserPostData: UserPostData
+        backendMessenger: BackendMessenger,
+        loggedInUserPostData: UserPostData,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) -> Either<PulpFictionRequestError, CommentView> {
         return binding(
             yield: CommentView(
@@ -112,7 +129,9 @@ struct CommentView: PostLikeOnSwipeView {
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
                 postFeedMessenger: postFeedMessenger,
-                loggedInUserPostData: loggedInUserPostData
+                backendMessenger: backendMessenger,
+                loggedInUserPostData: loggedInUserPostData,
+                notificationBannerViewStore: notificationBannerViewStore
             )
         )^.onError { cause in
             logger.error(

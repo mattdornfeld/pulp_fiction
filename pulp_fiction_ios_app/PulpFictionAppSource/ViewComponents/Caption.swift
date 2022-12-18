@@ -97,18 +97,22 @@ extension Title {
     }
 }
 
-struct NavigationBarText: TextView {
+struct NavigationText: TextView {
     let text: Text
     let alignment: TextAlignment
 }
 
-extension NavigationBarText {
-    init(text: String, alignment: TextAlignment) {
-        self.text = Text(text)
+extension NavigationText {
+    init(text: String, alignment: TextAlignment, color: Color?) {
+        self.text = Text(text).foregroundColor(color)
         self.alignment = alignment
     }
 
+    init(text: String, alignment: TextAlignment) {
+        self.init(text: text, alignment: alignment, color: nil)
+    }
+
     init(_ text: String) {
-        self.init(text: text, alignment: .leading)
+        self.init(text: text, alignment: .leading, color: nil)
     }
 }

@@ -18,11 +18,16 @@ struct EmptyNavigationLinkViewReducer: ReducerProtocol {
 
     enum Action {
         /// Updates shouldLoadDestionationView
+        case navigateToDestionationView(() -> Void = {})
         case updateShouldLoadDestionationView(Bool)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
+        case let .navigateToDestionationView(callback):
+            callback()
+            return .task { .updateShouldLoadDestionationView(true) }
+
         case let .updateShouldLoadDestionationView(newShouldLoadDestionationView):
             state.shouldLoadDestionationView = newShouldLoadDestionationView
             return .none

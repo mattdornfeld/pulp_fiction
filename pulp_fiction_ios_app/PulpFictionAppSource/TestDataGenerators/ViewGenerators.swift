@@ -12,7 +12,8 @@ import Foundation
 extension ImagePostView {
     static func generate(
         postFeedMessenger: PostFeedMessenger,
-        loggedInUserPostData: UserPostData
+        loggedInUserPostData: UserPostData,
+        backendMessenger: BackendMessenger
     ) -> IO<PulpFictionRequestError, ImagePostView> {
         let imagePostDataIO = IO<PulpFictionRequestError, ImagePostData>.var()
         let userPostDataIO = IO<PulpFictionRequestError, UserPostData>.var()
@@ -26,7 +27,9 @@ extension ImagePostView {
                 imagePostData: imagePostDataIO.get,
                 userPostData: userPostDataIO.get,
                 postFeedMessenger: postFeedMessenger,
-                loggedInUserPostData: loggedInUserPostData
+                loggedInUserPostData: loggedInUserPostData,
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: NotificationBanner.buildViewStore()
             ).toIO(),
             yield: imagePostViewIO.get
         )^

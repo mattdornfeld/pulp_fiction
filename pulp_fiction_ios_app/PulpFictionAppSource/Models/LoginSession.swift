@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct LoginSession {
+public class LoginSession {
     let loggedInUserPostData: UserPostData
 
     public init(loggedInUserPostData: UserPostData) {

@@ -267,10 +267,8 @@ message UpdatePostRequest {
     string body = 1;
   }
 
-  message LikePost {
-  }
-
-  message DislikePost {
+  message UpdatePostLikeStatus {
+    Post.PostLike newPostLikeStatus = 1;
   }
 
   message DeletePost {
@@ -302,12 +300,11 @@ message UpdatePostRequest {
   string post_id = 2;
   oneof update_post_request {
     CommentOnPost commentOnPost = 3;
-    LikePost upvotePost = 4;
-    DislikePost likePost = 5;
-    DeletePost dislikePost = 6;
-    UpdateImagePost updateImagePost = 7;
-    UpdateComment updateComment = 8;
-    ReportPost reportPost = 9;
+    UpdatePostLikeStatus updatePostLikeStatus = 4;
+    DeletePost deletePost = 5;
+    UpdateImagePost updateImagePost = 6;
+    UpdateComment updateComment = 7;
+    ReportPost reportPost = 8;
   }
 }
 
@@ -318,7 +315,7 @@ message UpdatePostResponse {
 service PulpFiction {
   rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {}
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
-  rpc GetFeed (GetFeedRequest) returns (stream GetFeedResponse) {}
+  rpc GetFeed (stream GetFeedRequest) returns (stream GetFeedResponse) {}
   rpc GetPost (GetPostRequest) returns (GetPostResponse) {}
   rpc GetUser (GetUserRequest) returns (GetUserResponse) {}
   rpc Login (LoginRequest) returns (LoginResponse) {}

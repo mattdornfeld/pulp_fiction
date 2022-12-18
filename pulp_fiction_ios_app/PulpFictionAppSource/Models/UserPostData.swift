@@ -11,7 +11,7 @@ import Foundation
 import UIKit
 
 /// User post data is stored in this model. Used for rendering UserPostView and avatar + display name in other post views.
-public struct UserPostData: PostData, PostDataIdentifiable, Equatable, AutoSetter {
+public class UserPostData: PostData, PostDataIdentifiable, Equatable, AutoSetter {
     public let id: PostUpdateIdentifier
     let postMetadata: PostMetadata
     var userPostContentData: ContentData
@@ -20,13 +20,33 @@ public struct UserPostData: PostData, PostDataIdentifiable, Equatable, AutoSette
     let userId: UUID
     @CodableUIImage var userAvatarUIImage: UIImage
 
+    public init(id: PostUpdateIdentifier, postMetadata: PostMetadata, userPostContentData: ContentData, userDisplayName: String, bio: String, userId: UUID, userAvatarUIImage: UIImage) {
+        self.id = id
+        self.postMetadata = postMetadata
+        self.userPostContentData = userPostContentData
+        self.userDisplayName = userDisplayName
+        self.bio = bio
+        self.userId = userId
+        self.userAvatarUIImage = userAvatarUIImage
+    }
+
+    public static func == (lhs: UserPostData, rhs: UserPostData) -> Bool {
+        lhs.id == rhs.id &&
+            lhs.postMetadata == rhs.postMetadata &&
+            lhs.userPostContentData == rhs.userPostContentData &&
+            lhs.userDisplayName == rhs.userDisplayName &&
+            lhs.bio == rhs.bio &&
+            lhs.userId == rhs.userId &&
+            lhs.userAvatarUIImage == rhs.userAvatarUIImage
+    }
+
     func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.userPostData(self)
     }
 }
 
 private extension UserPostData {
-    init(
+    convenience init(
         postMetadata: PostMetadata,
         userPostProto: Post.UserPost,
         userPostContentData: ContentData,

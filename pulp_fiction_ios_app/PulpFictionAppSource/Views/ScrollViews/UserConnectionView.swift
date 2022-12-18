@@ -16,7 +16,7 @@ struct UserConnectionViewReducer: ReducerProtocol {
         var isFollowing: Bool = true
     }
 
-    enum Action {
+    enum Action: Equatable {
         /// Updates the following status of a user connection
         case updateIsFollowing(Bool)
     }
@@ -35,7 +35,9 @@ struct UserConnectionView: ScrollableContentView {
     let id: Int
     let userPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     let loggedInUserPostData: UserPostData
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     private let store: ComposableArchitecture.StoreOf<SwipablePostViewReducer<UserConnectionViewReducer>> = Store(
         initialState: SwipablePostViewReducer.State(viewComponentsState: UserConnectionViewReducer.State()),
         reducer: SwipablePostViewReducer(
@@ -68,7 +70,9 @@ struct UserConnectionView: ScrollableContentView {
                     UserPostView(
                         userPostData: userPostData,
                         postFeedMessenger: postFeedMessenger,
-                        loggedInUserPostData: loggedInUserPostData
+                        loggedInUserPostData: loggedInUserPostData,
+                        backendMessenger: backendMessenger,
+                        notificationBannerViewStore: notificationBannerViewStore
                     )
                     Spacer()
                     buildFollowingNotFolowingCaption(viewStore.state.viewComponentsState.isFollowing)

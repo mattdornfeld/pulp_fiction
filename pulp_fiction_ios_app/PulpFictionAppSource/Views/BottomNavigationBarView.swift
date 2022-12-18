@@ -48,29 +48,38 @@ struct BottomNavigationBarReducer: ReducerProtocol {
 struct BottomNavigationBarView: View {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
-    private let store: ComposableArchitecture.StoreOf<BottomNavigationBarReducer>
+    let backendMessenger: BackendMessenger
+    private let banner: NotificationBanner = .init()
+    @ObservedObject private var viewStore: ViewStore<BottomNavigationBarReducer.State, BottomNavigationBarReducer.Action>
 
     init(
         loggedInUserPostData: UserPostData,
         postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
         currentMainView: BottomNavigationBarReducer.MainView = .postFeedScrollView
     ) {
         self.loggedInUserPostData = loggedInUserPostData
         self.postFeedMessenger = postFeedMessenger
-        store = Store(
-            initialState: BottomNavigationBarReducer.State(currentMainView: currentMainView),
-            reducer: BottomNavigationBarReducer()
-        )
+        self.backendMessenger = backendMessenger
+        viewStore = {
+            let store = Store(
+                initialState: BottomNavigationBarReducer.State(currentMainView: currentMainView),
+                reducer: BottomNavigationBarReducer()
+            )
+            return ViewStore(store)
+        }()
     }
 
     var body: some View {
-        WithViewStore(store) { viewStore in
-            NavigationView {
-                VStack {
-                    buildMainView(viewStore.state.currentMainView)
-                    buildBottomNavigationBar(viewStore)
-                }
-            }.accentColor(.black)
+        NavigationView {
+            VStack {
+                buildMainView(viewStore.state.currentMainView)
+                buildBottomNavigationBar(viewStore)
+            }
+        }
+        .accentColor(.black)
+        .overlay {
+            banner
         }
     }
 
@@ -79,18 +88,24 @@ struct BottomNavigationBarView: View {
         case .postFeedScrollView:
             PostFeedScrollView(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger
+                postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: banner.viewStore
             )
         case .loggedInUserProfileView:
             UserProfileView(
                 userProfileOwnerPostData: loggedInUserPostData,
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger
+                postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: banner.viewStore
             )
         case .loggedInUserFollowedScrollView:
             UserConnectionsScrollView(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger
+                postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: banner.viewStore
             )
         }
     }
