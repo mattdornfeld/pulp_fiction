@@ -42,16 +42,11 @@ struct CaptionCreatorView: View {
         EditTextView(
             prompt: "Write a caption",
             createButtonLabel: "Post",
-            createButtonAction: { caption in
-                if caption.count == 0 {
+            createButtonAction: { state in
+                if state.text.count == 0 {
                     return
                 }
 
-                if let uiImage = uiImageMaybeSupplier() {
-                    print("Creating post")
-                    print("caption: \(caption)")
-                    print("image: \(uiImage)")
-                }
                 self.emptyNavigationLink.viewStore.send(.navigateToDestionationView(displayBannerNotificationCallback))
             }
         )

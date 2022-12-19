@@ -11,6 +11,10 @@ import SwiftUI
 
 /// Navigation bar for CommentsPageScrollView
 struct CommentsPageTopNavigationBar: ToolbarContent {
+    let postMetadata: PostMetadata
+    let backendMessenger: BackendMessenger
+    let notificationnotificationBannerViewStore: NotificationnotificationBannerViewStore
+
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
             Title("Comments")
@@ -22,7 +26,11 @@ struct CommentsPageTopNavigationBar: ToolbarContent {
                 symbolName: "plus",
                 size: 20,
                 color: .gray
-            ).navigateOnTap(destination: CommentCreatorView())
+            ).navigateOnTap(destination: CommentCreator(
+                postMetadata: postMetadata,
+                backendMessenger: backendMessenger,
+                notificationnotificationBannerViewStore: notificationnotificationBannerViewStore
+            ))
         }
     }
 }
@@ -58,7 +66,11 @@ struct CommentsPageScrollView: ScrollViewParent {
                     viewStore: viewStore
                 )
         }.toolbar {
-            CommentsPageTopNavigationBar()
+            CommentsPageTopNavigationBar(
+                postMetadata: imagePostView.postMetadata,
+                backendMessenger: backendMessenger,
+                notificationnotificationBannerViewStore: notificationBannerViewStore
+            )
         }
     }
 }

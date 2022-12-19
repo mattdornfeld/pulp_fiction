@@ -10,8 +10,11 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
+/// Describes the possible options for the main post feed
 enum PostFeedFilter: String, DropDownMenuOption {
+    /// Feed will contain all posts
     case Global
+    /// Feed will contain only the posts from users the logged in user is following
     case Following
 }
 

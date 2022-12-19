@@ -38,7 +38,7 @@ struct EditTextView: View {
     let prompt: String
     let createButtonLabel: String
     let keyboardType: UIKeyboardType
-    let createButtonAction: (String) -> Void
+    let createButtonAction: (EditTextReducer.State) async -> Void
     let validateTextAction: (String) -> Bool
     private let store: ComposableArchitecture.StoreOf<EditTextReducer>
     @FocusState private var isInputTextFieldFocused: Bool
@@ -48,7 +48,7 @@ struct EditTextView: View {
         createButtonLabel: String,
         keyboardType: UIKeyboardType,
         maxTextSize: Int = 10000,
-        createButtonAction: @escaping (String) -> Void,
+        createButtonAction: @escaping (EditTextReducer.State) async -> Void,
         validateTextAction: @escaping (String) -> Bool
     ) {
         self.prompt = prompt
@@ -84,7 +84,7 @@ struct EditTextView: View {
             .toolbar {
                 TextCreatorTopNavigationBar(createButtonLabel: createButtonLabel) {
                     if validateTextAction(viewStore.text) {
-                        createButtonAction(viewStore.text)
+                        Task { await createButtonAction(viewStore.state) }
                     } else {
                         viewStore.send(.updateShowInvalidInputAlert(true))
                     }
@@ -99,7 +99,7 @@ struct EditTextView: View {
 }
 
 extension EditTextView {
-    init(prompt: String, createButtonLabel: String, createButtonAction: @escaping (String) -> Void) {
+    init(prompt: String, createButtonLabel: String, createButtonAction: @escaping (EditTextReducer.State) async -> Void) {
         self.init(
             prompt: prompt,
             createButtonLabel: createButtonLabel,

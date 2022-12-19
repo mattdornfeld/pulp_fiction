@@ -169,8 +169,8 @@ struct EditProfileField: View {
             prompt: prompt,
             createButtonLabel: "Update",
             keyboardType: keyboardType,
-            createButtonAction: { newText in
-                updateButtonAction(newText)
+            createButtonAction: { state in
+                updateButtonAction(state.text)
                 self.presentationMode.wrappedValue.dismiss()
             },
             validateTextAction: validateTextAction
