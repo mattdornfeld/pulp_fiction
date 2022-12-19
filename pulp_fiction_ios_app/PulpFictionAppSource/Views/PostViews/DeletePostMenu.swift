@@ -10,11 +10,12 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
-struct DeletePostMenuReducer: ReducerProtocol {
+struct DeletePostMenuReducer<A: ScrollableContentView>: ReducerProtocol {
     let postMetadata: PostMetadata
     let backendMessenger: BackendMessenger
     let extraOptionsDropDownMenuViewStore: PulpFictionViewStore<ExtraOptionsDropDownMenuReducer>
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
+    let contentScrollViewStore: ContentScrollViewStore<A>
 
     struct State: Equatable {}
 
@@ -37,21 +38,23 @@ struct DeletePostMenuReducer: ReducerProtocol {
                 successAction: { notificationBannerViewStore.send(.showNotificationBanner("Your post has been deleted", .info)) }
             )
             extraOptionsDropDownMenuViewStore.send(.updateShowShowDeletePostMenu(false))
+            contentScrollViewStore.send(.filterPostFromFeed(postMetadata))
             return .none
         }
     }
 }
 
 /// View for selecting whether or not to delete a post
-struct DeletePostMenu: View {
+struct DeletePostMenu<A: ScrollableContentView>: View {
     let extraOptionsDropDownMenuViewStore: PulpFictionViewStore<ExtraOptionsDropDownMenuReducer>
-    private let store: PulpFictionStore<DeletePostMenuReducer>
+    private let store: PulpFictionStore<DeletePostMenuReducer<A>>
 
     init(
         postMetadata: PostMetadata,
         extraOptionsDropDownMenuViewStore: PulpFictionViewStore<ExtraOptionsDropDownMenuReducer>,
         backendMessenger: BackendMessenger,
-        notificationBannerViewStore: NotificationnotificationBannerViewStore
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
+        contentScrollViewStore: ContentScrollViewStore<A>
     ) {
         self.extraOptionsDropDownMenuViewStore = extraOptionsDropDownMenuViewStore
         store = .init(
@@ -60,7 +63,8 @@ struct DeletePostMenu: View {
                 postMetadata: postMetadata,
                 backendMessenger: backendMessenger,
                 extraOptionsDropDownMenuViewStore: extraOptionsDropDownMenuViewStore,
-                notificationBannerViewStore: notificationBannerViewStore
+                notificationBannerViewStore: notificationBannerViewStore,
+                contentScrollViewStore: contentScrollViewStore
             )
         )
     }

@@ -39,10 +39,11 @@ struct ExtraOptionsDropDownMenuReducer: ReducerProtocol {
 }
 
 /// View that shows the extra options for post actions
-struct ExtraOptionsDropDownMenuView: View {
+struct ExtraOptionsDropDownMenuView<A: ScrollableContentView>: View {
     let postMetadata: PostMetadata
     let backendMessenger: BackendMessenger
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
+    let contentScrollViewStore: ContentScrollViewStore<A>
     @ObservedObject private var viewStore: PulpFictionViewStore<ExtraOptionsDropDownMenuReducer>
 
     /// Enumeration of the extra post action
@@ -96,11 +97,13 @@ struct ExtraOptionsDropDownMenuView: View {
     init(
         postMetadata: PostMetadata,
         backendMessenger: BackendMessenger,
-        notificationBannerViewStore: NotificationnotificationBannerViewStore
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
+        contentScrollViewStore: ContentScrollViewStore<A>
     ) {
         self.postMetadata = postMetadata
         self.backendMessenger = backendMessenger
         self.notificationBannerViewStore = notificationBannerViewStore
+        self.contentScrollViewStore = contentScrollViewStore
         viewStore = ExtraOptionsDropDownMenuView.buildViewStore()
     }
 
@@ -131,7 +134,8 @@ struct ExtraOptionsDropDownMenuView: View {
                 postMetadata: postMetadata,
                 extraOptionsDropDownMenuViewStore: viewStore,
                 backendMessenger: backendMessenger,
-                notificationBannerViewStore: notificationBannerViewStore
+                notificationBannerViewStore: notificationBannerViewStore,
+                contentScrollViewStore: contentScrollViewStore
             ).presentationDetents([.fraction(0.2)])
         }
     }

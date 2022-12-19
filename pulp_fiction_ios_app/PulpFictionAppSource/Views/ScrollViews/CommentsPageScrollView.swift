@@ -33,7 +33,7 @@ struct CommentsPageScrollView: ScrollViewParent {
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
-    let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, CommentView>
+    let postViewEitherSupplier: (Int, Post, ContentScrollViewStore<CommentView>) -> Either<PulpFictionRequestError, CommentView>
 
     init(
         imagePostView: ImagePostView,
@@ -45,7 +45,7 @@ struct CommentsPageScrollView: ScrollViewParent {
         self.postFeedMessenger = postFeedMessenger
         self.backendMessenger = backendMessenger
         self.notificationBannerViewStore = notificationBannerViewStore
-        postViewEitherSupplier = { postViewIndex, postProto in
+        postViewEitherSupplier = { postViewIndex, postProto, contentScrollViewStore in
             let commentPostDataEither = Either<PulpFictionRequestError, CommentPostData>.var()
             let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
             let commentViewEither = Either<PulpFictionRequestError, CommentView>.var()
@@ -66,7 +66,8 @@ struct CommentsPageScrollView: ScrollViewParent {
                     postFeedMessenger: postFeedMessenger,
                     backendMessenger: backendMessenger,
                     loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
-                    notificationBannerViewStore: notificationBannerViewStore
+                    notificationBannerViewStore: notificationBannerViewStore,
+                    contentScrollViewStore: contentScrollViewStore
                 ),
                 yield: commentViewEither.get
             )^

@@ -13,11 +13,12 @@ import SwiftUI
 /// A protocol from which which all Views that can be embedded in a scroll should inherit
 public protocol ScrollableContentView: View, Identifiable, Equatable {
     var id: Int { get }
+    var postMetadata: PostMetadata { get }
 }
 
 /// Reducer that manages scrolling through an infinite list of content
 struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
-    let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, A>
+    let postViewEitherSupplier: (Int, Post, ContentScrollViewStore<A>) -> Either<PulpFictionRequestError, A>
     private let logger: Logger = .init(label: String(describing: ContentScrollViewReducer.self))
     private let restartScrollOffsetThreshold = 10.0
 
@@ -28,6 +29,7 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
         private(set) var feedLoadProgressIndicatorOpacity: Double = 0.0
         /// Post indices for which loadMorePosts was called. We keep track of this to make sure we don't double load posts
         var lastVisiblePostIndices: Set<Int> = .init()
+        var postIdsToFilterFromFeed: Set<UUID> = .init()
 
         mutating func hideFeedLoadProgressIndicator() {
             feedLoadProgressIndicatorOpacity = 0.0
@@ -40,11 +42,15 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
         mutating func showFeedLoadProgressIndicator() {
             feedLoadProgressIndicatorOpacity = 1.0
         }
+
+        func shouldFeedIncludePost(postMetadata: PostMetadata) -> Bool {
+            !postIdsToFilterFromFeed.contains(postMetadata.postUpdateIdentifier.postId)
+        }
     }
 
     enum Action {
         /// Enqueue posts into the scroll.
-        case enqueuePostsToScroll([(Int, Post)])
+        case enqueuePostsToScroll([(Int, Post)], ContentScrollViewStore<A>)
         /// Called every time a post appears in the scroll. Checks to see if old posts should be removed from a scroll and loads new posts into the scroll if necessary.
         case refreshScrollIfNecessary(Int, PostStream)
         /// Dequeus old posts from scroll if necessary
@@ -57,14 +63,15 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
         case restartScrollIfOffsetGreaterThanThreshold(CGFloat, PostStream)
         /// Restarts the scroll
         case restartScroll(PostStream)
+        case filterPostFromFeed(PostMetadata)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
-        case let .enqueuePostsToScroll(postIndicesAndPosts):
+        case let .enqueuePostsToScroll(postIndicesAndPosts, viewStore):
             state.showFeedLoadProgressIndicator()
             let scrollableContentViews = postIndicesAndPosts.map { postIndex, post in
-                postViewEitherSupplier(postIndex, post)
+                postViewEitherSupplier(postIndex, post, viewStore)
                     .onSuccess { _ in
                         self.logger.debug(
                             "Successfully built PostView",
@@ -161,6 +168,13 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
             postStream.restartStream()
             state.postViews = .init()
             return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
+
+        case let .filterPostFromFeed(postMetadata):
+            let postId = postMetadata.postUpdateIdentifier.postId
+            if !state.postIdsToFilterFromFeed.contains(postId) {
+                state.postIdsToFilterFromFeed.insert(postId)
+            }
+            return .none
         }
     }
 }
@@ -190,8 +204,11 @@ private extension PostStream {
     }
 }
 
+typealias PrepenedToScrollView = View
+typealias ContentScrollViewStore<A: ScrollableContentView> = PulpFictionViewStore<ContentScrollViewReducer<A>>
+
 /// Build a view that shows a feed of scrollable content
-struct ContentScrollView<A: ScrollableContentView, B: View>: View {
+struct ContentScrollView<A: ScrollableContentView, B: PrepenedToScrollView>: View {
     private let progressIndicatorScaleFactor: CGFloat = 2.0
     private let refreshFeedOnScrollUpSensitivity: CGFloat = 10.0
     private let prependToBeginningOfScroll: B
@@ -206,20 +223,24 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
     ///   - postStreamSupplier: Function that constructs a PostStream
     init(
         prependToBeginningOfScroll: B = EmptyView(),
-        postViewEitherSupplier: @escaping (Int, Post) -> Either<PulpFictionRequestError, A>,
+        postViewEitherSupplier: @escaping (Int, Post, ContentScrollViewStore<A>) -> Either<PulpFictionRequestError, A>,
         postStreamSupplier: @escaping (ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>) -> PostStream
 
     ) {
         self.prependToBeginningOfScroll = prependToBeginningOfScroll
-        let viewStore = {
-            let store = Store(
-                initialState: ContentScrollViewReducer<A>.State(),
-                reducer: ContentScrollViewReducer<A>(postViewEitherSupplier: postViewEitherSupplier)
-            )
-            return ViewStore(store)
-        }()
+        let viewStore = ContentScrollView.buildViewStore(postViewEitherSupplier: postViewEitherSupplier)
         self.viewStore = viewStore
         postStream = postStreamSupplier(viewStore)
+    }
+
+    static func buildViewStore<A: ScrollableContentView>(
+        postViewEitherSupplier: @escaping (Int, Post, ContentScrollViewStore<A>) -> Either<PulpFictionRequestError, A>
+    ) -> ContentScrollViewStore<A> {
+        let store = Store(
+            initialState: ContentScrollViewReducer<A>.State(),
+            reducer: ContentScrollViewReducer<A>(postViewEitherSupplier: postViewEitherSupplier)
+        )
+        return ViewStore(store)
     }
 
     var body: some View {
@@ -229,7 +250,11 @@ struct ContentScrollView<A: ScrollableContentView, B: View>: View {
                     prependToBeginningOfScroll
 
                     LazyVStack(alignment: .leading) {
-                        ForEach(viewStore.postViews.elements) { currentPost in
+                        ForEach(viewStore.postViews.elements.filter { scrollableContentView in
+                            viewStore
+                                .state
+                                .shouldFeedIncludePost(postMetadata: scrollableContentView.postMetadata)
+                        }) { currentPost in
                             currentPost.onAppear {
                                 viewStore.send(.refreshScrollIfNecessary(currentPost.id, self.postStream))
                             }

@@ -124,7 +124,7 @@ ios_unit_test(
         "resourceBundleFileIdentifier": "co.firstorderlabs.PulpFictionTests",
         "isTestMode": "true",
     },
-    minimum_os_version = MINIMUM_IOS_VERSION,
+    minimum_os_version = MINIMUM_IOS_VERSIONg,
     visibility = ["//visibility:public"],
 )
 

@@ -15,7 +15,7 @@ protocol ScrollViewParent: View {
     associatedtype A: ScrollableContentView
     var postFeedMessenger: PostFeedMessenger { get }
     var backendMessenger: BackendMessenger { get }
-    var postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, A> { get }
+    var postViewEitherSupplier: (Int, Post, ContentScrollViewStore<A>) -> Either<PulpFictionRequestError, A> { get }
     var notificationBannerViewStore: NotificationnotificationBannerViewStore { get }
 }
 
@@ -23,7 +23,7 @@ protocol ScrollViewParent: View {
 protocol ImagePostScrollView: ScrollViewParent {}
 
 extension ImagePostScrollView {
-    var postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, ImagePostView> { { postViewIndex, postProto in
+    var postViewEitherSupplier: (Int, Post, ContentScrollViewStore<ImagePostView>) -> Either<PulpFictionRequestError, ImagePostView> { { postViewIndex, postProto, contentScrollViewStore in
         let imagePostDataEither = Either<PulpFictionRequestError, ImagePostData>.var()
         let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
         let imagePostViewEither = Either<PulpFictionRequestError, ImagePostView>.var()
@@ -44,7 +44,8 @@ extension ImagePostScrollView {
                 postFeedMessenger: postFeedMessenger,
                 loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
                 backendMessenger: backendMessenger,
-                notificationBannerViewStore: notificationBannerViewStore
+                notificationBannerViewStore: notificationBannerViewStore,
+                contentScrollViewStore: contentScrollViewStore
             ),
             yield: imagePostViewEither.get
         )^

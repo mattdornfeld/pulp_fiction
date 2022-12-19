@@ -36,6 +36,8 @@ struct CommentView: PostLikeOnSwipeView {
     let postFeedMessenger: PostFeedMessenger
     let loggedInUserPostData: UserPostData
     let backendMessenger: BackendMessenger
+    let contentScrollViewStore: ContentScrollViewStore<CommentView>
+    var postMetadata: PostMetadata { commentPostData.postMetadata }
     private static let logger = Logger(label: String(describing: CommentView.self))
     internal let swipablePostStore: ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer>
     private let store: ComposableArchitecture.StoreOf<CommentViewReducer>
@@ -48,7 +50,8 @@ struct CommentView: PostLikeOnSwipeView {
         postFeedMessenger: PostFeedMessenger,
         backendMessenger: BackendMessenger,
         loggedInUserPostData: UserPostData,
-        notificationBannerViewStore: NotificationnotificationBannerViewStore
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
+        contentScrollViewStore: ContentScrollViewStore<CommentView>
     ) {
         self.commentPostData = commentPostData
         self.creatorUserPostData = creatorUserPostData
@@ -57,6 +60,7 @@ struct CommentView: PostLikeOnSwipeView {
         self.loggedInUserPostData = loggedInUserPostData
         self.backendMessenger = backendMessenger
         self.notificationBannerViewStore = notificationBannerViewStore
+        self.contentScrollViewStore = contentScrollViewStore
         swipablePostStore = CommentView.buildStore(
             backendMessenger: backendMessenger,
             postMetadata: commentPostData.postMetadata,
@@ -104,7 +108,8 @@ struct CommentView: PostLikeOnSwipeView {
                     ExtraOptionsDropDownMenuView(
                         postMetadata: commentPostData.postMetadata,
                         backendMessenger: backendMessenger,
-                        notificationBannerViewStore: notificationBannerViewStore
+                        notificationBannerViewStore: notificationBannerViewStore,
+                        contentScrollViewStore: contentScrollViewStore
                     )
                 }
                 Caption(commentPostData.body)
@@ -121,7 +126,8 @@ struct CommentView: PostLikeOnSwipeView {
         postFeedMessenger: PostFeedMessenger,
         backendMessenger: BackendMessenger,
         loggedInUserPostData: UserPostData,
-        notificationBannerViewStore: NotificationnotificationBannerViewStore
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
+        contentScrollViewStore: ContentScrollViewStore<CommentView>
     ) -> Either<PulpFictionRequestError, CommentView> {
         return binding(
             yield: CommentView(
@@ -131,7 +137,8 @@ struct CommentView: PostLikeOnSwipeView {
                 postFeedMessenger: postFeedMessenger,
                 backendMessenger: backendMessenger,
                 loggedInUserPostData: loggedInUserPostData,
-                notificationBannerViewStore: notificationBannerViewStore
+                notificationBannerViewStore: notificationBannerViewStore,
+                contentScrollViewStore: contentScrollViewStore
             )
         )^.onError { cause in
             logger.error(

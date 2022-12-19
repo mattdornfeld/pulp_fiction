@@ -38,6 +38,7 @@ struct UserConnectionView: ScrollableContentView {
     let backendMessenger: BackendMessenger
     let loggedInUserPostData: UserPostData
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
+    var postMetadata: PostMetadata { userPostData.postMetadata }
     private let store: ComposableArchitecture.StoreOf<SwipablePostViewReducer<UserConnectionViewReducer>> = Store(
         initialState: SwipablePostViewReducer.State(viewComponentsState: UserConnectionViewReducer.State()),
         reducer: SwipablePostViewReducer(

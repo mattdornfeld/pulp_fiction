@@ -48,7 +48,8 @@ extension ImagePostView {
         imagePostData: ImagePostData,
         loggedInUserPostData: UserPostData,
         backendMessenger: BackendMessenger,
-        notificationBannerViewStore: NotificationnotificationBannerViewStore
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
+        contentScrollViewStore: ContentScrollViewStore<ImagePostView>
     ) {
         self.postFeedMessenger = postFeedMessenger
         self.backendMessenger = backendMessenger
@@ -58,6 +59,7 @@ extension ImagePostView {
         self.imagePostData = imagePostData
         self.loggedInUserPostData = loggedInUserPostData
         self.notificationBannerViewStore = notificationBannerViewStore
+        self.contentScrollViewStore = contentScrollViewStore
         store = Store(
             initialState: ImagePostViewReducer.State(),
             reducer: ImagePostViewReducer()
@@ -82,6 +84,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
     let loggedInUserPostData: UserPostData
     let backendMessenger: BackendMessenger
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
+    let contentScrollViewStore: ContentScrollViewStore<ImagePostView>
+    var postMetadata: PostMetadata { imagePostData.postMetadata }
     private var isForCommentsScrollView: Bool = false
     private let store: ComposableArchitecture.StoreOf<ImagePostViewReducer>
     internal let swipablePostStore: ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer>
@@ -138,7 +142,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                     ExtraOptionsDropDownMenuView(
                         postMetadata: imagePostData.postMetadata,
                         backendMessenger: backendMessenger,
-                        notificationBannerViewStore: notificationBannerViewStore
+                        notificationBannerViewStore: notificationBannerViewStore,
+                        contentScrollViewStore: contentScrollViewStore
                     )
                 }
                 postUIImage.toImage().resizable().scaledToFit()
@@ -176,7 +181,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
         postFeedMessenger: PostFeedMessenger,
         loggedInUserPostData: UserPostData,
         backendMessenger: BackendMessenger,
-        notificationBannerViewStore: NotificationnotificationBannerViewStore
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
+        contentScrollViewStore: ContentScrollViewStore<ImagePostView>
     ) -> Either<PulpFictionRequestError, ImagePostView> {
         let createPostUIImageEither = Either<PulpFictionRequestError, UIImage>.var()
 
@@ -190,7 +196,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                 imagePostData: imagePostData,
                 loggedInUserPostData: loggedInUserPostData,
                 backendMessenger: backendMessenger,
-                notificationBannerViewStore: notificationBannerViewStore
+                notificationBannerViewStore: notificationBannerViewStore,
+                contentScrollViewStore: contentScrollViewStore
             )
         )^.onError { cause in
             logger.error(
