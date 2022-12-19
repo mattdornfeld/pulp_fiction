@@ -208,4 +208,38 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
             )
         }
     }
+
+    static func getPostViewEitherSupplier(
+        postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
+    ) -> PostViewEitherSupplier<ImagePostView> {
+        { postViewIndex, postProto, contentScrollViewStore in
+            let imagePostDataEither = Either<PulpFictionRequestError, ImagePostData>.var()
+            let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
+            let imagePostViewEither = Either<PulpFictionRequestError, ImagePostView>.var()
+
+            return binding(
+                imagePostDataEither <- postFeedMessenger.postDataMessenger
+                    .getPostData(postProto)
+                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
+                    .flatMap { postDataOneOf in postDataOneOf.toImagePostData() }^,
+                userPostDataEither <- postFeedMessenger.postDataMessenger
+                    .getPostData(postProto.imagePost.postCreatorLatestUserPost)
+                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
+                    .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
+                imagePostViewEither <- ImagePostView.create(
+                    postViewIndex: postViewIndex,
+                    imagePostData: imagePostDataEither.get,
+                    userPostData: userPostDataEither.get,
+                    postFeedMessenger: postFeedMessenger,
+                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
+                    backendMessenger: backendMessenger,
+                    notificationBannerViewStore: notificationBannerViewStore,
+                    contentScrollViewStore: contentScrollViewStore
+                ),
+                yield: imagePostViewEither.get
+            )^
+        }
+    }
 }

@@ -283,17 +283,7 @@ message UpdatePostRequest {
   }
 
   message ReportPost {
-    enum Reason {
-      SPAM = 0;
-      PROMOTES_VIOLENCE = 1;
-      ENDANGERS_CHILDREN = 2;
-      FALSE_INFORMATION = 3;
-      SELF_HARM = 4;
-      SCAM_OR_FRAUD = 5;
-      ILLEGAL_ACTIVITY = 6;
-    }
-    Reason reason = 1;
-    string description = 2;
+    string reportReason = 1;
   }
 
   LoginResponse.LoginSession loginSession = 1;

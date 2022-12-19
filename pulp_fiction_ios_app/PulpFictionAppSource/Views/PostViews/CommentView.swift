@@ -149,4 +149,38 @@ struct CommentView: PostLikeOnSwipeView {
             )
         }
     }
+
+    static func getPostViewEitherSupplier(
+        postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
+    ) -> PostViewEitherSupplier<CommentView> {
+        { postViewIndex, postProto, contentScrollViewStore in
+            let commentPostDataEither = Either<PulpFictionRequestError, CommentPostData>.var()
+            let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
+            let commentViewEither = Either<PulpFictionRequestError, CommentView>.var()
+
+            return binding(
+                commentPostDataEither <- postFeedMessenger.postDataMessenger
+                    .getPostData(postProto)
+                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
+                    .flatMap { postDataOneOf in postDataOneOf.toCommentPostData() }^,
+                userPostDataEither <- postFeedMessenger.postDataMessenger
+                    .getPostData(postProto.comment.postCreatorLatestUserPost)
+                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
+                    .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
+                commentViewEither <- CommentView.create(
+                    postViewIndex: postViewIndex,
+                    commentPostData: commentPostDataEither.get,
+                    userPostData: userPostDataEither.get,
+                    postFeedMessenger: postFeedMessenger,
+                    backendMessenger: backendMessenger,
+                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
+                    notificationBannerViewStore: notificationBannerViewStore,
+                    contentScrollViewStore: contentScrollViewStore
+                ),
+                yield: commentViewEither.get
+            )^
+        }
+    }
 }

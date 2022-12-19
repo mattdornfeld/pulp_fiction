@@ -10,7 +10,7 @@ import Foundation
 import SwiftUI
 
 /// View that scrolls through a user's profile along with their posts
-struct UserProfileScrollView<Content: View>: ImagePostScrollView {
+struct UserProfileScrollView<Content: View>: ScrollViewParent {
     let userProfileOwnerPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
@@ -18,7 +18,12 @@ struct UserProfileScrollView<Content: View>: ImagePostScrollView {
     @ViewBuilder let userProfileViewBuilder: () -> Content
 
     var body: some View {
-        ContentScrollView(prependToBeginningOfScroll: userProfileViewBuilder(), postViewEitherSupplier: postViewEitherSupplier) { viewStore in
+        ContentScrollView(
+            prependToBeginningOfScroll: userProfileViewBuilder(),
+            postFeedMessenger: postFeedMessenger,
+            backendMessenger: backendMessenger,
+            notificationBannerViewStore: notificationBannerViewStore
+        ) { viewStore in
             postFeedMessenger
                 .getUserProfilePostFeed(
                     userId: userProfileOwnerPostData.userId,

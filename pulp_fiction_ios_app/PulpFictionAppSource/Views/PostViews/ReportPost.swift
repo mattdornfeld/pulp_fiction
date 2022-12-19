@@ -1,10 +1,11 @@
 //
-//  ReportPostView.swift
+//  ReportPost.swift
 //  build_app_source
 //
 //  Created by Matthew Dornfeld on 11/15/22.
 //
 
+import Bow
 import ComposableArchitecture
 import Foundation
 import SwiftUI
@@ -12,17 +13,20 @@ import SwiftUI
 /// Reducer for ReportPostView
 struct ReportPostReducer: ReducerProtocol {
     let postMetadata: PostMetadata
-    private let maxReportReasonSize: Int = 100
+    let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
+    private let maxReportReasonSize: Int = 200
 
     struct State: Equatable {
         /// Caption being created
         var reportReason: String = ""
     }
 
-    enum Action {
+    enum Action: Equatable {
         /// Updates the report reason as new characters are typed
         case updateReportReason(String)
-        case reportPost(() -> Void)
+        case reportPost(EquatableClosure0<Void>)
+        case processUpdatePostResponse(Either<PulpFictionRequestError, UpdatePostResponse>, EquatableClosure0<Void>)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
@@ -30,13 +34,28 @@ struct ReportPostReducer: ReducerProtocol {
         case let .updateReportReason(newReportReason):
             state.reportReason = String(newReportReason.prefix(maxReportReasonSize))
             return .none
+
         case let .reportPost(reportPostAction):
             if state.reportReason.count == 0 {
                 return .none
             }
 
-            print(postMetadata)
-            print(state.reportReason)
+            reportPostAction()
+            let reportReason = state.reportReason
+            return .task {
+                let updatePostResponseEither = await backendMessenger.reportPost(
+                    postId: postMetadata.postUpdateIdentifier.postId,
+                    reportReason: reportReason
+                )
+                return .processUpdatePostResponse(updatePostResponseEither, reportPostAction)
+            }
+
+        case let .processUpdatePostResponse(updatePostResponseEither, reportPostAction):
+            updatePostResponseEither.processResponseFromServer(
+                notificationBannerViewStore: notificationBannerViewStore,
+                state: state,
+                successAction: { notificationBannerViewStore.send(.showNotificationBanner("Post has been reported", .info)) }
+            )
             reportPostAction()
             return .none
         }
@@ -44,15 +63,22 @@ struct ReportPostReducer: ReducerProtocol {
 }
 
 /// View for reporting a post
-struct ReportPostView: View {
+struct ReportPost: View {
     private let store: ComposableArchitecture.StoreOf<ReportPostReducer>
     @FocusState private var isInputFieldFocused: Bool
     @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
 
-    init(postMetadata: PostMetadata) {
+    init(postMetadata: PostMetadata,
+         backendMessenger: BackendMessenger,
+         notificationBannerViewStore: NotificationnotificationBannerViewStore)
+    {
         store = Store(
             initialState: ReportPostReducer.State(),
-            reducer: ReportPostReducer(postMetadata: postMetadata)
+            reducer: ReportPostReducer(
+                postMetadata: postMetadata,
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
+            )
         )
     }
 
@@ -76,7 +102,7 @@ struct ReportPostView: View {
             }
             .toolbar {
                 TextCreatorTopNavigationBar(createButtonLabel: "Report") {
-                    viewStore.send(.reportPost { self.presentationMode.wrappedValue.dismiss() })
+                    viewStore.send(.reportPost(EquatableClosure0 { self.presentationMode.wrappedValue.dismiss() }))
                 }
             }
         }

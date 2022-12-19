@@ -51,7 +51,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
 }
 
 /// View that scrolls through a feed of posts
-struct PostFeedScrollView: ImagePostScrollView {
+struct PostFeedScrollView: ScrollViewParent {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
@@ -66,7 +66,9 @@ struct PostFeedScrollView: ImagePostScrollView {
 
     var body: some View {
         ContentScrollView(
-            postViewEitherSupplier: postViewEitherSupplier
+            postFeedMessenger: postFeedMessenger,
+            backendMessenger: backendMessenger,
+            notificationBannerViewStore: notificationBannerViewStore
         ) { viewStore in
             getPostFeed(
                 postFeedFilter: postFeedFilterDropDownMenu.currentSelection,

@@ -58,16 +58,24 @@ struct ExtraOptionsDropDownMenuView<A: ScrollableContentView>: View {
             case .Delete:
                 return false
             case .Report:
-                return false
+                return true
             }
         }
 
-        @ViewBuilder func destinationViewBuilder(postMetadata: PostMetadata) -> some View {
+        @ViewBuilder func destinationViewBuilder(
+            postMetadata: PostMetadata,
+            backendMessenger: BackendMessenger,
+            notificationBannerViewStore: NotificationnotificationBannerViewStore
+        ) -> some View {
             switch self {
             case .Delete:
                 EmptyView()
             case .Report:
-                ReportPostView(postMetadata: postMetadata)
+                ReportPost(
+                    postMetadata: postMetadata,
+                    backendMessenger: backendMessenger,
+                    notificationBannerViewStore: notificationBannerViewStore
+                )
             }
         }
 
@@ -122,7 +130,11 @@ struct ExtraOptionsDropDownMenuView<A: ScrollableContentView>: View {
                 .padding(.bottom, 4),
             menuOptions: ExtraOptions.allCases,
             destinationSupplier: { menuOption in
-                menuOption.destinationViewBuilder(postMetadata: postMetadata)
+                menuOption.destinationViewBuilder(
+                    postMetadata: postMetadata,
+                    backendMessenger: backendMessenger,
+                    notificationBannerViewStore: notificationBannerViewStore
+                )
             }
         ) { menuOption in
             menuOption.getNavigationAction(viewStore: viewStore)

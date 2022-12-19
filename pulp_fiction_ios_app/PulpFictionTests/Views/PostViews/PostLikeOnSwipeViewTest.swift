@@ -87,9 +87,10 @@ class PostLikeOnSwipeViewTest: XCTestCase {
             }
 
             let pulpFictionClientProtocol = reducer.backendMessenger.pulpFictionClientProtocol as! PulpFictionTestClientWithFakeData
-            let updatePostResponse = pulpFictionClientProtocol.updatePostRequests[0]
-            XCTAssertEqual(reducer.postMetadata.postUpdateIdentifier.postId.uuidString, updatePostResponse.postID)
-            XCTAssertEqual(expectedPostLikeStatus, updatePostResponse.updatePostLikeStatus.newPostLikeStatus)
+            let updatePostRequest = pulpFictionClientProtocol.updatePostRequests[0]
+            XCTAssertEqual(reducer.postMetadata.postUpdateIdentifier.postId.uuidString, updatePostRequest.postID)
+            XCTAssertEqual(reducer.backendMessenger.loginSession.toProto(), updatePostRequest.loginSession)
+            XCTAssertEqual(expectedPostLikeStatus, updatePostRequest.updatePostLikeStatus.newPostLikeStatus)
         }
     }
 

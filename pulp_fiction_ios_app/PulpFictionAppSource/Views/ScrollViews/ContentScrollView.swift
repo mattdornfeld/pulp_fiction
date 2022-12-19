@@ -10,10 +10,21 @@ import ComposableArchitecture
 import Logging
 import SwiftUI
 
+/// Function that constructs a Either<PulpFictionRequestError, A>
+typealias PostViewEitherSupplier<A: ScrollableContentView> = (Int, Post, ContentScrollViewStore<A>) -> Either<PulpFictionRequestError, A>
+
 /// A protocol from which which all Views that can be embedded in a scroll should inherit
-public protocol ScrollableContentView: View, Identifiable, Equatable {
+protocol ScrollableContentView: View, Identifiable, Equatable {
+    /// The integer position of the piece of content in the feed
     var id: Int { get }
+    /// The metadata for the post
     var postMetadata: PostMetadata { get }
+    /// Function for constructing a PostViewEitherSupplier
+    static func getPostViewEitherSupplier(
+        postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
+    ) -> PostViewEitherSupplier<Self>
 }
 
 /// Reducer that manages scrolling through an infinite list of content
@@ -219,16 +230,25 @@ struct ContentScrollView<A: ScrollableContentView, B: PrepenedToScrollView>: Vie
     /// Builds a ContentScrollView
     /// - Parameters:
     ///   - prependToBeginningOfScroll: View to prepend to beginning of scroll
+    ///   - postFeedMessenger:
+    ///   - backendMessenger:
+    ///   - notificationBannerViewStore:
     ///   - postViewEitherSupplier: Function constructs a ScrollableContentView from a Post and its index in the feed
     ///   - postStreamSupplier: Function that constructs a PostStream
     init(
         prependToBeginningOfScroll: B = EmptyView(),
-        postViewEitherSupplier: @escaping (Int, Post, ContentScrollViewStore<A>) -> Either<PulpFictionRequestError, A>,
+        postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
         postStreamSupplier: @escaping (ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>) -> PostStream
 
     ) {
         self.prependToBeginningOfScroll = prependToBeginningOfScroll
-        let viewStore = ContentScrollView.buildViewStore(postViewEitherSupplier: postViewEitherSupplier)
+        let viewStore = ContentScrollView.buildViewStore(postViewEitherSupplier: A.getPostViewEitherSupplier(
+            postFeedMessenger: postFeedMessenger,
+            backendMessenger: backendMessenger,
+            notificationBannerViewStore: notificationBannerViewStore
+        ))
         self.viewStore = viewStore
         postStream = postStreamSupplier(viewStore)
     }

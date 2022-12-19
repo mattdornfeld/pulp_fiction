@@ -53,6 +53,18 @@ public struct BackendMessenger {
 
         return await buildUpdatePostResponse(updatePostRequest: updatePostRequest)
     }
+
+    func reportPost(postId: UUID, reportReason: String) async -> Either<PulpFictionRequestError, UpdatePostResponse> {
+        let updatePostRequest = UpdatePostRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.postID = postId.uuidString
+            $0.reportPost = UpdatePostRequest.ReportPost.with {
+                $0.reportReason = reportReason
+            }
+        }
+
+        return await buildUpdatePostResponse(updatePostRequest: updatePostRequest)
+    }
 }
 
 extension Either<PulpFictionRequestError, UpdatePostResponse> {

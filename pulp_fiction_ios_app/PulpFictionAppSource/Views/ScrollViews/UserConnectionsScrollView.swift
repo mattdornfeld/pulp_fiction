@@ -39,7 +39,6 @@ struct UserConnectionsScrollView: ScrollViewParent {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
-    let postViewEitherSupplier: (Int, Post, ContentScrollViewStore<UserConnectionView>) -> Either<PulpFictionRequestError, UserConnectionView>
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var userConnectionsFilterDropDownMenu: SymbolWithDropDownMenu<UserConnectionsFilter> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
@@ -59,28 +58,14 @@ struct UserConnectionsScrollView: ScrollViewParent {
         self.postFeedMessenger = postFeedMessenger
         self.backendMessenger = backendMessenger
         self.notificationBannerViewStore = notificationBannerViewStore
-        postViewEitherSupplier = { postViewIndex, postProto, _ in
-            let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
-
-            return binding(
-                userPostDataEither <- postFeedMessenger.postDataMessenger
-                    .getPostData(postProto)
-                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
-                    .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
-                yield: UserConnectionView(
-                    id: postViewIndex,
-                    userPostData: userPostDataEither.get,
-                    postFeedMessenger: postFeedMessenger,
-                    backendMessenger: backendMessenger,
-                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
-                    notificationBannerViewStore: notificationBannerViewStore
-                )
-            )^
-        }
     }
 
     var body: some View {
-        ContentScrollView(postViewEitherSupplier: postViewEitherSupplier) { viewStore in
+        ContentScrollView(
+            postFeedMessenger: postFeedMessenger,
+            backendMessenger: backendMessenger,
+            notificationBannerViewStore: notificationBannerViewStore
+        ) { viewStore in
             buildPostViewFeed(
                 userConnectionsFilter: userConnectionsFilterDropDownMenu.currentSelection,
                 viewStore: viewStore

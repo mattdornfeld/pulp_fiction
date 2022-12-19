@@ -5,6 +5,7 @@
 //  Created by Matthew Dornfeld on 10/22/22.
 //
 
+import Bow
 import ComposableArchitecture
 import Foundation
 import SwiftUI
@@ -100,5 +101,30 @@ struct UserConnectionView: ScrollableContentView {
             .padding()
             .opacity(notFollowingOpacity)
         }.background(backgroundColor)
+    }
+
+    static func getPostViewEitherSupplier(
+        postFeedMessenger: PostFeedMessenger,
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
+    ) -> PostViewEitherSupplier<UserConnectionView> {
+        { postViewIndex, postProto, _ in
+            let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
+
+            return binding(
+                userPostDataEither <- postFeedMessenger.postDataMessenger
+                    .getPostData(postProto)
+                    .unsafeRunSyncEither(on: .global(qos: .userInteractive))
+                    .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
+                yield: UserConnectionView(
+                    id: postViewIndex,
+                    userPostData: userPostDataEither.get,
+                    postFeedMessenger: postFeedMessenger,
+                    backendMessenger: backendMessenger,
+                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
+                    notificationBannerViewStore: notificationBannerViewStore
+                )
+            )^
+        }
     }
 }
