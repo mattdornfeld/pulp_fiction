@@ -10,8 +10,6 @@ import ComposableArchitecture
 import Logging
 import SwiftUI
 
-private let logger: Logger = .init(label: String(describing: "ScrollableContentView"))
-
 /// A protocol from which which all Views that can be embedded in a scroll should inherit
 public protocol ScrollableContentView: View, Identifiable, Equatable {
     var id: Int { get }
@@ -19,195 +17,258 @@ public protocol ScrollableContentView: View, Identifiable, Equatable {
 
 /// Reducer that manages scrolling through an infinite list of content
 struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
-    let postViewFeedIteratorSupplier: () -> PostViewFeedIterator<A>
+    let postViewEitherSupplier: (Int, Post) -> Either<PulpFictionRequestError, A>
+    private let logger: Logger = .init(label: String(describing: ContentScrollViewReducer.self))
+    private let restartScrollOffsetThreshold = 10.0
 
     struct State: Equatable {
-        /// The iterator used to retrieve posts from the backend API and data store
-        var postViewFeedIteratorMaybe: PostViewFeedIterator<A>? = nil
-        /// The PostView objects currently available in the scroll
-        var postViews: [A] = []
+        /// Queue for storing ScrollableContentViews that will be rendered in the feed
+        var postViews: Queue<A> = .init()
         /// Indicator that shows new content is being loaded into the feed
-        var feedLoadProgressIndicatorOpacity: Double = 0.0
+        private(set) var feedLoadProgressIndicatorOpacity: Double = 0.0
+        /// Post indices for which loadMorePosts was called. We keep track of this to make sure we don't double load posts
+        var lastVisiblePostIndices: Set<Int> = .init()
 
-        func shouldLoadMorePosts(_ postViewFeedIterator: PostViewFeedIterator<A>, _ currentPostViewIndex: Int) -> Bool {
-            let thresholdIndex = postViews.index(postViews.endIndex, offsetBy: -PostFeedConfigs.numPostViewsLoadedInAdvance)
-            return !postViewFeedIterator.isDone
-                && (postViews.count == 0
-                    || postViews.firstIndex(where: { $0.id == currentPostViewIndex }) == thresholdIndex
-                )
+        mutating func hideFeedLoadProgressIndicator() {
+            feedLoadProgressIndicatorOpacity = 0.0
         }
 
-        mutating func loadMorePostsIfNeeded(_ postViewFeedIterator: PostViewFeedIterator<A>, _ currentPostViewIndex: Int) {
-            if shouldLoadMorePosts(postViewFeedIterator, currentPostViewIndex) {
-                logger.debug(
-                    "Loading more posts from iterator",
-                    metadata: [
-                        "currentPostViewIndex": "\(currentPostViewIndex)",
-                        "numPostsInScroll": "\(postViews.count)",
-                    ]
-                )
+        func isFeedLoadProgressIndicatorShowing() -> Bool {
+            abs(feedLoadProgressIndicatorOpacity - 1.0) < 1e-10
+        }
 
-                (1 ... PostFeedConfigs.numPostViewsLoadedInAdvance).forEach { _ in
-                    postViewFeedIterator.next().map { postView in
-                        self.postViews.append(postView)
-                    }
-                }
-
-                logger.debug(
-                    "Posts added to scroll",
-                    metadata: [
-                        "currentPostViewIndex": "\(currentPostViewIndex)",
-                        "numPostsInScroll": "\(postViews.count)",
-                    ]
-                )
-
-            } else {
-                logger.debug(
-                    "Loading more posts from iterator is not needed. Continuing",
-                    metadata: [
-                        "currentPostViewIndex": "\(currentPostViewIndex)",
-                        "numPostsInScroll": "\(postViews.count)",
-                    ]
-                )
-            }
+        mutating func showFeedLoadProgressIndicator() {
+            feedLoadProgressIndicatorOpacity = 1.0
         }
     }
 
     enum Action {
-        /// This action is called on view load. It starts the PostViewFeedIterator and begins loading posts into the view.
-        case startScroll
-        /// Refreshes the feed scroll with new content
-        case refreshScroll
-        /// Loads more posts if necessary. Triggered on scroll.
-        case loadMorePostsIfNeeded(any ScrollableContentView)
-    }
-
-    enum PostScrollErrors {
-        class PostViewFeedIteratorNotStarted: PulpFictionRequestError {}
+        /// Enqueue posts into the scroll.
+        case enqueuePostsToScroll([(Int, Post)])
+        /// Called every time a post appears in the scroll. Checks to see if old posts should be removed from a scroll and loads new posts into the scroll if necessary.
+        case refreshScrollIfNecessary(Int, PostStream)
+        /// Dequeus old posts from scroll if necessary
+        case dequeuePostsFromScrollIfNecessary(Int, PostStream)
+        /// Updates the opacity of progress indicator. Set to 1.0 if posts are being loaded into the scroll and 0.0 otherwise.
+        case updateFeedLoadProgressIndicatorOpacity(Bool)
+        /// Called when there are no more posts left to scroll through
+        case stopScroll
+        /// Restarts the scroll on a drag up action if offset is greater than threshold
+        case restartScrollIfOffsetGreaterThanThreshold(CGFloat, PostStream)
+        /// Restarts the scroll
+        case restartScroll(PostStream)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
-        case .startScroll:
-            if state.postViewFeedIteratorMaybe != nil {
+        case let .enqueuePostsToScroll(postIndicesAndPosts):
+            state.showFeedLoadProgressIndicator()
+            let scrollableContentViews = postIndicesAndPosts.map { postIndex, post in
+                postViewEitherSupplier(postIndex, post)
+                    .onSuccess { _ in
+                        self.logger.debug(
+                            "Successfully built PostView",
+                            metadata: [
+                                "queueSize": "\(state.postViews.elements.count)",
+                                "postId": "\(post.metadata.postUpdateIdentifier.postID)",
+                                "currentPostIndex": "\(postIndex)",
+                            ]
+                        )
+                    }
+                    .onError { cause in
+                        self.logger.error(
+                            "Error building PostView",
+                            metadata: [
+                                "cause": "\(cause)",
+                                "postId": "\(post.metadata.postUpdateIdentifier.postID)",
+                                "postIndex": "\(postIndex)",
+                            ]
+                        )
+                    }
+            }.flattenError()
+
+            state.postViews.enqueue(scrollableContentViews)
+
+            return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
+
+        case let .refreshScrollIfNecessary(currentPostIndex, postStream):
+            state.showFeedLoadProgressIndicator()
+            return .task { .dequeuePostsFromScrollIfNecessary(currentPostIndex, postStream) }
+
+        case let .dequeuePostsFromScrollIfNecessary(currentPostIndex, postStream):
+            if state.postViews.isClosed() {
                 return .none
             }
 
-            state.postViews = []
-            state.postViewFeedIteratorMaybe = {
-                let postViewFeedIterator = postViewFeedIteratorSupplier()
+            state.showFeedLoadProgressIndicator()
 
-                logger.debug("Started post feed iterator")
+            let alreadyLoadedForPostIndex = state
+                .lastVisiblePostIndices
+                .contains(currentPostIndex)
 
-                state.loadMorePostsIfNeeded(postViewFeedIterator, 0)
+            let isLastPostVisible = state
+                .postViews
+                .elements
+                .last
+                .map { $0.id == currentPostIndex }^
+                .getOrElse(true)
 
-                return postViewFeedIterator
-            }()
-            state.feedLoadProgressIndicatorOpacity = 0.0
-            return .none
+            let isQueueFull = state.postViews.elements.count == PostFeedConfigs.postFeedMaxQueueSize
 
-        case .refreshScroll:
-            state.feedLoadProgressIndicatorOpacity = 1.0
-            state.postViewFeedIteratorMaybe = nil
-            return .task {
-                .startScroll
-            }
+            let shouldClearPosts = isQueueFull
+            let shouldLoadMorePosts = !alreadyLoadedForPostIndex && isLastPostVisible
 
-        case let .loadMorePostsIfNeeded(currentPostView):
-            state.postViewFeedIteratorMaybe.map { postViewFeedIterator in
-                state.loadMorePostsIfNeeded(postViewFeedIterator, currentPostView.id)
-            }
-            .toEither(PostScrollErrors.PostViewFeedIteratorNotStarted())
-            .mapLeft { cause in
-                logger.error(
-                    "Error loading posts",
+            if shouldClearPosts, shouldLoadMorePosts {
+                logger.debug(
+                    "Queue is full. Making room.",
                     metadata: [
-                        "cause": "\(cause)",
+                        "queueSize": "\(state.postViews.elements.count)",
+                        "currentPostIndex": "\(currentPostIndex)",
                     ]
                 )
+
+                state.postViews.dequeue(numElements: PostFeedConfigs.numPostReturnedPerRequest)
+                postStream.loadMorePosts(state: &state, currentPostIndex: currentPostIndex)
+            } else if shouldLoadMorePosts {
+                postStream.loadMorePosts(state: &state, currentPostIndex: currentPostIndex)
+            }
+
+            return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
+
+        case let .updateFeedLoadProgressIndicatorOpacity(shouldShowFeedLoadProgressIndicator):
+            if shouldShowFeedLoadProgressIndicator {
+                state.showFeedLoadProgressIndicator()
+            } else {
+                state.hideFeedLoadProgressIndicator()
+            }
+            return .none
+
+        case .stopScroll:
+            state.postViews.close()
+            return .none
+
+        case let .restartScrollIfOffsetGreaterThanThreshold(newOffset, postStream):
+            if newOffset >= restartScrollOffsetThreshold, !state.isFeedLoadProgressIndicatorShowing() {
+                return .task { .restartScroll(postStream) }
+            } else if newOffset <= 1.0, state.isFeedLoadProgressIndicatorShowing() {
+                return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
             }
 
             return .none
+
+        case let .restartScroll(postStream):
+            state.showFeedLoadProgressIndicator()
+            postStream.restartStream()
+            state.postViews = .init()
+            return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
         }
     }
 }
 
-extension ContentScrollView where B == EmptyView {
-    init(
-        postFeedMessenger: PostFeedMessenger,
-        postViewFeedIteratorSupplier: @escaping () -> PostViewFeedIterator<A>
-    ) {
-        self.init(
-            postFeedMessenger: postFeedMessenger,
-            prependToBeginningOfScroll: EmptyView(),
-            postViewFeedIteratorSupplier: postViewFeedIteratorSupplier
+private extension Queue {
+    convenience init() {
+        self.init(maxSize: PostFeedConfigs.postFeedMaxQueueSize)
+    }
+}
+
+private extension PostStream {
+    /// Send request to backend server to load more posts into stream.
+    /// - Parameters:
+    ///   - state: The current state of the ViewStore
+    ///   - currentPostIndex: The post index that last appeared
+    func loadMorePosts<A: ScrollableContentView>(state: inout ContentScrollViewReducer<A>.State, currentPostIndex: Int) {
+        logger.debug(
+            "Loading more posts",
+            metadata: [
+                "queueSize": "\(state.postViews.elements.count)",
+                "currentPostIndex": "\(currentPostIndex)",
+            ]
         )
+
+        loadMorePosts()
+        state.lastVisiblePostIndices.insert(currentPostIndex)
     }
 }
 
 /// Build a view that shows a feed of scrollable content
 struct ContentScrollView<A: ScrollableContentView, B: View>: View {
-    private let store: ComposableArchitecture.StoreOf<ContentScrollViewReducer<A>>
     private let progressIndicatorScaleFactor: CGFloat = 2.0
     private let refreshFeedOnScrollUpSensitivity: CGFloat = 10.0
     private let prependToBeginningOfScroll: B
+    private let postStream: PostStream
     @GestureState private var dragOffset: CGFloat = -100
+    @ObservedObject private var viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>
 
     /// Builds a ContentScrollView
     /// - Parameters:
-    ///   - postFeedMessenger: Messenger that calls backend API and post data store to construct post feeds
     ///   - prependToBeginningOfScroll: View to prepend to beginning of scroll
-    ///   - postViewFeedIteratorSupplier: Function that constructs the views which make up the items of the scroll
+    ///   - postViewEitherSupplier: Function constructs a ScrollableContentView from a Post and its index in the feed
+    ///   - postStreamSupplier: Function that constructs a PostStream
     init(
-        postFeedMessenger _: PostFeedMessenger,
-        prependToBeginningOfScroll: B,
-        postViewFeedIteratorSupplier: @escaping () -> PostViewFeedIterator<A>
-    ) {
-        store = Store(
-            initialState: ContentScrollViewReducer<A>.State(),
-            reducer: ContentScrollViewReducer<A>(postViewFeedIteratorSupplier: postViewFeedIteratorSupplier)
-        )
-        self.prependToBeginningOfScroll = prependToBeginningOfScroll
-    }
+        prependToBeginningOfScroll: B = EmptyView(),
+        postViewEitherSupplier: @escaping (Int, Post) -> Either<PulpFictionRequestError, A>,
+        postStreamSupplier: @escaping (ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>) -> PostStream
 
-    func startScroll(_ viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>) -> some View {
-        viewStore.send(.startScroll)
-        return EmptyView()
+    ) {
+        self.prependToBeginningOfScroll = prependToBeginningOfScroll
+        let viewStore = {
+            let store = Store(
+                initialState: ContentScrollViewReducer<A>.State(),
+                reducer: ContentScrollViewReducer<A>(postViewEitherSupplier: postViewEitherSupplier)
+            )
+            return ViewStore(store)
+        }()
+        self.viewStore = viewStore
+        postStream = postStreamSupplier(viewStore)
     }
 
     var body: some View {
-        WithViewStore(store) { viewStore in
-            GeometryReader { geometryProxy in
-                ScrollView {
-                    VStack(alignment: .center) {
-                        ProgressView()
-                            .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
-                            .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
+        GeometryReader { geometryProxy in
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .center) {
+                    prependToBeginningOfScroll
 
-                        startScroll(viewStore)
-                        prependToBeginningOfScroll
-
-                        LazyVStack(alignment: .leading) {
-                            ForEach(viewStore.state.postViews) { currentPost in
-                                currentPost.onAppear {
-                                    viewStore.send(.loadMorePostsIfNeeded(currentPost))
-                                }
+                    LazyVStack(alignment: .leading) {
+                        ForEach(viewStore.postViews.elements) { currentPost in
+                            currentPost.onAppear {
+                                viewStore.send(.refreshScrollIfNecessary(currentPost.id, self.postStream))
                             }
                         }
-
-                        Spacer()
-
-                        Caption(
-                            text: "You have reached the end\nTry refreshing the feed to see new posts",
-                            alignment: .center,
-                            color: .gray
-                        )
-                        .padding()
                     }
-                    .frame(minHeight: geometryProxy.size.height)
+
+                    Spacer()
+
+                    Caption(
+                        text: "You have reached the end\nTry refreshing the feed to see new posts",
+                        alignment: .center,
+                        color: .gray
+                    )
+                    .padding()
+                    .opacity(viewStore.state.isFeedLoadProgressIndicatorShowing() ? 0.0 : 1.0)
                 }
-                .onDragUp { viewStore.send(.refreshScroll) }
+                .frame(minHeight: geometryProxy.size.height)
+                .anchorPreference(key: OffsetPreferenceKey.self, value: .top) {
+                    geometryProxy[$0].y
+                }
+                .onPreferenceChange(OffsetPreferenceKey.self) { newOffset in
+                    viewStore.send(.restartScrollIfOffsetGreaterThanThreshold(newOffset, postStream))
+                }
+            }.overlay {
+                ProgressView()
+                    .scaleEffect(progressIndicatorScaleFactor, anchor: .center)
+                    .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
             }
+        }.onDisappear {
+            postStream.closeStream()
         }
+    }
+}
+
+private struct OffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static let threshold: CGFloat = 10.0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }

@@ -113,13 +113,24 @@ public extension Either {
         }
     }
 
-    func logSuccess(_ msgSupplier: (B) -> String) -> Either<A, B> where A: Error {
+    @discardableResult
+    func logSuccess(level: Logger.Level = .info, _ msgSupplier: (B) -> String) -> Either<A, B> where A: Error {
+        Logger.Level.debug
         mapRight { b in
-            BowExtensionLogger.logger.info(
-                Logger.Message(stringLiteral: msgSupplier(b))
+            BowExtensionLogger.logger.log(
+                level: level,
+                Logger.Message(stringLiteral: msgSupplier(b)),
+                metadata: [
+                    "right": "\(b)",
+                ]
             )
         }
         return self
+    }
+
+    @discardableResult
+    func logSuccess(_ msg: String, level: Logger.Level = .info) -> Either<A, B> where A: Error {
+        logSuccess(level: level) { _ in msg }
     }
 
     @discardableResult
@@ -162,6 +173,17 @@ public extension Either {
             { error in Swift.Result.failure(error) },
             { value in Swift.Result.success(value) }
         )
+    }
+
+    static func invoke(
+        _ errorSupplier: @escaping (Error) -> A,
+        _ f: @escaping () throws -> B
+    ) -> Either<A, B> where A: Error {
+        do {
+            return try Either.right(f())
+        } catch {
+            return Either.left(errorSupplier(error))
+        }
     }
 }
 

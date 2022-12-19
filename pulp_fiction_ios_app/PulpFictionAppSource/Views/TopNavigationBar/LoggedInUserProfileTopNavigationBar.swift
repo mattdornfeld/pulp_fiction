@@ -12,6 +12,8 @@ import SwiftUI
 struct LoggedInUserProfileTopNavigationBar: ToolbarContent {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
@@ -28,7 +30,9 @@ struct LoggedInUserProfileTopNavigationBar: ToolbarContent {
                 )
                 .navigateOnTap(destination: PostCreatorView(
                     loggedInUserPostData: loggedInUserPostData,
-                    postFeedMessenger: postFeedMessenger
+                    postFeedMessenger: postFeedMessenger,
+                    backendMessenger: backendMessenger,
+                    notificationBannerViewStore: notificationBannerViewStore
                 ))
 
                 Symbol(

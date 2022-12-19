@@ -7,8 +7,25 @@
 
 import Foundation
 
-public struct LoggedInUserPostInteractions: Codable, Equatable {
+public class LoggedInUserPostInteractions: Codable, Equatable {
     public let postLikeStatus: Post.PostLike
+
+    public init(postLikeStatus: Post.PostLike) {
+        self.postLikeStatus = postLikeStatus
+    }
+
+    public required convenience init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let postLikeRawValue = try values.decode(Int.self, forKey: .postLike)
+
+        self.init(
+            postLikeStatus: Post.PostLike(rawValue: postLikeRawValue) ?? Post.PostLike.UNRECOGNIZED(postLikeRawValue)
+        )
+    }
+
+    public static func == (lhs: LoggedInUserPostInteractions, rhs: LoggedInUserPostInteractions) -> Bool {
+        lhs.postLikeStatus == rhs.postLikeStatus
+    }
 }
 
 public extension Post.LoggedInUserPostInteractions {
@@ -20,15 +37,6 @@ public extension Post.LoggedInUserPostInteractions {
 public extension LoggedInUserPostInteractions {
     private enum CodingKeys: String, CodingKey {
         case postLike
-    }
-
-    init(from decoder: Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        let postLikeRawValue = try values.decode(Int.self, forKey: .postLike)
-
-        self.init(
-            postLikeStatus: Post.PostLike(rawValue: postLikeRawValue) ?? Post.PostLike.UNRECOGNIZED(postLikeRawValue)
-        )
     }
 
     func encode(to encoder: Encoder) throws {

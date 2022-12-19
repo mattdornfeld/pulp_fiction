@@ -14,13 +14,13 @@ public class AtomicCounter {
 
     func increment() {
         queue.sync {
-            value += 1
+            self.value += 1
         }
     }
 
     func getValue() -> Int {
         queue.sync {
-            value
+            self.value
         }
     }
 }

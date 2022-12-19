@@ -7,27 +7,51 @@
 //  Created by Matthew Dornfeld on 10/13/22.
 //
 
+import Bow
 import ComposableArchitecture
 import Foundation
 import Logging
 import SwiftUI
 
-private let logger = Logger(label: String(describing: "PostSwipeView"))
-
 typealias PostLikeOnSwipeReducer = SwipablePostViewReducer<PostLikeArrowReducer>
 
 /// Reducer for updating the post like arrow
 struct PostLikeArrowReducer: ReducerProtocol {
+    let backendMessenger: BackendMessenger
+    let postMetadata: PostMetadata
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
+
+    private let logger = Logger(label: String(describing: PostLikeArrowReducer.self))
+
     struct State: Equatable {
         /// Whether or not the current logged in user likes the current post or not
         var loggedInUserPostLikeStatus: Post.PostLike
         /// Total # of likes - dislikes for the current post
         var postNumNetLikes: Int64
+        var showErrorCommunicatingWithServerAlert: Bool = false
     }
 
-    indirect enum Action {
+    indirect enum Action: Equatable {
         case updatePostLikeStatus(PostLikeOnSwipeReducer.Action)
+        case processUpdatePostLikeStatusResponseFromBackend((Post.PostLike, Int64), Either<PulpFictionRequestError, UpdatePostResponse>)
         case tapPostLikeArrow
+        case updateShowErrorCommunicatingWithServerAlert(Bool)
+
+        static func == (lhs: PostLikeArrowReducer.Action, rhs: PostLikeArrowReducer.Action) -> Bool {
+            switch (lhs, rhs) {
+            case let (.updatePostLikeStatus(leftSwipablePostAction), .updatePostLikeStatus(rightSwipablePostAction)):
+                return leftSwipablePostAction == rightSwipablePostAction
+            case let (.processUpdatePostLikeStatusResponseFromBackend(leftPostLikeUpdate, leftUpdatePostResponseEither), .processUpdatePostLikeStatusResponseFromBackend(rightPostLikeUpdate, rightUpdatePostResponseEither)):
+                return leftPostLikeUpdate == rightPostLikeUpdate &&
+                    leftUpdatePostResponseEither == rightUpdatePostResponseEither
+            case (.tapPostLikeArrow, .tapPostLikeArrow):
+                return true
+            case let (.updateShowErrorCommunicatingWithServerAlert(leftNewShowErrorCommunicatingWithServerAlert), .updateShowErrorCommunicatingWithServerAlert(rightNewShowErrorCommunicatingWithServerAlert)):
+                return leftNewShowErrorCommunicatingWithServerAlert == rightNewShowErrorCommunicatingWithServerAlert
+            default:
+                return false
+            }
+        }
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
@@ -36,33 +60,80 @@ struct PostLikeArrowReducer: ReducerProtocol {
             return .task { .updatePostLikeStatus(.swipeLeft) }
 
         case let .updatePostLikeStatus(swipablePostAction):
-            switch (state.loggedInUserPostLikeStatus, swipablePostAction) {
-            case (.neutral, .swipeLeft):
-                state.loggedInUserPostLikeStatus = .like
-                state.postNumNetLikes += 1
-            case (.neutral, .swipeRight):
-                state.loggedInUserPostLikeStatus = .dislike
-                state.postNumNetLikes -= 1
-            case (.like, .swipeLeft):
-                state.loggedInUserPostLikeStatus = .neutral
-                state.postNumNetLikes -= 1
-            case (.dislike, .swipeRight):
-                state.loggedInUserPostLikeStatus = .neutral
-                state.postNumNetLikes += 1
-            case (.dislike, .swipeLeft):
-                state.loggedInUserPostLikeStatus = .like
-                state.postNumNetLikes += 2
-            case (.like, .swipeRight):
-                state.loggedInUserPostLikeStatus = .dislike
-                state.postNumNetLikes -= 2
-            default:
+            let postLikeUpdateMaybe: (Post.PostLike, Int64)? = {
+                switch (state.loggedInUserPostLikeStatus, swipablePostAction) {
+                case (.neutral, .swipeLeft):
+                    return (.like, 1)
+                case (.neutral, .swipeRight):
+                    return (.dislike, -1)
+                case (.like, .swipeLeft):
+                    return (.neutral, -1)
+                case (.dislike, .swipeRight):
+                    return (.neutral, 1)
+                case (.dislike, .swipeLeft):
+                    return (.like, 1)
+                case (.like, .swipeRight):
+                    return (.dislike, -2)
+                default:
+                    return nil
+                }
+            }()
+
+            logger.debug(
+                "Updating loggedInUserPostLikeStatus.",
+                metadata: [
+                    "swipablePostAction": "\(swipablePostAction)",
+                    "postLikeUpdateMaybe": "\(String(describing: postLikeUpdateMaybe))",
+                ]
+            )
+
+            if let postLikeUpdate = postLikeUpdateMaybe {
+                return .task {
+                    let updatePostResponseEither = await backendMessenger
+                        .updatePostLikeStatus(
+                            postId: postMetadata.postUpdateIdentifier.postId,
+                            newPostLikeStatus: postLikeUpdate.0
+                        )
+
+                    return .processUpdatePostLikeStatusResponseFromBackend(postLikeUpdate, updatePostResponseEither)
+                }
+            } else {
                 logger.error("Unrecognized action",
                              metadata: [
                                  "postLikeStatus": "\(state.loggedInUserPostLikeStatus)",
                                  "swipablePostAction": "\(swipablePostAction)",
                              ])
+                return .none
             }
 
+        case let .processUpdatePostLikeStatusResponseFromBackend(postLikeUpdate, updatePostResponseEither):
+            switch updatePostResponseEither.toEnum() {
+            case let .left(error):
+                logger.error("Error communicating with backend server",
+                             metadata: [
+                                 "error": "\(error)",
+                                 "cause": "\(String(describing: error.causeMaybe.orNil))",
+                             ])
+
+                notificationBannerViewStore.send(.showNotificationBanner("Error contacting server. Please try again later.", .error))
+                return .none
+            case .right:
+                state.loggedInUserPostLikeStatus = postLikeUpdate.0
+                state.postNumNetLikes += postLikeUpdate.1
+
+                logger.debug(
+                    "Successfully processed UpdatePostResponse from backed",
+                    metadata: [
+                        "postLikeUpdate": "\(postLikeUpdate)",
+                        "updatePostResponseEither": "\(String(describing: updatePostResponseEither))",
+                    ]
+                )
+
+                return .none
+            }
+
+        case let .updateShowErrorCommunicatingWithServerAlert(newShowErrorCommunicatingWithServerAlert):
+            state.showErrorCommunicatingWithServerAlert = newShowErrorCommunicatingWithServerAlert
             return .none
         }
     }
@@ -79,6 +150,11 @@ struct PostLikeArrowView: View {
         WithViewStore(store) { viewStore in
             buildPostLikeArrow(viewStore.state)
                 .onTapGesture { viewStore.send(.tapPostLikeArrow) }
+//            .alert("Error contacting server. Please try again later.", isPresented: viewStore.binding(
+//                get: \.showErrorCommunicatingWithServerAlert,
+//                send: .updateShowErrorCommunicatingWithServerAlert(false))) {
+//                    Button("OK", role: .cancel) {}
+//            }
         }
     }
 
@@ -138,8 +214,11 @@ extension PostLikeOnSwipeView {
     }
 
     static func buildStore(
+        backendMessenger: BackendMessenger,
+        postMetadata: PostMetadata,
         postInteractionAggregates: PostInteractionAggregates,
-        loggedInUserPostInteractions: LoggedInUserPostInteractions
+        loggedInUserPostInteractions: LoggedInUserPostInteractions,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) -> ComposableArchitecture.StoreOf<PostLikeOnSwipeReducer> {
         Store(
             initialState: PostLikeOnSwipeReducer.State(
@@ -149,7 +228,11 @@ extension PostLikeOnSwipeView {
                 )
             ),
             reducer: PostLikeOnSwipeReducer(
-                viewComponentsReducerSuplier: { PostLikeArrowReducer() },
+                viewComponentsReducerSuplier: { PostLikeArrowReducer(
+                    backendMessenger: backendMessenger,
+                    postMetadata: postMetadata,
+                    notificationBannerViewStore: notificationBannerViewStore
+                ) },
                 updateViewComponentsActionSupplier: { _, dragOffset in
                     if (dragOffset.width + 1e-6) < 0 {
                         return .updatePostLikeStatus(.swipeLeft)

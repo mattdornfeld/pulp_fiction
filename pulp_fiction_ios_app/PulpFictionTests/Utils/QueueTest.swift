@@ -6,8 +6,9 @@
 //
 
 import Foundation
-import PulpFictionAppSource
 import XCTest
+
+@testable import PulpFictionAppSource
 
 class QueueTests: XCTestCase {
     func testQueueEmptyWhenCreated() {
@@ -35,5 +36,24 @@ class QueueTests: XCTestCase {
         XCTAssertEqual(expectedMaxSize, queue.getSize())
         XCTAssertTrue(queue.checkLockedBecauseFull())
         XCTAssertFalse(queue.checkLockedBecauseEmpty())
+    }
+
+    func testOverfillingQueue() {
+        let expectedElements = [1, 2, 3]
+        let elements = Queue<Int>(maxSize: 2)
+            .enqueue(expectedElements)
+            .dequeue(numElements: 3)
+
+        XCTAssertEqual(expectedElements, elements)
+    }
+
+    func testClosingQueue() {
+        let queue = Queue<Int>(maxSize: 2)
+            .enqueue([1, 2])
+            .close()
+
+        XCTAssertTrue(queue.isClosed())
+        XCTAssertEqual(nil, queue.dequeue())
+        XCTAssertEqual(queue, queue.enqueue(3))
     }
 }

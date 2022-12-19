@@ -5,6 +5,8 @@
 //  Created by Matthew Dornfeld on 10/23/22.
 //
 
+import Bow
+import ComposableArchitecture
 import Foundation
 import SwiftUI
 
@@ -16,8 +18,10 @@ enum PostFeedFilter: String, DropDownMenuOption {
 struct PostFeedTopNavigationBar: ToolbarContent {
     let postFeedFilter: PostFeedFilter
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
     let loggedInUserPostData: UserPostData
     let postFeedFilterDropDownMenuView: SymbolWithDropDownMenuView<PostFeedFilter>
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
@@ -34,7 +38,9 @@ struct PostFeedTopNavigationBar: ToolbarContent {
                 ).navigateOnTap(
                     destination: PostCreatorView(
                         loggedInUserPostData: loggedInUserPostData,
-                        postFeedMessenger: postFeedMessenger
+                        postFeedMessenger: postFeedMessenger,
+                        backendMessenger: backendMessenger,
+                        notificationBannerViewStore: notificationBannerViewStore
                     )
                 )
 
@@ -45,9 +51,11 @@ struct PostFeedTopNavigationBar: ToolbarContent {
 }
 
 /// View that scrolls through a feed of posts
-struct PostFeedScrollView: View {
+struct PostFeedScrollView: ImagePostScrollView {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
+    let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var postFeedFilterDropDownMenu: SymbolWithDropDownMenu<PostFeedFilter> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
         symbolSize: 20,
@@ -57,28 +65,37 @@ struct PostFeedScrollView: View {
     )
 
     var body: some View {
-        ContentScrollView(postFeedMessenger: postFeedMessenger) { () -> PostViewFeedIterator<ImagePostView> in
-            getPostFeed(postFeedFilterDropDownMenu.currentSelection)
-                .makeIterator()
+        ContentScrollView(
+            postViewEitherSupplier: postViewEitherSupplier
+        ) { viewStore in
+            getPostFeed(
+                postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
+                viewStore: viewStore
+            )
         }
         .toolbar {
             PostFeedTopNavigationBar(
                 postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
                 postFeedMessenger: postFeedMessenger,
+                backendMessenger: backendMessenger,
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view
+                postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view,
+                notificationBannerViewStore: notificationBannerViewStore
             )
         }
     }
 
-    func getPostFeed(_ postFeedFilter: PostFeedFilter) -> PostViewFeed<ImagePostView> {
+    private func getPostFeed(
+        postFeedFilter: PostFeedFilter,
+        viewStore: ViewStore<ContentScrollViewReducer<ImagePostView>.State, ContentScrollViewReducer<ImagePostView>.Action>
+    ) -> PostStream {
         switch postFeedFilter {
         case .Global:
             return postFeedMessenger
-                .getGlobalPostFeed()
+                .getGlobalPostFeed(viewStore: viewStore)
         case .Following:
             return postFeedMessenger
-                .getFollowingPostFeed(userId: loggedInUserPostData.userId)
+                .getFollowingPostFeed(userId: loggedInUserPostData.userId, viewStore: viewStore)
         }
     }
 }

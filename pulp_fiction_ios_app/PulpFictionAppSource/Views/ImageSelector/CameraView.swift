@@ -5,25 +5,27 @@
 //  Created by Matthew Dornfeld on 11/6/22.
 //
 
+import ComposableArchitecture
 import Foundation
 import SwiftUI
 import UIKit
 
 struct CameraView: UIViewControllerRepresentable {
     typealias UIViewControllerType = UIImagePickerController
-
-    func makeUIViewController(context: Context) -> UIViewControllerType {
-        let viewController = UIViewControllerType()
-        viewController.delegate = context.coordinator
-        viewController.sourceType = .photoLibrary
-        return viewController
-    }
-
-    func updateUIViewController(_: UIViewControllerType, context _: Context) {}
+    let viewStore: ViewStore<ImageSelectorReducer.State, ImageSelectorReducer.Action>
 
     func makeCoordinator() -> CameraView.Coordinator {
         return Coordinator(self)
     }
+
+    func makeUIViewController(context: Context) -> UIViewControllerType {
+        let viewController = UIViewControllerType()
+        viewController.delegate = context.coordinator
+        viewController.sourceType = .camera
+        return viewController
+    }
+
+    func updateUIViewController(_: UIViewControllerType, context _: Context) {}
 }
 
 extension CameraView {
@@ -34,14 +36,26 @@ extension CameraView {
             self.parent = parent
         }
 
-        func imagePickerControllerDidCancel(_: UIImagePickerController) {
-            print("Cancel pressed")
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            DispatchQueue.main.async {
+                self.parent.viewStore.send(.pickImageFromCamera(.failure(ImageSelectorReducer.Error.CancelledWithOutPickingImage())))
+            }
+            picker.dismiss(animated: true)
         }
 
-        func imagePickerController(_: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
-                UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            let pickImageFromCameraResult: Result<UIImage, PulpFictionRequestError> = {
+                if let uiImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
+                    return .success(uiImage)
+                } else {
+                    return .failure(ImageSelectorReducer.Error.ErrorPickingImageFromCamera())
+                }
+            }()
+
+            DispatchQueue.main.async {
+                self.parent.viewStore.send(.pickImageFromCamera(pickImageFromCameraResult))
             }
+            picker.dismiss(animated: true)
         }
     }
 }

@@ -29,3 +29,13 @@ public enum PulpFictionUtils {
         Int64.random(in: Int64.min ... Int64.max)
     }
 }
+
+@propertyWrapper
+/// Property wrapper for properties in a Struct that should not be included in its equality calculation
+struct EquatableIgnore<Value>: Equatable {
+    var wrappedValue: Value
+
+    static func == (_: EquatableIgnore<Value>, _: EquatableIgnore<Value>) -> Bool {
+        true
+    }
+}

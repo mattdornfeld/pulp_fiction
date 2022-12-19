@@ -8,7 +8,7 @@
 import Foundation
 
 /// Image post data is stored in this model. Used for rendering ImagePostView.
-struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
+class ImagePostData: PostData, PostDataIdentifiable, Equatable {
     let id: PostUpdateIdentifier
     let caption: String
     let imagePostContentData: ContentData
@@ -16,13 +16,31 @@ struct ImagePostData: PostData, PostDataIdentifiable, Equatable {
     let postInteractionAggregates: PostInteractionAggregates
     let loggedInUserPostInteractions: LoggedInUserPostInteractions
 
+    init(id: PostUpdateIdentifier, caption: String, imagePostContentData: ContentData, postMetadata: PostMetadata, postInteractionAggregates: PostInteractionAggregates, loggedInUserPostInteractions: LoggedInUserPostInteractions) {
+        self.id = id
+        self.caption = caption
+        self.imagePostContentData = imagePostContentData
+        self.postMetadata = postMetadata
+        self.postInteractionAggregates = postInteractionAggregates
+        self.loggedInUserPostInteractions = loggedInUserPostInteractions
+    }
+
+    static func == (lhs: ImagePostData, rhs: ImagePostData) -> Bool {
+        lhs.id == rhs.id &&
+            lhs.caption == rhs.caption &&
+            lhs.imagePostContentData == rhs.imagePostContentData &&
+            lhs.postMetadata == rhs.postMetadata &&
+            lhs.postInteractionAggregates == rhs.postInteractionAggregates &&
+            lhs.loggedInUserPostInteractions == rhs.loggedInUserPostInteractions
+    }
+
     func toPostDataOneOf() -> PostDataOneOf {
         PostDataOneOf.imagePostData(self)
     }
 }
 
 extension ImagePostData {
-    init(
+    convenience init(
         _ postMetadata: PostMetadata,
         _ imagePostProto: Post.ImagePost,
         _ imagePostContentData: ContentData
@@ -41,7 +59,7 @@ extension ImagePostData {
         )
     }
 
-    init(_ createImagePostRequestProto: CreatePostRequest.CreateImagePostRequest) {
+    convenience init(_ createImagePostRequestProto: CreatePostRequest.CreateImagePostRequest) {
         let postMetadata = PostMetadata(
             postUpdateIdentifier: PostUpdateIdentifier(postId: UUID(), updatedAt: Date()),
             postType: Post.PostType.image,

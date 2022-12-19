@@ -11,6 +11,5 @@ import Foundation
 struct PostFeedConfigs {
     /// The size of the internal queue used to to store post feed results
     static let postFeedMaxQueueSize = 20
-    /// The number of post views loaded in advance of the current scroll offset
-    static let numPostViewsLoadedInAdvance = 5
+    static let numPostReturnedPerRequest = 5
 }
