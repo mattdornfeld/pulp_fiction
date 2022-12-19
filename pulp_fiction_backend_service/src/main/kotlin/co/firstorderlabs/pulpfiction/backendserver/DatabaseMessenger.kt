@@ -521,6 +521,18 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     .select(columns)
                     .where { Followers.followerId eq userId }
             }
+            request.hasGetFollowersFeedRequest() -> {
+                database
+                    .from(Followers)
+                    .select()
+                    .where { Followers.followerId eq userId }
+            }
+            request.hasGetFollowingPostFeedRequest() -> {
+                database
+                    .from(Followers)
+                    .select()
+                    .where { Followers.userId eq userId }
+            }
             else -> { shift(RequestParsingError("Feed request received without valid instruction.")) }
         }
     }
