@@ -132,7 +132,7 @@ struct ExtraOptionsDropDownMenuView: View {
                 extraOptionsDropDownMenuViewStore: viewStore,
                 backendMessenger: backendMessenger,
                 notificationBannerViewStore: notificationBannerViewStore
-            )
+            ).presentationDetents([.fraction(0.2)])
         }
     }
 }
