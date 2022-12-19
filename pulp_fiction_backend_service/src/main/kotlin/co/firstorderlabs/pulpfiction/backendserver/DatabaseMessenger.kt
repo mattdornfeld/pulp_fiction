@@ -468,7 +468,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     }
 
     suspend fun getFeed(
-        request: GetFeedRequest
+        request: GetFeedRequest,
+        count: Int
     ): Effect<PulpFictionRequestError, List<PulpFictionProtos.Post>> = effect {
         val userId = request.loginSession.userId.toUUID().bind()
 
@@ -479,7 +480,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .orderBy(Posts.createdAt.desc())
 
         val pagination = 2000
-        val paginatedPosts = sortedPostsQuery.limit(offset = 0, limit = pagination)
+        val paginatedPosts = sortedPostsQuery.limit(offset = count * pagination, limit = pagination)
         paginatedPosts.map { row ->
             val postId = row[Posts.postId] ?: shift(PostNotFoundError())
             val postUpdate = getPostUpdate(postId).bind()
@@ -520,18 +521,6 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     .rightJoin(Posts, on = Followers.userId eq Posts.postCreatorId)
                     .select(columns)
                     .where { Followers.followerId eq userId }
-            }
-            request.hasGetFollowersFeedRequest() -> {
-                database
-                    .from(Followers)
-                    .select()
-                    .where { Followers.followerId eq userId }
-            }
-            request.hasGetFollowingPostFeedRequest() -> {
-                database
-                    .from(Followers)
-                    .select()
-                    .where { Followers.userId eq userId }
             }
             else -> { shift(RequestParsingError("Feed request received without valid instruction.")) }
         }

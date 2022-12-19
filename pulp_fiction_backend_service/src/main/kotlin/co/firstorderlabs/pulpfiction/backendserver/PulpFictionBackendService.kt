@@ -26,7 +26,6 @@ import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.runBlocking
 import org.ktorm.database.Database
 import software.amazon.awssdk.services.s3.S3Client
 
@@ -149,18 +148,24 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             .getResultAndThrowException()
     }
 
-    override fun getFeed(request: PulpFictionProtos.GetFeedRequest): Flow<PulpFictionProtos.GetFeedResponse> {
+    override fun getFeed(requests: Flow<PulpFictionProtos.GetFeedRequest>): Flow<PulpFictionProtos.GetFeedResponse> {
         val endpointName = EndpointName.getFeed
         return flow {
+            var count = 0
+            requests.collect { request ->
                 checkLoginSessionValid(request.loginSession, endpointName).getResultAndThrowException()
 
+                count = count.inc()
                 val postsFeed = databaseMessenger
-                    .getFeed(request)
+                    .getFeed(request, count)
                     .logDatabaseMetrics(endpointName, DatabaseOperation.getFeed)
                     .getResultAndThrowException()
-                getFeedResponse {
-                    this.posts += postsFeed
-                }
+                emit(
+                    getFeedResponse {
+                        this.posts += postsFeed
+                    }
+                )
             }
+        }
     }
 }
