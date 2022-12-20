@@ -90,6 +90,7 @@ struct PostLikeArrowReducer: ReducerProtocol {
             if let postLikeUpdate = postLikeUpdateMaybe {
                 return .task {
                     let updatePostResponseEither = await backendMessenger
+                        .updatePostBackendMessenger
                         .updatePostLikeStatus(
                             postId: postMetadata.postUpdateIdentifier.postId,
                             newPostLikeStatus: postLikeUpdate.0

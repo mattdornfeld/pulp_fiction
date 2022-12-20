@@ -20,12 +20,13 @@ struct CommentCreator: View {
                 return
             }
 
-            await backendMessenger.commentOnPost(
+            await backendMessenger.updatePostBackendMessenger.commentOnPost(
                 postId: postMetadata.postId,
                 commentBody: state.text
             ).processResponseFromServer(
                 notificationBannerViewStore: notificationnotificationBannerViewStore,
                 state: state,
+                path: "backendMessenger.updatePostBackendMessenger.commentOnPost",
                 successAction: {
                     notificationnotificationBannerViewStore.send(.showNotificationBanner("Your comment has been created!", .success))
                 }

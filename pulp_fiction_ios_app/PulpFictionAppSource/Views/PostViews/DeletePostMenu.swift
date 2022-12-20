@@ -28,13 +28,14 @@ struct DeletePostMenuReducer<A: ScrollableContentView>: ReducerProtocol {
         switch action {
         case .deletePost:
             return .task {
-                let updatePostResponseEither = await backendMessenger.deletePost(postId: postMetadata.postUpdateIdentifier.postId)
+                let updatePostResponseEither = await backendMessenger.updatePostBackendMessenger.deletePost(postId: postMetadata.postUpdateIdentifier.postId)
                 return .processUpdatePostResponse(updatePostResponseEither)
             }
         case let .processUpdatePostResponse(updatePostResponseEither):
             updatePostResponseEither.processResponseFromServer(
                 notificationBannerViewStore: notificationBannerViewStore,
                 state: state,
+                path: "backendMessenger.updatePostBackendMessenger.deletePost",
                 successAction: { notificationBannerViewStore.send(.showNotificationBanner("Your post has been deleted", .info)) }
             )
             extraOptionsDropDownMenuViewStore.send(.updateShowShowDeletePostMenu(false))

@@ -43,7 +43,7 @@ struct ReportPostReducer: ReducerProtocol {
             reportPostAction()
             let reportReason = state.reportReason
             return .task {
-                let updatePostResponseEither = await backendMessenger.reportPost(
+                let updatePostResponseEither = await backendMessenger.updatePostBackendMessenger.reportPost(
                     postId: postMetadata.postUpdateIdentifier.postId,
                     reportReason: reportReason
                 )
@@ -54,6 +54,7 @@ struct ReportPostReducer: ReducerProtocol {
             updatePostResponseEither.processResponseFromServer(
                 notificationBannerViewStore: notificationBannerViewStore,
                 state: state,
+                path: "backendMessenger.updatePostBackendMessenger.reportPost",
                 successAction: { notificationBannerViewStore.send(.showNotificationBanner("Post has been reported", .info)) }
             )
             reportPostAction()

@@ -248,6 +248,15 @@ message UpdateUserRequest {
   message ResetPassword {
   }
 
+  message UpdateUserFollowingStatus {
+    enum UserFollowingStatus {
+      NOT_FOLLOWING = 0;
+      FOLLOWING = 1;
+    }
+    string target_user_id = 1;
+    UserFollowingStatus user_following_status = 2;
+  }
+
   LoginResponse.LoginSession loginSession = 1;
   oneof update_user_request {
     UpdateUserInfo updateUserInfo = 2;
@@ -255,6 +264,7 @@ message UpdateUserRequest {
     UpdateEmail updateEmail = 4;
     UpdatePhoneNumber updatePhoneNumber = 5;
     ResetPassword resetPassword = 6;
+    UpdateUserFollowingStatus update_user_following_status = 7;
   }
 }
 
