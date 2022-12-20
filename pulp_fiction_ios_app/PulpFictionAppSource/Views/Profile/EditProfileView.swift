@@ -165,7 +165,7 @@ struct EditProfileField: View {
     @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
 
     var body: some View {
-        EditTextView(
+        EditText(
             prompt: prompt,
             createButtonLabel: "Update",
             keyboardType: keyboardType,

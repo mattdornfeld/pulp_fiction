@@ -39,7 +39,7 @@ struct CaptionCreatorView: View {
     var body: some View {
         emptyNavigationLink.view
 
-        EditTextView(
+        EditText(
             prompt: "Write a caption",
             createButtonLabel: "Post",
             createButtonAction: { state in

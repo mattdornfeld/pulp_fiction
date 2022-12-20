@@ -1,5 +1,5 @@
 //
-//  EditTextView.swift
+//  EditText.swift
 //  build_app_source
 //
 //  Created by Matthew Dornfeld on 11/18/22.
@@ -34,7 +34,7 @@ struct EditTextReducer: ReducerProtocol {
     }
 }
 
-struct EditTextView: View {
+struct EditText: View {
     let prompt: String
     let createButtonLabel: String
     let keyboardType: UIKeyboardType
@@ -99,7 +99,7 @@ struct EditTextView: View {
     }
 }
 
-extension EditTextView {
+extension EditText {
     init(prompt: String, createButtonLabel: String, createButtonAction: @escaping (EditTextReducer.State) async -> Void) {
         self.init(
             prompt: prompt,

@@ -35,8 +35,8 @@ struct CommentCreator: View {
         }
     }
 
-    var editTextView: EditTextView {
-        EditTextView(
+    var editTextView: EditText {
+        EditText(
             prompt: "Write a comment",
             createButtonLabel: "Comment",
             createButtonAction: createButtonAction
