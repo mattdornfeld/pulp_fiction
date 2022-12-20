@@ -14,30 +14,38 @@ struct CommentCreator: View {
     let postMetadata: PostMetadata
     let backendMessenger: BackendMessenger
     let notificationnotificationBannerViewStore: NotificationnotificationBannerViewStore
-    @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
+    var createButtonAction: (EditTextReducer.State) async -> Void {
+        { @MainActor state in
+            if state.text.count == 0 {
+                return
+            }
 
-    var body: some View {
+            await backendMessenger.commentOnPost(
+                postId: postMetadata.postId,
+                commentBody: state.text
+            ).processResponseFromServer(
+                notificationBannerViewStore: notificationnotificationBannerViewStore,
+                state: state,
+                successAction: {
+                    notificationnotificationBannerViewStore.send(.showNotificationBanner("Your comment has been created!", .success))
+                }
+            )
+
+            self.presentationMode.wrappedValue.dismiss()
+        }
+    }
+
+    var editTextView: EditTextView {
         EditTextView(
             prompt: "Write a comment",
             createButtonLabel: "Comment",
-            createButtonAction: { state in
-                if state.text.count == 0 {
-                    return
-                }
-
-                await backendMessenger.commentOnPost(
-                    postId: postMetadata.postId,
-                    commentBody: state.text
-                ).processResponseFromServer(
-                    notificationBannerViewStore: notificationnotificationBannerViewStore,
-                    state: state,
-                    successAction: {
-                        notificationnotificationBannerViewStore.send(.showNotificationBanner("Your comment has been created!", .success))
-                    }
-                )
-
-                self.presentationMode.wrappedValue.dismiss()
-            }
+            createButtonAction: createButtonAction
         )
+    }
+
+    @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
+
+    var body: some View {
+        editTextView
     }
 }

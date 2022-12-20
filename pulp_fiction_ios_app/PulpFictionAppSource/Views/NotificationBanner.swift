@@ -46,7 +46,7 @@ struct NotificationBannerReducer: ReducerProtocol {
             state.notificationTextMaybe = newAlertText
             state.bannerTypeMaybe = bannerType
 
-            logger.info(
+            logger.debug(
                 "Showing NotificationBanner",
                 metadata: [
                     "state": "\(state)",
@@ -60,7 +60,7 @@ struct NotificationBannerReducer: ReducerProtocol {
             state.notificationTextMaybe = nil
             state.bannerTypeMaybe = nil
 
-            logger.info(
+            logger.debug(
                 "Hiding NotificationBanner",
                 metadata: [
                     "state": "\(state)",

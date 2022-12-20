@@ -40,7 +40,7 @@ struct EditTextView: View {
     let keyboardType: UIKeyboardType
     let createButtonAction: (EditTextReducer.State) async -> Void
     let validateTextAction: (String) -> Bool
-    private let store: ComposableArchitecture.StoreOf<EditTextReducer>
+    @ObservedObject var viewStore: PulpFictionViewStore<EditTextReducer>
     @FocusState private var isInputTextFieldFocused: Bool
 
     init(
@@ -56,45 +56,46 @@ struct EditTextView: View {
         self.keyboardType = keyboardType
         self.createButtonAction = createButtonAction
         self.validateTextAction = validateTextAction
-        store = Store(
-            initialState: EditTextReducer.State(),
-            reducer: EditTextReducer(maxTextSize: maxTextSize)
-        )
+        viewStore = {
+            let store = Store(
+                initialState: EditTextReducer.State(),
+                reducer: EditTextReducer(maxTextSize: maxTextSize)
+            )
+            return ViewStore(store)
+        }()
     }
 
     var body: some View {
-        WithViewStore(store) { viewStore in
-            VStack {
-                TextField(
-                    prompt,
-                    text: viewStore.binding(
-                        get: \.text,
-                        send: { newText in .updateText(newText) }
-                    ),
-                    prompt: Text(prompt)
-                )
-                .keyboardType(keyboardType)
-                .foregroundColor(.gray)
-                .focused($isInputTextFieldFocused)
-                Spacer()
-            }
-            .onAppear {
-                isInputTextFieldFocused = true
-            }
-            .toolbar {
-                TextCreatorTopNavigationBar(createButtonLabel: createButtonLabel) {
-                    if validateTextAction(viewStore.text) {
-                        Task { await createButtonAction(viewStore.state) }
-                    } else {
-                        viewStore.send(.updateShowInvalidInputAlert(true))
-                    }
+        VStack {
+            TextField(
+                prompt,
+                text: viewStore.binding(
+                    get: \.text,
+                    send: { newText in .updateText(newText) }
+                ),
+                prompt: Text(prompt)
+            )
+            .keyboardType(keyboardType)
+            .foregroundColor(.gray)
+            .focused($isInputTextFieldFocused)
+            Spacer()
+        }
+        .onAppear {
+            isInputTextFieldFocused = true
+        }
+        .toolbar {
+            TextCreatorTopNavigationBar(createButtonLabel: createButtonLabel) {
+                if validateTextAction(viewStore.text) {
+                    Task { await createButtonAction(viewStore.state) }
+                } else {
+                    viewStore.send(.updateShowInvalidInputAlert(true))
                 }
             }
-            .alert("Please input a valid option", isPresented: viewStore.binding(
-                get: \.showInvalidInputAlert,
-                send: .updateShowInvalidInputAlert(false)
-            )) {}
         }
+        .alert("Please input a valid option", isPresented: viewStore.binding(
+            get: \.showInvalidInputAlert,
+            send: .updateShowInvalidInputAlert(false)
+        )) {}
     }
 }
 
