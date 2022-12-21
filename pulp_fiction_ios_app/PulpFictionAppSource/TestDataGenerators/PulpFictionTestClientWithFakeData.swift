@@ -21,12 +21,14 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     var requestBuffers: RequestBuffers = .init()
 
     private enum Path: String {
+        case createPost = "/pulp_fiction.protos.PulpFiction/CreatePost"
         case getFeed = "/pulp_fiction.protos.PulpFiction/GetFeed"
         case updatePost = "/pulp_fiction.protos.PulpFiction/UpdatePost"
         case updateUser = "/pulp_fiction.protos.PulpFiction/UpdateUser"
     }
 
     class RequestBuffers {
+        var createPost: [CreatePostRequest] = .init()
         var getFeed: [GetFeedRequest] = .init()
         var updatePost: [UpdatePostRequest] = .init()
         var updateUser: [UpdateUserRequest] = .init()
@@ -165,6 +167,8 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
                     self.requestBuffers.updateUser.append(request)
                 case let request as UpdatePostRequest:
                     self.requestBuffers.updatePost.append(request)
+                case let request as CreatePostRequest:
+                    self.requestBuffers.createPost.append(request)
                 default:
                     break
                 }
@@ -197,6 +201,17 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         return makeUnaryCall(
             path: path.rawValue,
             request: request
+        )
+    }
+
+    public func createPost(
+        _ request: CreatePostRequest,
+        callOptions _: CallOptions? = nil
+    ) -> UnaryCall<CreatePostRequest, CreatePostResponse> {
+        processUnaryRequest(
+            request: request,
+            responseSupplier: { _ in CreatePostResponse() },
+            path: Path.createPost
         )
     }
 
@@ -240,6 +255,13 @@ public extension PulpFictionClientProtocol {
         handler: @escaping (GetFeedResponse) -> Void
     ) -> BidirectionalStreamingCall<GetFeedRequest, GetFeedResponse> {
         getClient().getFeed(callOptions: callOptions, handler: handler)
+    }
+
+    func createPost(
+        _ request: CreatePostRequest,
+        callOptions: CallOptions? = nil
+    ) -> UnaryCall<CreatePostRequest, CreatePostResponse> {
+        getClient().createPost(request, callOptions: callOptions)
     }
 
     func updatePost(

@@ -18,8 +18,8 @@ public struct UpdateUserBackendMessenger {
         Either<PulpFictionRequestError, UpdateUserResponse>.invoke({ cause in ErrorUpdatingUser(cause) }) {
             try pulpFictionClientProtocol.updateUser(updateUserRequest).response.wait()
         }
-        .logSuccess(level: .debug) { _ in "Successfuly called updatePost" }
-        .logError("Error calling updatePost")
+        .logSuccess(level: .debug) { _ in "Successfuly called updateUser" }
+        .logError("Error calling updateUser")
     }
 
     func updateUserFollowingStatus(targetUserId: UUID, newUserFollowingStatus: UpdateUserRequest.UpdateUserFollowingStatus.UserFollowingStatus) async -> Either<PulpFictionRequestError, UpdateUserResponse> {

@@ -20,7 +20,9 @@ class EditTextTest: XCTestCase {
     private func buildTestStore() -> PulpFictionTestStore<EditTextReducer> {
         TestStore(
             initialState: EditTextReducer.State(),
-            reducer: EditTextReducer(maxTextSize: expectedMaxTestSize)
+            reducer: EditTextReducer(
+                maxTextSize: expectedMaxTestSize
+            )
         )
     }
 

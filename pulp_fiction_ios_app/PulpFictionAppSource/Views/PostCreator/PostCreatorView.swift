@@ -33,7 +33,7 @@ struct PostCreatorTopNavigationBar: ToolbarContent {
             HStack {
                 imageSourceTypeDropDownMenuView
                 Symbol(symbolName: "arrow.right", size: 20, color: .gray)
-                    .navigateOnTap(destination: CaptionCreatorView(
+                    .navigateOnTap(destination: CaptionCreator(
                         loggedInUserPostData: loggedInUserPostData,
                         postFeedMessenger: postFeedMessenger,
                         backendMessenger: backendMessenger,

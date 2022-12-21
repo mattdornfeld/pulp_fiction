@@ -37,10 +37,17 @@ class CommentCreatorTest: XCTestCase {
 
     func testCommentOnPost() async throws {
         let commentCreator = try buildCommentCreator()
-        let editTextView = commentCreator.editTextView
+        let store = TestStore(
+            initialState: EditTextReducer.State(),
+            reducer: commentCreator.editTextView.reducer
+        )
+
         let expectedComment = "expectedComment"
-        editTextView.viewStore.send(.updateText(expectedComment))
-        await commentCreator.createButtonAction(editTextView.viewStore.state)
+        await store.send(.updateText(expectedComment)) {
+            $0.text = expectedComment
+        }
+        await store.send(.submitText)
+        await store.receive(.processSuccessfulButtonPush)
 
         let pulpFictionTestClientWithFakeData = commentCreator.backendMessenger.getPulpFictionTestClientWithFakeData()
         let updatePostRequest = pulpFictionTestClientWithFakeData.requestBuffers.updatePost[0]
@@ -49,5 +56,3 @@ class CommentCreatorTest: XCTestCase {
         XCTAssertEqual(expectedComment, updatePostRequest.commentOnPost.body)
     }
 }
-
-//

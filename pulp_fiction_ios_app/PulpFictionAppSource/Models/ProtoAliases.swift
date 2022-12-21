@@ -12,6 +12,7 @@ import protos_pulp_fiction_proto
 import SwiftProtobuf
 
 public typealias CreatePostRequest = PulpFiction_Protos_CreatePostRequest
+public typealias CreatePostResponse = PulpFiction_Protos_CreatePostResponse
 public typealias GetFeedRequest = PulpFiction_Protos_GetFeedRequest
 public typealias GetFeedResponse = PulpFiction_Protos_GetFeedResponse
 public typealias ImagePost = PulpFiction_Protos_Post.ImagePost

@@ -7,18 +7,34 @@
 
 import ComposableArchitecture
 import Foundation
+import Logging
 import SwiftUI
 
 struct EditTextReducer: ReducerProtocol {
     let maxTextSize: Int
+    let createButtonAction: (EditTextReducer.State) async -> Void
+    let validateTextAction: (String) -> Bool
+    private let logger: Logger = .init(label: String(describing: EditTextReducer.self))
+
+    init(
+        maxTextSize: Int,
+        createButtonAction: @escaping (EditTextReducer.State) async -> Void = { _ in },
+        validateTextAction: @escaping (String) -> Bool = { _ in true }
+    ) {
+        self.maxTextSize = maxTextSize
+        self.createButtonAction = createButtonAction
+        self.validateTextAction = validateTextAction
+    }
 
     struct State: Equatable {
         var text: String = ""
         var showInvalidInputAlert: Bool = false
     }
 
-    enum Action {
+    enum Action: Equatable {
         case updateText(String)
+        case submitText
+        case processSuccessfulButtonPush
         case updateShowInvalidInputAlert(Bool)
     }
 
@@ -27,6 +43,22 @@ struct EditTextReducer: ReducerProtocol {
         case let .updateText(newText):
             state.text = String(newText.prefix(maxTextSize))
             return .none
+
+        case .submitText:
+            let _state = state
+            return .task {
+                if validateTextAction(_state.text) {
+                    await createButtonAction(_state)
+                    return .processSuccessfulButtonPush
+                } else {
+                    return .updateShowInvalidInputAlert(true)
+                }
+            }
+
+        case .processSuccessfulButtonPush:
+            logger.debug("Button successfully pushed")
+            return .none
+
         case let .updateShowInvalidInputAlert(newShowInvalidInputAlert):
             state.showInvalidInputAlert = newShowInvalidInputAlert
             return .none
@@ -38,8 +70,7 @@ struct EditText: View {
     let prompt: String
     let createButtonLabel: String
     let keyboardType: UIKeyboardType
-    let createButtonAction: (EditTextReducer.State) async -> Void
-    let validateTextAction: (String) -> Bool
+    let reducer: EditTextReducer
     @ObservedObject var viewStore: PulpFictionViewStore<EditTextReducer>
     @FocusState private var isInputTextFieldFocused: Bool
 
@@ -48,18 +79,23 @@ struct EditText: View {
         createButtonLabel: String,
         keyboardType: UIKeyboardType,
         maxTextSize: Int = 10000,
-        createButtonAction: @escaping (EditTextReducer.State) async -> Void,
-        validateTextAction: @escaping (String) -> Bool
+        createButtonAction: @escaping (EditTextReducer.State) async -> Void = { _ in },
+        validateTextAction: @escaping (String) -> Bool = { _ in true }
     ) {
+        let reducer = EditTextReducer(
+            maxTextSize: maxTextSize,
+            createButtonAction: createButtonAction,
+            validateTextAction: validateTextAction
+        )
+
         self.prompt = prompt
         self.createButtonLabel = createButtonLabel
         self.keyboardType = keyboardType
-        self.createButtonAction = createButtonAction
-        self.validateTextAction = validateTextAction
+        self.reducer = reducer
         viewStore = {
             let store = Store(
                 initialState: EditTextReducer.State(),
-                reducer: EditTextReducer(maxTextSize: maxTextSize)
+                reducer: reducer
             )
             return ViewStore(store)
         }()
@@ -85,11 +121,7 @@ struct EditText: View {
         }
         .toolbar {
             TextCreatorTopNavigationBar(createButtonLabel: createButtonLabel) {
-                if validateTextAction(viewStore.text) {
-                    Task { await createButtonAction(viewStore.state) }
-                } else {
-                    viewStore.send(.updateShowInvalidInputAlert(true))
-                }
+                viewStore.send(.submitText)
             }
         }
         .alert("Please input a valid option", isPresented: viewStore.binding(
