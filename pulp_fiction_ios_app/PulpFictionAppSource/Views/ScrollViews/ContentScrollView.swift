@@ -209,6 +209,7 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
             state.showFeedLoadProgressIndicator()
             state.postStreamMaybe.map { $0.restartStream() }
             state.postViews = .init()
+            state.lastVisiblePostIndices = .init()
             return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
 
         case let .filterPostFromFeed(postMetadata):
