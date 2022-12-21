@@ -273,10 +273,6 @@ message UpdateUserResponse {
 }
 
 message UpdatePostRequest {
-  message CommentOnPost {
-    string body = 1;
-  }
-
   message UpdatePostLikeStatus {
     Post.PostLike newPostLikeStatus = 1;
   }
@@ -299,12 +295,11 @@ message UpdatePostRequest {
   LoginResponse.LoginSession loginSession = 1;
   string post_id = 2;
   oneof update_post_request {
-    CommentOnPost commentOnPost = 3;
-    UpdatePostLikeStatus updatePostLikeStatus = 4;
-    DeletePost deletePost = 5;
-    UpdateImagePost updateImagePost = 6;
-    UpdateComment updateComment = 7;
-    ReportPost reportPost = 8;
+    UpdatePostLikeStatus updatePostLikeStatus = 3;
+    DeletePost deletePost = 4;
+    UpdateImagePost updateImagePost = 5;
+    UpdateComment updateComment = 6;
+    ReportPost reportPost = 7;
   }
 }
 

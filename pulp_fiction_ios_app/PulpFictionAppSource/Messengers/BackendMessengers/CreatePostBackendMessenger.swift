@@ -24,6 +24,18 @@ public struct CreatePostBackendMessenger {
         .logError("Error calling createPost")
     }
 
+    func createComment(parentPostId: UUID, commentBody: String) async -> Either<PulpFictionRequestError, CreatePostResponse> {
+        let createPostRequest = CreatePostRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.createCommentRequest = CreatePostRequest.CreateCommentRequest.with {
+                $0.parentPostID = parentPostId.uuidString
+                $0.body = commentBody
+            }
+        }
+
+        return await buildCreatePostResponse(createPostRequest: createPostRequest)
+    }
+
     func createImagePost(uiImageMaybe: UIImage?, caption: String) async -> Either<PulpFictionRequestError, CreatePostResponse> {
         let uiImageEither = Either<PulpFictionRequestError, UIImage>.var()
         let uiImageDataEither = Either<PulpFictionRequestError, Data>.var()

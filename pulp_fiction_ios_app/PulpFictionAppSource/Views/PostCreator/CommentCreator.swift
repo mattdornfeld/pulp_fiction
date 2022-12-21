@@ -20,8 +20,8 @@ struct CommentCreator: View {
                 return
             }
 
-            await backendMessenger.updatePostBackendMessenger.commentOnPost(
-                postId: postMetadata.postId,
+            await backendMessenger.createPostBackendMessenger.createComment(
+                parentPostId: postMetadata.postId,
                 commentBody: state.text
             ).processResponseFromServer(
                 notificationBannerViewStore: notificationnotificationBannerViewStore,

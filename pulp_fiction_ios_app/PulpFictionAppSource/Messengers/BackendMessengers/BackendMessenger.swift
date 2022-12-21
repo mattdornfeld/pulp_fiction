@@ -38,6 +38,7 @@ public struct BackendMessenger {
 }
 
 extension Either where A: PulpFictionRequestError, B: SwiftProtobuf.Message {
+    @discardableResult
     func processResponseFromServer(
         notificationBannerViewStore: NotificationnotificationBannerViewStore,
         state: Any,

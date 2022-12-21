@@ -50,9 +50,9 @@ class CommentCreatorTest: XCTestCase {
         await store.receive(.processSuccessfulButtonPush)
 
         let pulpFictionTestClientWithFakeData = commentCreator.backendMessenger.getPulpFictionTestClientWithFakeData()
-        let updatePostRequest = pulpFictionTestClientWithFakeData.requestBuffers.updatePost[0]
-        XCTAssertEqual(commentCreator.postMetadata.postId.uuidString, updatePostRequest.postID)
-        XCTAssertEqual(commentCreator.backendMessenger.loginSession.toProto(), updatePostRequest.loginSession)
-        XCTAssertEqual(expectedComment, updatePostRequest.commentOnPost.body)
+        let createPostRequest = pulpFictionTestClientWithFakeData.requestBuffers.createPost[0]
+        XCTAssertEqual(commentCreator.backendMessenger.loginSession.toProto(), createPostRequest.loginSession)
+        XCTAssertEqual(commentCreator.postMetadata.postId.uuidString, createPostRequest.createCommentRequest.parentPostID)
+        XCTAssertEqual(expectedComment, createPostRequest.createCommentRequest.body)
     }
 }

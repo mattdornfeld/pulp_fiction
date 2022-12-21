@@ -57,16 +57,4 @@ public struct UpdatePostBackendMessenger {
 
         return await buildUpdatePostResponse(updatePostRequest: updatePostRequest)
     }
-
-    func commentOnPost(postId: UUID, commentBody: String) async -> Either<PulpFictionRequestError, UpdatePostResponse> {
-        let updatePostRequest = UpdatePostRequest.with {
-            $0.loginSession = loginSession.toProto()
-            $0.postID = postId.uuidString
-            $0.commentOnPost = UpdatePostRequest.CommentOnPost.with {
-                $0.body = commentBody
-            }
-        }
-
-        return await buildUpdatePostResponse(updatePostRequest: updatePostRequest)
-    }
 }
