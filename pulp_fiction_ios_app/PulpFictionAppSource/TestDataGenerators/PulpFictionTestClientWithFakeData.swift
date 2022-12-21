@@ -18,7 +18,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     public var channel: GRPC.GRPCChannel
     public var defaultCallOptions: GRPC.CallOptions = CallOptions()
     public var interceptors: PulpFiction_Protos_PulpFictionClientInterceptorFactoryProtocol?
-    private var requestBuffers: RequestBuffers = .init()
+    var requestBuffers: RequestBuffers = .init()
 
     private enum Path: String {
         case getFeed = "/pulp_fiction.protos.PulpFiction/GetFeed"
@@ -26,7 +26,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         case updateUser = "/pulp_fiction.protos.PulpFiction/UpdateUser"
     }
 
-    struct RequestBuffers {
+    class RequestBuffers {
         var getFeed: [GetFeedRequest] = .init()
         var updatePost: [UpdatePostRequest] = .init()
         var updateUser: [UpdateUserRequest] = .init()
@@ -145,7 +145,6 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
 
     private func processUnaryRequest<Request: SwiftProtobuf.Message, Response: SwiftProtobuf.Message>(
         request: Request,
-        requestsBuffer: [Request],
         responseSupplier: @escaping (Request) -> Response,
         path: Path
     ) -> UnaryCall<Request, Response> where Response: Equatable {
@@ -161,7 +160,15 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         let stream: FakeUnaryResponse<Request, Response> = fakeChannel.makeFakeUnaryResponse(path: path.rawValue) { fakeRequestPart in
             switch fakeRequestPart {
             case let .message(request):
-                requestsBuffer.append(request)
+                switch request {
+                case let request as UpdateUserRequest:
+                    self.requestBuffers.updateUser.append(request)
+                case let request as UpdatePostRequest:
+                    self.requestBuffers.updatePost.append(request)
+                default:
+                    break
+                }
+
                 responseBuffer.enqueue(responseSupplier(request))
                 /// TODO (matt): For some reason tests fails if you take out this sleep. Unclear why.
                 /// Figure out in future. This code block is only run in tests.
@@ -199,7 +206,6 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     ) -> UnaryCall<UpdatePostRequest, UpdatePostResponse> {
         processUnaryRequest(
             request: request,
-            requestsBuffer: requestBuffers.updatePost,
             responseSupplier: { _ in UpdatePostResponse() },
             path: Path.updatePost
         )
@@ -211,7 +217,6 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     ) -> UnaryCall<UpdateUserRequest, UpdateUserResponse> {
         processUnaryRequest(
             request: request,
-            requestsBuffer: requestBuffers.updateUser,
             responseSupplier: { _ in UpdateUserResponse() },
             path: Path.updateUser
         )

@@ -67,7 +67,7 @@ class DeletePostMenuTest: XCTestCase {
         await store.receive(.processUpdatePostResponse(expectedUpdatePostResponseEither))
 
         let pulpFictionClientProtocol = reducer.backendMessenger.pulpFictionClientProtocol as! PulpFictionTestClientWithFakeData
-        let updatePostRequest = pulpFictionClientProtocol.updatePostRequests[0]
+        let updatePostRequest = pulpFictionClientProtocol.requestBuffers.updatePost[0]
         XCTAssertEqual(reducer.postMetadata.postUpdateIdentifier.postId.uuidString, updatePostRequest.postID)
         XCTAssertEqual(reducer.backendMessenger.loginSession.toProto(), updatePostRequest.loginSession)
         let isDeletePostRequest = {

@@ -34,12 +34,15 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
     private let restartScrollOffsetThreshold = 10.0
 
     struct State: Equatable {
+        @EquatableIgnore
+        var postStreamMaybe: PostStream? = nil
         /// Queue for storing ScrollableContentViews that will be rendered in the feed
         var postViews: Queue<A> = .init()
         /// Indicator that shows new content is being loaded into the feed
         private(set) var feedLoadProgressIndicatorOpacity: Double = 0.0
         /// Post indices for which loadMorePosts was called. We keep track of this to make sure we don't double load posts
         var lastVisiblePostIndices: Set<Int> = .init()
+        /// These post ids will be filtered from the feed. Used to remove deleted posts from local feed without refreshing feed.
         var postIdsToFilterFromFeed: Set<UUID> = .init()
 
         mutating func hideFeedLoadProgressIndicator() {
@@ -63,18 +66,20 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
         /// Enqueue posts into the scroll.
         case enqueuePostsToScroll([(Int, Post)], ContentScrollViewStore<A>)
         /// Called every time a post appears in the scroll. Checks to see if old posts should be removed from a scroll and loads new posts into the scroll if necessary.
-        case refreshScrollIfNecessary(Int, PostStream)
+        case refreshScrollIfNecessary(Int)
         /// Dequeus old posts from scroll if necessary
-        case dequeuePostsFromScrollIfNecessary(Int, PostStream)
+        case dequeuePostsFromScrollIfNecessary(Int)
         /// Updates the opacity of progress indicator. Set to 1.0 if posts are being loaded into the scroll and 0.0 otherwise.
         case updateFeedLoadProgressIndicatorOpacity(Bool)
         /// Called when there are no more posts left to scroll through
         case stopScroll
         /// Restarts the scroll on a drag up action if offset is greater than threshold
-        case restartScrollIfOffsetGreaterThanThreshold(CGFloat, PostStream)
+        case restartScrollIfOffsetGreaterThanThreshold(CGFloat)
         /// Restarts the scroll
-        case restartScroll(PostStream)
+        case restartScroll
+        /// Filter post from local feed
         case filterPostFromFeed(PostMetadata)
+        case startPostStream(PostStream)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
@@ -109,11 +114,11 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
 
             return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
 
-        case let .refreshScrollIfNecessary(currentPostIndex, postStream):
+        case let .refreshScrollIfNecessary(currentPostIndex):
             state.showFeedLoadProgressIndicator()
-            return .task { .dequeuePostsFromScrollIfNecessary(currentPostIndex, postStream) }
+            return .task { .dequeuePostsFromScrollIfNecessary(currentPostIndex) }
 
-        case let .dequeuePostsFromScrollIfNecessary(currentPostIndex, postStream):
+        case let .dequeuePostsFromScrollIfNecessary(currentPostIndex):
             if state.postViews.isClosed() {
                 return .none
             }
@@ -124,17 +129,34 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
                 .lastVisiblePostIndices
                 .contains(currentPostIndex)
 
+            logger.debug(
+                "Attempting to load posts for currentPostIndex",
+                metadata: [
+                    "currentPostIndex": "\(currentPostIndex)",
+                    "lastVisiblePostIndices": "\(state.lastVisiblePostIndices)",
+                ]
+            )
+
             let isLastPostVisible = state
                 .postViews
                 .elements
                 .last
                 .map { $0.id == currentPostIndex }^
                 .getOrElse(true)
-
             let isQueueFull = state.postViews.elements.count == PostFeedConfigs.postFeedMaxQueueSize
-
             let shouldClearPosts = isQueueFull
             let shouldLoadMorePosts = !alreadyLoadedForPostIndex && isLastPostVisible
+
+            logger.debug(
+                "Deciding whether to clear posts from feed and load more",
+                metadata: [
+                    "alreadyLoadedForPostIndex": "\(alreadyLoadedForPostIndex)",
+                    "isLastPostVisible": "\(isLastPostVisible)",
+                    "isQueueFull": "\(isQueueFull)",
+                    "shouldClearPosts": "\(shouldClearPosts)",
+                    "shouldLoadMorePosts": "\(shouldLoadMorePosts)",
+                ]
+            )
 
             if shouldClearPosts, shouldLoadMorePosts {
                 logger.debug(
@@ -146,10 +168,18 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
                 )
 
                 state.postViews.dequeue(numElements: PostFeedConfigs.numPostReturnedPerRequest)
-                postStream.loadMorePosts(state: &state, currentPostIndex: currentPostIndex)
+                state.postStreamMaybe.map { $0.loadMorePosts(state: &state, currentPostIndex: currentPostIndex) }
             } else if shouldLoadMorePosts {
-                postStream.loadMorePosts(state: &state, currentPostIndex: currentPostIndex)
+                state.postStreamMaybe.map { $0.loadMorePosts(state: &state, currentPostIndex: currentPostIndex) }
             }
+
+            logger.debug(
+                "dequeuePostsFromScrollIfNecessary is finished",
+                metadata: [
+                    "shouldClearPosts": "\(shouldClearPosts)",
+                    "shouldLoadMorePosts": "\(shouldLoadMorePosts)",
+                ]
+            )
 
             return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
 
@@ -163,20 +193,21 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
 
         case .stopScroll:
             state.postViews.close()
+            state.postStreamMaybe.map { $0.closeStream() }
             return .none
 
-        case let .restartScrollIfOffsetGreaterThanThreshold(newOffset, postStream):
+        case let .restartScrollIfOffsetGreaterThanThreshold(newOffset):
             if newOffset >= restartScrollOffsetThreshold, !state.isFeedLoadProgressIndicatorShowing() {
-                return .task { .restartScroll(postStream) }
+                return .task { .restartScroll }
             } else if newOffset <= 1.0, state.isFeedLoadProgressIndicatorShowing() {
                 return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
             }
 
             return .none
 
-        case let .restartScroll(postStream):
+        case .restartScroll:
             state.showFeedLoadProgressIndicator()
-            postStream.restartStream()
+            state.postStreamMaybe.map { $0.restartStream() }
             state.postViews = .init()
             return .task { .updateFeedLoadProgressIndicatorOpacity(false) }
 
@@ -185,6 +216,10 @@ struct ContentScrollViewReducer<A: ScrollableContentView>: ReducerProtocol {
             if !state.postIdsToFilterFromFeed.contains(postId) {
                 state.postIdsToFilterFromFeed.insert(postId)
             }
+            return .none
+
+        case let .startPostStream(postStream):
+            state.postStreamMaybe = postStream
             return .none
         }
     }
@@ -223,9 +258,8 @@ struct ContentScrollView<A: ScrollableContentView, B: PrepenedToScrollView>: Vie
     private let progressIndicatorScaleFactor: CGFloat = 2.0
     private let refreshFeedOnScrollUpSensitivity: CGFloat = 10.0
     private let prependToBeginningOfScroll: B
-    private let postStream: PostStream
+    @ObservedObject var viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>
     @GestureState private var dragOffset: CGFloat = -100
-    @ObservedObject private var viewStore: ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>
 
     /// Builds a ContentScrollView
     /// - Parameters:
@@ -244,13 +278,12 @@ struct ContentScrollView<A: ScrollableContentView, B: PrepenedToScrollView>: Vie
 
     ) {
         self.prependToBeginningOfScroll = prependToBeginningOfScroll
-        let viewStore = ContentScrollView.buildViewStore(postViewEitherSupplier: A.getPostViewEitherSupplier(
+        viewStore = ContentScrollView.buildViewStore(postViewEitherSupplier: A.getPostViewEitherSupplier(
             postFeedMessenger: postFeedMessenger,
             backendMessenger: backendMessenger,
             notificationBannerViewStore: notificationBannerViewStore
         ))
-        self.viewStore = viewStore
-        postStream = postStreamSupplier(viewStore)
+        viewStore.send(.startPostStream(postStreamSupplier(viewStore)))
     }
 
     static func buildViewStore<A: ScrollableContentView>(
@@ -276,7 +309,7 @@ struct ContentScrollView<A: ScrollableContentView, B: PrepenedToScrollView>: Vie
                                 .shouldFeedIncludePost(postMetadata: scrollableContentView.postMetadata)
                         }) { currentPost in
                             currentPost.onAppear {
-                                viewStore.send(.refreshScrollIfNecessary(currentPost.id, self.postStream))
+                                viewStore.send(.refreshScrollIfNecessary(currentPost.id))
                             }
                         }
                     }
@@ -296,7 +329,7 @@ struct ContentScrollView<A: ScrollableContentView, B: PrepenedToScrollView>: Vie
                     geometryProxy[$0].y
                 }
                 .onPreferenceChange(OffsetPreferenceKey.self) { newOffset in
-                    viewStore.send(.restartScrollIfOffsetGreaterThanThreshold(newOffset, postStream))
+                    viewStore.send(.restartScrollIfOffsetGreaterThanThreshold(newOffset))
                 }
             }.overlay {
                 ProgressView()
@@ -304,7 +337,7 @@ struct ContentScrollView<A: ScrollableContentView, B: PrepenedToScrollView>: Vie
                     .opacity(viewStore.state.feedLoadProgressIndicatorOpacity)
             }
         }.onDisappear {
-            postStream.closeStream()
+            viewStore.send(.stopScroll)
         }
     }
 }

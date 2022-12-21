@@ -13,10 +13,14 @@ import SwiftProtobuf
 
 /// Struct for communicating with backend API
 public struct BackendMessenger {
+    public let pulpFictionClientProtocol: PulpFictionClientProtocol
+    public let loginSession: LoginSession
     public let updatePostBackendMessenger: UpdatePostBackendMessenger
     public let updateUserBackendMessenger: UpdateUserBackendMessenger
 
     public init(pulpFictionClientProtocol: PulpFictionClientProtocol, loginSession: LoginSession) {
+        self.pulpFictionClientProtocol = pulpFictionClientProtocol
+        self.loginSession = loginSession
         updatePostBackendMessenger = .init(
             pulpFictionClientProtocol: pulpFictionClientProtocol,
             loginSession: loginSession

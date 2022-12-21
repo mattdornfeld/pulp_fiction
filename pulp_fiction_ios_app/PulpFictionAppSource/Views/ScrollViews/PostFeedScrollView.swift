@@ -66,8 +66,7 @@ struct PostFeedScrollView: ScrollViewParent {
         menuOptions: PostFeedFilter.allCases,
         initialMenuSelection: .Global
     )
-
-    var body: some View {
+    var contentScrollView: ContentScrollView<ImagePostView, EmptyView> {
         ContentScrollView(
             postFeedMessenger: postFeedMessenger,
             backendMessenger: backendMessenger,
@@ -78,16 +77,20 @@ struct PostFeedScrollView: ScrollViewParent {
                 viewStore: viewStore
             )
         }
-        .toolbar {
-            PostFeedTopNavigationBar(
-                postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
-                loggedInUserPostData: loggedInUserPostData,
-                postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view,
-                notificationBannerViewStore: notificationBannerViewStore
-            )
-        }
+    }
+
+    var body: some View {
+        contentScrollView
+            .toolbar {
+                PostFeedTopNavigationBar(
+                    postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
+                    postFeedMessenger: postFeedMessenger,
+                    backendMessenger: backendMessenger,
+                    loggedInUserPostData: loggedInUserPostData,
+                    postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view,
+                    notificationBannerViewStore: notificationBannerViewStore
+                )
+            }
     }
 
     private func getPostFeed(

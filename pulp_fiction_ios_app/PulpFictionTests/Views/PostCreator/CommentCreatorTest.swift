@@ -43,9 +43,11 @@ class CommentCreatorTest: XCTestCase {
         await commentCreator.createButtonAction(editTextView.viewStore.state)
 
         let pulpFictionTestClientWithFakeData = commentCreator.backendMessenger.getPulpFictionTestClientWithFakeData()
-        let updatePostRequest = pulpFictionTestClientWithFakeData.updatePostRequests[0]
+        let updatePostRequest = pulpFictionTestClientWithFakeData.requestBuffers.updatePost[0]
         XCTAssertEqual(commentCreator.postMetadata.postId.uuidString, updatePostRequest.postID)
         XCTAssertEqual(commentCreator.backendMessenger.loginSession.toProto(), updatePostRequest.loginSession)
         XCTAssertEqual(expectedComment, updatePostRequest.commentOnPost.body)
     }
 }
+
+//
