@@ -39,8 +39,10 @@ struct LoggedInUserProfileTopNavigationBar: ToolbarContent {
                     symbolName: "gearshape.fill",
                     size: 20,
                     color: .gray
-                ).navigateOnTap(destination: EditProfileView(
-                    loggedInUserPostData: loggedInUserPostData
+                ).navigateOnTap(destination: EditProfile(
+                    loggedInUserPostData: loggedInUserPostData,
+                    backendMessenger: backendMessenger,
+                    notificationBannerViewStore: notificationBannerViewStore
                 ))
             }
         }

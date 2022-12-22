@@ -37,12 +37,14 @@ public struct BackendMessenger {
     }
 }
 
+typealias BackendPath = String
+
 extension Either where A: PulpFictionRequestError, B: SwiftProtobuf.Message {
     @discardableResult
     func processResponseFromServer(
         notificationBannerViewStore: NotificationnotificationBannerViewStore,
         state: Any,
-        path: String,
+        path: BackendPath,
         successAction: @escaping () -> Void = {},
         failureAction: @escaping () -> Void = {}
     ) -> Either<A, B> {

@@ -5,6 +5,7 @@
 //  Created by Matthew Dornfeld on 11/16/22.
 //
 
+import Bow
 import ComposableArchitecture
 import Foundation
 import Logging
@@ -20,6 +21,8 @@ enum ProfileSection: String, DropDownMenuOption {
 
 /// Reducer for EditProfileView
 struct EditProfileReducer: ReducerProtocol {
+    let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     private let logger: Logger = .init(label: String(describing: EditProfileReducer.self))
 
     struct State: Equatable {
@@ -32,9 +35,15 @@ struct EditProfileReducer: ReducerProtocol {
                 return newFormatter.date(from: "1990-04-20T00:00:00Z")!
             }()
         )
+        /// Toggle used to trigger a UI refresh
+        var toggleToRefresh: Bool = false
     }
 
-    enum Action {
+    enum BannerMessage: String {
+        case updateUserAvatarUIImage = "Avatar successfully updated"
+    }
+
+    enum Action: Equatable {
         /// Updates loggedInUserPostData.userAvatarUIImage
         case updateUserAvatarUIImage(UIImage)
         /// Updates loggedInUserPostData.loggedInUserPostDatadisplayName
@@ -51,28 +60,43 @@ struct EditProfileReducer: ReducerProtocol {
         case updateLoggedInUserPostData(UserPostData)
         /// Updates loggedInUserSensitiveMetadata
         case updateLoggedInUserSensitiveMetadata(SensitiveUserMetadata)
+        case processUpdateUserResponse(
+            Either<PulpFictionRequestError, UpdateUserResponse>,
+            BackendPath,
+            BannerMessage,
+            EquatableWrapper<(UpdateUserResponse, State) -> PulpFictionRequestEither<UserPostData>>
+        )
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
         case let .updateUserAvatarUIImage(newUserAvatarUIImage):
-            newUserAvatarUIImage
-                .toContentData()
-                .mapRight { newUserPostContentData in
-                    let newLoggedInUserPostData1 = UserPostData
-                        .setter(for: \.userPostContentData)
-                        .set(state.loggedInUserPostData, newUserPostContentData)
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateUserAvatarUIImage(avatarUIImage: newUserAvatarUIImage)
 
-                    let newLoggedInUserPostData2 = UserPostData
-                        .setter(for: \.userAvatarUIImage)
-                        .set(newLoggedInUserPostData1, newUserAvatarUIImage)
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateUserAvatarUIImage.rawValue,
+                    BannerMessage.updateUserAvatarUIImage,
+                    EquatableWrapper(
+                        { (_: UpdateUserResponse, state: State) -> PulpFictionRequestEither<UserPostData> in
+                            newUserAvatarUIImage
+                                .toContentData()
+                                .mapRight { newUserPostContentData in
+                                    let newLoggedInUserPostData1 = UserPostData
+                                        .setter(for: \.userPostContentData)
+                                        .set(state.loggedInUserPostData, newUserPostContentData)
 
-                    state.loggedInUserPostData = newLoggedInUserPostData2
-                }
-                .onError { _ in
-                    logger.error("Error serializing image")
-                }
-            return .none
+                                    return UserPostData
+                                        .setter(for: \.userAvatarUIImage)
+                                        .set(newLoggedInUserPostData1, newUserAvatarUIImage)
+                                }
+                        }
+                    )
+                )
+            }
 
         case let .updateDisplayName(newDisplayName):
             let newLoggedInUserPostData = UserPostData
@@ -106,13 +130,28 @@ struct EditProfileReducer: ReducerProtocol {
 
         case let .updateLoggedInUserPostData(newLoggedInUserPostData):
             state.loggedInUserPostData = newLoggedInUserPostData
-            print(newLoggedInUserPostData)
+            state.toggleToRefresh.toggle()
             return .none
 
         case let .updateLoggedInUserSensitiveMetadata(newLoggedInUserSensitiveMetadata):
             state.loggedInUserSensitiveMetadata = newLoggedInUserSensitiveMetadata
-            print(newLoggedInUserSensitiveMetadata)
             return .none
+
+        case let .processUpdateUserResponse(updateUserResponseEither, backendPath, bannerMessage, userPostDataUpdateAction):
+            let _state = state
+            let newLoggedInUserPostaDataEither = updateUserResponseEither.processResponseFromServer(
+                notificationBannerViewStore: notificationBannerViewStore,
+                state: _state,
+                path: backendPath
+            ).flatMap { updateUserResponse in userPostDataUpdateAction.wrapped(updateUserResponse, _state) }^
+
+            switch newLoggedInUserPostaDataEither.toEnum() {
+            case .left:
+                return .none
+            case let .right(newLoggedInUserPostaData):
+                notificationBannerViewStore.send(.showNotificationBanner(bannerMessage.rawValue, .info))
+                return .task { .updateLoggedInUserPostData(newLoggedInUserPostaData) }
+            }
         }
     }
 }
@@ -306,7 +345,7 @@ struct EditPrivateProfileDataView: View {
 }
 
 /// Display and edit profile data
-struct EditProfileView: View {
+struct EditProfile: View {
     @ObservedObject private var symbolWithDropDownMenu: SymbolWithDropDownMenu<ProfileSection> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
         symbolSize: 20,
@@ -314,16 +353,21 @@ struct EditProfileView: View {
         menuOptions: ProfileSection.allCases,
         initialMenuSelection: .Public
     )
-    private var store: StoreOf<EditProfileReducer>
+    private var store: ComposableArchitecture.StoreOf<EditProfileReducer>
 
-    /// Inits a EditProfileView
-    /// - Parameter loggedInUserPostData: UserPostData for the logged in user
-    init(loggedInUserPostData: UserPostData) {
+    init(
+        loggedInUserPostData: UserPostData,
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
+    ) {
         store = Store(
             initialState: EditProfileReducer.State(
                 loggedInUserPostData: loggedInUserPostData
             ),
-            reducer: EditProfileReducer()
+            reducer: EditProfileReducer(
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
+            )
         )
     }
 

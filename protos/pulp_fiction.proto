@@ -227,14 +227,13 @@ message LoginResponse {
 }
 
 message UpdateUserRequest {
-  message UpdateUserInfo {
-    string new_display_name = 1;
-    string new_date_of_birth = 2;
-  }
-
   message UpdatePassword {
     string old_password = 1;
     string new_password = 2;
+  }
+
+  message UpdateUserAvatar {
+    bytes avatarJpg = 1;
   }
 
   message UpdateEmail {
@@ -259,11 +258,11 @@ message UpdateUserRequest {
 
   LoginResponse.LoginSession loginSession = 1;
   oneof update_user_request {
-    UpdateUserInfo updateUserInfo = 2;
-    UpdatePassword updatePassword = 3;
-    UpdateEmail updateEmail = 4;
-    UpdatePhoneNumber updatePhoneNumber = 5;
-    ResetPassword resetPassword = 6;
+    UpdateUserAvatar update_user_avatar = 2;
+    UpdatePassword update_password = 3;
+    UpdateEmail update_email = 4;
+    UpdatePhoneNumber update_phone_number = 5;
+    ResetPassword reset_password = 6;
     UpdateUserFollowingStatus update_user_following_status = 7;
   }
 }
