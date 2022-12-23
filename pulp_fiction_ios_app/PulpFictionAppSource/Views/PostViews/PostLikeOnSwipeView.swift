@@ -235,9 +235,9 @@ extension PostLikeOnSwipeView {
                     notificationBannerViewStore: notificationBannerViewStore
                 ) },
                 updateViewComponentsActionSupplier: { _, dragOffset in
-                    if (dragOffset.width + 1e-6) < 0 {
+                    if (dragOffset.width + SwipablePostViewConfigs.dragOffsetThreshold) < 0 {
                         return .updatePostLikeStatus(.swipeLeft)
-                    } else if (dragOffset.width - 1e-6) > 0 {
+                    } else if (dragOffset.width - SwipablePostViewConfigs.dragOffsetThreshold) > 0 {
                         return .updatePostLikeStatus(.swipeRight)
                     } else {
                         return nil

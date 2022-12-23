@@ -110,6 +110,7 @@ class Queue<A>: Equatable where A: Equatable {
     }
 
     /// Closes the queue. No new elements can be enqueued or dequeued.
+    @discardableResult
     func close() -> Queue<A> {
         isClosedAtomicBoolean.setValue(true)
         isEmpty.unlock(withCondition: 0)
