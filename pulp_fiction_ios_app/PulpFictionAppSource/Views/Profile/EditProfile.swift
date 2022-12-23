@@ -41,6 +41,8 @@ struct EditProfileReducer: ReducerProtocol {
 
     enum BannerMessage: String {
         case updateUserAvatarUIImage = "Avatar successfully updated"
+        case updateDisplayName = "Display name successfully updated"
+        case updateBio = "Bio successfully updated"
     }
 
     enum Action: Equatable {
@@ -81,7 +83,7 @@ struct EditProfileReducer: ReducerProtocol {
                     UpdateUserBackendMessenger.BackendPath.updateUserAvatarUIImage.rawValue,
                     BannerMessage.updateUserAvatarUIImage,
                     EquatableWrapper(
-                        { (_: UpdateUserResponse, state: State) -> PulpFictionRequestEither<UserPostData> in
+                        { _, state in
                             newUserAvatarUIImage
                                 .toContentData()
                                 .mapRight { newUserPostContentData in
@@ -99,16 +101,46 @@ struct EditProfileReducer: ReducerProtocol {
             }
 
         case let .updateDisplayName(newDisplayName):
-            let newLoggedInUserPostData = UserPostData
-                .setter(for: \.userDisplayName)
-                .set(state.loggedInUserPostData, newDisplayName)
-            return .task { .updateLoggedInUserPostData(newLoggedInUserPostData) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateDisplayName(newDisplayName: newDisplayName)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateDisplayName.rawValue,
+                    BannerMessage.updateDisplayName,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserPostData = UserPostData
+                                .setter(for: \.userDisplayName)
+                                .set(state.loggedInUserPostData, newDisplayName)
+                            return .right(newLoggedInUserPostData)
+                        }
+                    )
+                )
+            }
 
         case let .updateBio(newBio):
-            let newLoggedInUserPostData = UserPostData
-                .setter(for: \.bio)
-                .set(state.loggedInUserPostData, newBio)
-            return .task { .updateLoggedInUserPostData(newLoggedInUserPostData) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateBio(newBio: newBio)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateBio.rawValue,
+                    BannerMessage.updateBio,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserPostData = UserPostData
+                                .setter(for: \.bio)
+                                .set(state.loggedInUserPostData, newBio)
+                            return .right(newLoggedInUserPostData)
+                        }
+                    )
+                )
+            }
 
         case let .updateEmail(newEmail):
             let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata

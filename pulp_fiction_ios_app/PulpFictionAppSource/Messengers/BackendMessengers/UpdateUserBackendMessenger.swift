@@ -19,6 +19,7 @@ public struct UpdateUserBackendMessenger {
         case updateUserFollowingStatus
         case updateUserAvatarUIImage
         case updateDisplayName
+        case updateBio
     }
 
     private func buildUpdateUserResponse(updateUserRequest: UpdateUserRequest) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
@@ -70,6 +71,17 @@ public struct UpdateUserBackendMessenger {
             $0.loginSession = loginSession.toProto()
             $0.updateDisplayName = UpdateUserRequest.UpdateDisplayName.with {
                 $0.newDisplayName = newDisplayName
+            }
+        }
+
+        return await buildUpdateUserResponse(updateUserRequest: updateUserRequest)
+    }
+
+    func updateBio(newBio: String) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
+        let updateUserRequest = UpdateUserRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.updateBio = UpdateUserRequest.UpdateBio.with {
+                $0.newBio = newBio
             }
         }
 

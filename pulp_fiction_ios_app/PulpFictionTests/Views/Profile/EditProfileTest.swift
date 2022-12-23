@@ -16,6 +16,9 @@ import XCTest
 @MainActor
 class EditProfileTest: XCTestCase {
     private let expectedUpdateUserResponseEither: Either<PulpFictionRequestError, UpdateUserResponse> = .right(UpdateUserResponse())
+    private let userPostDataUpdateAction: EquatableWrapper<(UpdateUserResponse, EditProfileReducer.State) -> PulpFictionRequestEither<UserPostData>> = .init { _, _ in
+        PulpFictionRequestEither<UserPostData>.left(PulpFictionRequestError())
+    }
 
     func buildEditProfileReducer() throws -> EditProfileReducer {
         let externalMessengersEither = Either<PulpFictionRequestError, ExternalMessengers>.var()
@@ -56,7 +59,7 @@ class EditProfileTest: XCTestCase {
                 expectedUpdateUserResponseEither,
                 UpdateUserBackendMessenger.BackendPath.updateUserAvatarUIImage.rawValue,
                 EditProfileReducer.BannerMessage.updateUserAvatarUIImage,
-                EquatableWrapper { _, _ in .left(PulpFictionRequestError()) }
+                userPostDataUpdateAction
             ),
             timeout: Duration.seconds(0.2)
         )
@@ -69,5 +72,29 @@ class EditProfileTest: XCTestCase {
         let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
         let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
         XCTAssertEqual(try expectedUIImage.serializeImage().getOrThrow(), updateUserRequest.updateUserAvatar.avatarJpg)
+    }
+
+    func testUpdateDisplayName() async throws {
+        let reducer = try buildEditProfileReducer()
+        let store = try buildTestStore(reducer: reducer)
+        let expectedDisplayName = "expectedDisplayName"
+        await store.send(.updateDisplayName(expectedDisplayName))
+        await store.receive(
+            .processUpdateUserResponse(
+                expectedUpdateUserResponseEither,
+                UpdateUserBackendMessenger.BackendPath.updateDisplayName.rawValue,
+                EditProfileReducer.BannerMessage.updateDisplayName,
+                userPostDataUpdateAction
+            ),
+            timeout: Duration.seconds(0.2)
+        )
+        await store.receive(.updateLoggedInUserPostData(store.state.loggedInUserPostData)) {
+            $0.toggleToRefresh = true
+        }
+        XCTAssertEqual(expectedDisplayName, store.state.loggedInUserPostData.userDisplayName)
+
+        let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
+        let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
+        XCTAssertEqual(expectedDisplayName, updateUserRequest.updateDisplayName.newDisplayName)
     }
 }
