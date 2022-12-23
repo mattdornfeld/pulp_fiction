@@ -94,7 +94,7 @@ message User {
     UserMetadata nonSensitiveUserMetadata = 1;
     string email = 2;
     string phone_number = 3;
-    string date_of_birth = 4;
+    google.protobuf.Timestamp date_of_birth = 4;
   }
 
   oneof user_metadata {
@@ -121,7 +121,7 @@ message CreatePostRequest {
   message CreateUserPostRequest {
     string userId = 1;
     string display_name = 2;
-    bytes avatarJpg = 3;
+    bytes avatar_jpg = 3;
     string bio = 4;
   }
 
@@ -141,10 +141,10 @@ message CreateUserRequest {
   string display_name = 1;
   string email = 2;
   string phone_number = 3;
-  string date_of_birth = 4;
+  google.protobuf.Timestamp date_of_birth = 4;
   string password = 5;
   bool opt_in_to_emails = 6;
-  bytes avatarJpg = 7;
+  bytes avatar_jpg = 7;
   string bio = 8;
 }
 
@@ -233,7 +233,15 @@ message UpdateUserRequest {
   }
 
   message UpdateUserAvatar {
-    bytes avatarJpg = 1;
+    bytes avatar_jpg = 1;
+  }
+
+  message UpdateDisplayName {
+    string new_display_name = 1;
+  }
+
+  message UpdateBio {
+    string new_bio = 1;
   }
 
   message UpdateEmail {
@@ -242,6 +250,10 @@ message UpdateUserRequest {
 
   message UpdatePhoneNumber {
     string new_phone_number = 1;
+  }
+
+  message UpdateDateOfBirth {
+    google.protobuf.Timestamp new_date_of_birth = 1;
   }
 
   message ResetPassword {
@@ -259,11 +271,14 @@ message UpdateUserRequest {
   LoginResponse.LoginSession loginSession = 1;
   oneof update_user_request {
     UpdateUserAvatar update_user_avatar = 2;
-    UpdatePassword update_password = 3;
-    UpdateEmail update_email = 4;
-    UpdatePhoneNumber update_phone_number = 5;
-    ResetPassword reset_password = 6;
-    UpdateUserFollowingStatus update_user_following_status = 7;
+    UpdateDisplayName update_display_name = 3;
+    UpdateBio update_bio = 4;
+    UpdateEmail update_email = 5;
+    UpdatePhoneNumber update_phone_number = 6;
+    UpdateDateOfBirth update_date_of_birth = 7;
+    UpdatePassword update_password = 8;
+    ResetPassword reset_password = 9;
+    UpdateUserFollowingStatus update_user_following_status = 10;
   }
 }
 

@@ -20,6 +20,9 @@ public struct UpdateUserBackendMessenger {
         case updateUserAvatarUIImage
         case updateDisplayName
         case updateBio
+        case updateEmail
+        case updatePhoneNumber
+        case updateDateOfBirth
     }
 
     private func buildUpdateUserResponse(updateUserRequest: UpdateUserRequest) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
@@ -82,6 +85,39 @@ public struct UpdateUserBackendMessenger {
             $0.loginSession = loginSession.toProto()
             $0.updateBio = UpdateUserRequest.UpdateBio.with {
                 $0.newBio = newBio
+            }
+        }
+
+        return await buildUpdateUserResponse(updateUserRequest: updateUserRequest)
+    }
+
+    func updateEmail(newEmail: String) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
+        let updateUserRequest = UpdateUserRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.updateEmail = UpdateUserRequest.UpdateEmail.with {
+                $0.newEmail = newEmail
+            }
+        }
+
+        return await buildUpdateUserResponse(updateUserRequest: updateUserRequest)
+    }
+
+    func updatePhoneNumber(newPhoneNumber: String) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
+        let updateUserRequest = UpdateUserRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.updatePhoneNumber = UpdateUserRequest.UpdatePhoneNumber.with {
+                $0.newPhoneNumber = newPhoneNumber
+            }
+        }
+
+        return await buildUpdateUserResponse(updateUserRequest: updateUserRequest)
+    }
+
+    func updateDateOfBirth(newDateOfBirth: Date) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
+        let updateUserRequest = UpdateUserRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.updateDateOfBirth = UpdateUserRequest.UpdateDateOfBirth.with {
+                $0.newDateOfBirth = .init(date: newDateOfBirth)
             }
         }
 

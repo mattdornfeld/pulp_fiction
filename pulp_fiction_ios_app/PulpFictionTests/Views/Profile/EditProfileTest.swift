@@ -16,8 +16,8 @@ import XCTest
 @MainActor
 class EditProfileTest: XCTestCase {
     private let expectedUpdateUserResponseEither: Either<PulpFictionRequestError, UpdateUserResponse> = .right(UpdateUserResponse())
-    private let userPostDataUpdateAction: EquatableWrapper<(UpdateUserResponse, EditProfileReducer.State) -> PulpFictionRequestEither<UserPostData>> = .init { _, _ in
-        PulpFictionRequestEither<UserPostData>.left(PulpFictionRequestError())
+    private let userPostDataUpdateAction: EquatableWrapper<(UpdateUserResponse, EditProfileReducer.State) -> PulpFictionRequestEither<UserData>> = .init { _, _ in
+        .left(PulpFictionRequestError())
     }
 
     func buildEditProfileReducer() throws -> EditProfileReducer {
@@ -96,5 +96,110 @@ class EditProfileTest: XCTestCase {
         let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
         let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
         XCTAssertEqual(expectedDisplayName, updateUserRequest.updateDisplayName.newDisplayName)
+    }
+
+    func testUpdateBio() async throws {
+        let reducer = try buildEditProfileReducer()
+        let store = try buildTestStore(reducer: reducer)
+        let expectedBio = "expectedDisplayName"
+        await store.send(.updateBio(expectedBio))
+        await store.receive(
+            .processUpdateUserResponse(
+                expectedUpdateUserResponseEither,
+                UpdateUserBackendMessenger.BackendPath.updateBio.rawValue,
+                EditProfileReducer.BannerMessage.updateBio,
+                userPostDataUpdateAction
+            ),
+            timeout: Duration.seconds(0.2)
+        )
+        await store.receive(.updateLoggedInUserPostData(store.state.loggedInUserPostData)) {
+            $0.toggleToRefresh = true
+        }
+        XCTAssertEqual(expectedBio, store.state.loggedInUserPostData.bio)
+
+        let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
+        let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
+        XCTAssertEqual(expectedBio, updateUserRequest.updateBio.newBio)
+    }
+
+    func testUpdateEmail() async throws {
+        let reducer = try buildEditProfileReducer()
+        let store = try buildTestStore(reducer: reducer)
+        let expectedLoggedInUserSensitiveMetadata = SensitiveUserMetadata
+            .setter(for: \.email)
+            .set(store.state.loggedInUserSensitiveMetadata, "expectedEmail@gmail.com")
+        await store.send(.updateEmail(expectedLoggedInUserSensitiveMetadata.email))
+        await store.receive(
+            .processUpdateUserResponse(
+                expectedUpdateUserResponseEither,
+                UpdateUserBackendMessenger.BackendPath.updateEmail.rawValue,
+                EditProfileReducer.BannerMessage.updateEmail,
+                userPostDataUpdateAction
+            ),
+            timeout: Duration.seconds(0.2)
+        )
+
+        await store.receive(.updateLoggedInUserSensitiveMetadata(expectedLoggedInUserSensitiveMetadata)) {
+            $0.loggedInUserSensitiveMetadata = expectedLoggedInUserSensitiveMetadata
+        }
+        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.email, store.state.loggedInUserSensitiveMetadata.email)
+
+        let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
+        let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
+        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.email, updateUserRequest.updateEmail.newEmail)
+    }
+
+    func testUpdatePhoneNumber() async throws {
+        let reducer = try buildEditProfileReducer()
+        let store = try buildTestStore(reducer: reducer)
+        let expectedLoggedInUserSensitiveMetadata = SensitiveUserMetadata
+            .setter(for: \.phoneNumber)
+            .set(store.state.loggedInUserSensitiveMetadata, "876-5309")
+        await store.send(.updatePhoneNumber(expectedLoggedInUserSensitiveMetadata.phoneNumber))
+        await store.receive(
+            .processUpdateUserResponse(
+                expectedUpdateUserResponseEither,
+                UpdateUserBackendMessenger.BackendPath.updatePhoneNumber.rawValue,
+                EditProfileReducer.BannerMessage.updatePhoneNumber,
+                userPostDataUpdateAction
+            ),
+            timeout: Duration.seconds(0.2)
+        )
+
+        await store.receive(.updateLoggedInUserSensitiveMetadata(expectedLoggedInUserSensitiveMetadata)) {
+            $0.loggedInUserSensitiveMetadata = expectedLoggedInUserSensitiveMetadata
+        }
+        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.phoneNumber, store.state.loggedInUserSensitiveMetadata.phoneNumber)
+
+        let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
+        let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
+        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.phoneNumber, updateUserRequest.updatePhoneNumber.newPhoneNumber)
+    }
+
+    func testUpdateDateOfBirth() async throws {
+        let reducer = try buildEditProfileReducer()
+        let store = try buildTestStore(reducer: reducer)
+        let expectedLoggedInUserSensitiveMetadata = SensitiveUserMetadata
+            .setter(for: \.dateOfBirth)
+            .set(store.state.loggedInUserSensitiveMetadata, .distantPast)
+        await store.send(.updateDateOfBirth(expectedLoggedInUserSensitiveMetadata.dateOfBirth))
+        await store.receive(
+            .processUpdateUserResponse(
+                expectedUpdateUserResponseEither,
+                UpdateUserBackendMessenger.BackendPath.updateDateOfBirth.rawValue,
+                EditProfileReducer.BannerMessage.updateDateOfBirth,
+                userPostDataUpdateAction
+            ),
+            timeout: Duration.seconds(0.2)
+        )
+
+        await store.receive(.updateLoggedInUserSensitiveMetadata(expectedLoggedInUserSensitiveMetadata)) {
+            $0.loggedInUserSensitiveMetadata = expectedLoggedInUserSensitiveMetadata
+        }
+        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.dateOfBirth, store.state.loggedInUserSensitiveMetadata.dateOfBirth)
+
+        let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
+        let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
+        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.dateOfBirth, updateUserRequest.updateDateOfBirth.newDateOfBirth.date)
     }
 }

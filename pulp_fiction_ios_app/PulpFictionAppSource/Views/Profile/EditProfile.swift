@@ -43,6 +43,9 @@ struct EditProfileReducer: ReducerProtocol {
         case updateUserAvatarUIImage = "Avatar successfully updated"
         case updateDisplayName = "Display name successfully updated"
         case updateBio = "Bio successfully updated"
+        case updateEmail = "Email successfully updated"
+        case updatePhoneNumber = "Phone number successfully updated"
+        case updateDateOfBirth = "Date of birth successfully updated"
     }
 
     enum Action: Equatable {
@@ -66,7 +69,7 @@ struct EditProfileReducer: ReducerProtocol {
             Either<PulpFictionRequestError, UpdateUserResponse>,
             BackendPath,
             BannerMessage,
-            EquatableWrapper<(UpdateUserResponse, State) -> PulpFictionRequestEither<UserPostData>>
+            EquatableWrapper<(UpdateUserResponse, State) -> PulpFictionRequestEither<UserData>>
         )
     }
 
@@ -143,22 +146,67 @@ struct EditProfileReducer: ReducerProtocol {
             }
 
         case let .updateEmail(newEmail):
-            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
-                .setter(for: \.email)
-                .set(state.loggedInUserSensitiveMetadata, newEmail)
-            return .task { .updateLoggedInUserSensitiveMetadata(newLoggedInUserSensitiveMetadata) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateEmail(newEmail: newEmail)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateEmail.rawValue,
+                    BannerMessage.updateEmail,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
+                                .setter(for: \.email)
+                                .set(state.loggedInUserSensitiveMetadata, newEmail)
+                            return .right(newLoggedInUserSensitiveMetadata)
+                        }
+                    )
+                )
+            }
 
         case let .updatePhoneNumber(newPhoneNumber):
-            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
-                .setter(for: \.phoneNumber)
-                .set(state.loggedInUserSensitiveMetadata, newPhoneNumber)
-            return .task { .updateLoggedInUserSensitiveMetadata(newLoggedInUserSensitiveMetadata) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updatePhoneNumber(newPhoneNumber: newPhoneNumber)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updatePhoneNumber.rawValue,
+                    BannerMessage.updatePhoneNumber,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
+                                .setter(for: \.phoneNumber)
+                                .set(state.loggedInUserSensitiveMetadata, newPhoneNumber)
+                            return .right(newLoggedInUserSensitiveMetadata)
+                        }
+                    )
+                )
+            }
 
         case let .updateDateOfBirth(newDateOfBirth):
-            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
-                .setter(for: \.dateOfBirth)
-                .set(state.loggedInUserSensitiveMetadata, newDateOfBirth)
-            return .task { .updateLoggedInUserSensitiveMetadata(newLoggedInUserSensitiveMetadata) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateDateOfBirth(newDateOfBirth: newDateOfBirth)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateDateOfBirth.rawValue,
+                    BannerMessage.updateDateOfBirth,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
+                                .setter(for: \.dateOfBirth)
+                                .set(state.loggedInUserSensitiveMetadata, newDateOfBirth)
+                            return .right(newLoggedInUserSensitiveMetadata)
+                        }
+                    )
+                )
+            }
 
         case let .updateLoggedInUserPostData(newLoggedInUserPostData):
             state.loggedInUserPostData = newLoggedInUserPostData
@@ -180,9 +228,20 @@ struct EditProfileReducer: ReducerProtocol {
             switch newLoggedInUserPostaDataEither.toEnum() {
             case .left:
                 return .none
-            case let .right(newLoggedInUserPostaData):
+            case let .right(newLoggedInUserPostaData as UserPostData):
                 notificationBannerViewStore.send(.showNotificationBanner(bannerMessage.rawValue, .info))
                 return .task { .updateLoggedInUserPostData(newLoggedInUserPostaData) }
+            case let .right(newLoggedInSensitiveUserMetadata as SensitiveUserMetadata):
+                notificationBannerViewStore.send(.showNotificationBanner(bannerMessage.rawValue, .info))
+                return .task { .updateLoggedInUserSensitiveMetadata(newLoggedInSensitiveUserMetadata) }
+            case let .right(userData):
+                logger.error(
+                    "newLoggedInUserPostaDataEither has unsupported type",
+                    metadata: [
+                        "userData": "\(userData)",
+                    ]
+                )
+                return .none
             }
         }
     }

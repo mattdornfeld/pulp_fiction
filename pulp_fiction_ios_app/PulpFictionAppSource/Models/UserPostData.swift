@@ -11,7 +11,7 @@ import Foundation
 import UIKit
 
 /// User post data is stored in this model. Used for rendering UserPostView and avatar + display name in other post views.
-public class UserPostData: PostData, PostDataIdentifiable, Equatable, AutoSetter {
+public class UserPostData: UserData, PostData, PostDataIdentifiable, Equatable, AutoSetter {
     public let id: PostUpdateIdentifier
     let postMetadata: PostMetadata
     var userPostContentData: ContentData
