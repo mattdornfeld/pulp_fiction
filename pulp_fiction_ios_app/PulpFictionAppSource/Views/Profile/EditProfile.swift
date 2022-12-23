@@ -5,6 +5,7 @@
 //  Created by Matthew Dornfeld on 11/16/22.
 //
 
+import Bow
 import ComposableArchitecture
 import Foundation
 import Logging
@@ -20,6 +21,8 @@ enum ProfileSection: String, DropDownMenuOption {
 
 /// Reducer for EditProfileView
 struct EditProfileReducer: ReducerProtocol {
+    let backendMessenger: BackendMessenger
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     private let logger: Logger = .init(label: String(describing: EditProfileReducer.self))
 
     struct State: Equatable {
@@ -32,9 +35,20 @@ struct EditProfileReducer: ReducerProtocol {
                 return newFormatter.date(from: "1990-04-20T00:00:00Z")!
             }()
         )
+        /// Toggle used to trigger a UI refresh
+        var toggleToRefresh: Bool = false
     }
 
-    enum Action {
+    enum BannerMessage: String {
+        case updateUserAvatarUIImage = "Avatar successfully updated"
+        case updateDisplayName = "Display name successfully updated"
+        case updateBio = "Bio successfully updated"
+        case updateEmail = "Email successfully updated"
+        case updatePhoneNumber = "Phone number successfully updated"
+        case updateDateOfBirth = "Date of birth successfully updated"
+    }
+
+    enum Action: Equatable {
         /// Updates loggedInUserPostData.userAvatarUIImage
         case updateUserAvatarUIImage(UIImage)
         /// Updates loggedInUserPostData.loggedInUserPostDatadisplayName
@@ -51,68 +65,184 @@ struct EditProfileReducer: ReducerProtocol {
         case updateLoggedInUserPostData(UserPostData)
         /// Updates loggedInUserSensitiveMetadata
         case updateLoggedInUserSensitiveMetadata(SensitiveUserMetadata)
+        case processUpdateUserResponse(
+            Either<PulpFictionRequestError, UpdateUserResponse>,
+            BackendPath,
+            BannerMessage,
+            EquatableWrapper<(UpdateUserResponse, State) -> PulpFictionRequestEither<UserData>>
+        )
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
         case let .updateUserAvatarUIImage(newUserAvatarUIImage):
-            newUserAvatarUIImage
-                .toContentData()
-                .mapRight { newUserPostContentData in
-                    let newLoggedInUserPostData1 = UserPostData
-                        .setter(for: \.userPostContentData)
-                        .set(state.loggedInUserPostData, newUserPostContentData)
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateUserAvatarUIImage(avatarUIImage: newUserAvatarUIImage)
 
-                    let newLoggedInUserPostData2 = UserPostData
-                        .setter(for: \.userAvatarUIImage)
-                        .set(newLoggedInUserPostData1, newUserAvatarUIImage)
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateUserAvatarUIImage.rawValue,
+                    BannerMessage.updateUserAvatarUIImage,
+                    EquatableWrapper(
+                        { _, state in
+                            newUserAvatarUIImage
+                                .toContentData()
+                                .mapRight { newUserPostContentData in
+                                    let newLoggedInUserPostData1 = UserPostData
+                                        .setter(for: \.userPostContentData)
+                                        .set(state.loggedInUserPostData, newUserPostContentData)
 
-                    state.loggedInUserPostData = newLoggedInUserPostData2
-                }
-                .onError { _ in
-                    logger.error("Error serializing image")
-                }
-            return .none
+                                    return UserPostData
+                                        .setter(for: \.userAvatarUIImage)
+                                        .set(newLoggedInUserPostData1, newUserAvatarUIImage)
+                                }
+                        }
+                    )
+                )
+            }
 
         case let .updateDisplayName(newDisplayName):
-            let newLoggedInUserPostData = UserPostData
-                .setter(for: \.userDisplayName)
-                .set(state.loggedInUserPostData, newDisplayName)
-            return .task { .updateLoggedInUserPostData(newLoggedInUserPostData) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateDisplayName(newDisplayName: newDisplayName)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateDisplayName.rawValue,
+                    BannerMessage.updateDisplayName,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserPostData = UserPostData
+                                .setter(for: \.userDisplayName)
+                                .set(state.loggedInUserPostData, newDisplayName)
+                            return .right(newLoggedInUserPostData)
+                        }
+                    )
+                )
+            }
 
         case let .updateBio(newBio):
-            let newLoggedInUserPostData = UserPostData
-                .setter(for: \.bio)
-                .set(state.loggedInUserPostData, newBio)
-            return .task { .updateLoggedInUserPostData(newLoggedInUserPostData) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateBio(newBio: newBio)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateBio.rawValue,
+                    BannerMessage.updateBio,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserPostData = UserPostData
+                                .setter(for: \.bio)
+                                .set(state.loggedInUserPostData, newBio)
+                            return .right(newLoggedInUserPostData)
+                        }
+                    )
+                )
+            }
 
         case let .updateEmail(newEmail):
-            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
-                .setter(for: \.email)
-                .set(state.loggedInUserSensitiveMetadata, newEmail)
-            return .task { .updateLoggedInUserSensitiveMetadata(newLoggedInUserSensitiveMetadata) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateEmail(newEmail: newEmail)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateEmail.rawValue,
+                    BannerMessage.updateEmail,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
+                                .setter(for: \.email)
+                                .set(state.loggedInUserSensitiveMetadata, newEmail)
+                            return .right(newLoggedInUserSensitiveMetadata)
+                        }
+                    )
+                )
+            }
 
         case let .updatePhoneNumber(newPhoneNumber):
-            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
-                .setter(for: \.phoneNumber)
-                .set(state.loggedInUserSensitiveMetadata, newPhoneNumber)
-            return .task { .updateLoggedInUserSensitiveMetadata(newLoggedInUserSensitiveMetadata) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updatePhoneNumber(newPhoneNumber: newPhoneNumber)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updatePhoneNumber.rawValue,
+                    BannerMessage.updatePhoneNumber,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
+                                .setter(for: \.phoneNumber)
+                                .set(state.loggedInUserSensitiveMetadata, newPhoneNumber)
+                            return .right(newLoggedInUserSensitiveMetadata)
+                        }
+                    )
+                )
+            }
 
         case let .updateDateOfBirth(newDateOfBirth):
-            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
-                .setter(for: \.dateOfBirth)
-                .set(state.loggedInUserSensitiveMetadata, newDateOfBirth)
-            return .task { .updateLoggedInUserSensitiveMetadata(newLoggedInUserSensitiveMetadata) }
+            return .task {
+                let updateUserResponseEither = await backendMessenger
+                    .updateUserBackendMessenger
+                    .updateDateOfBirth(newDateOfBirth: newDateOfBirth)
+
+                return .processUpdateUserResponse(
+                    updateUserResponseEither,
+                    UpdateUserBackendMessenger.BackendPath.updateDateOfBirth.rawValue,
+                    BannerMessage.updateDateOfBirth,
+                    EquatableWrapper(
+                        { _, state in
+                            let newLoggedInUserSensitiveMetadata = SensitiveUserMetadata
+                                .setter(for: \.dateOfBirth)
+                                .set(state.loggedInUserSensitiveMetadata, newDateOfBirth)
+                            return .right(newLoggedInUserSensitiveMetadata)
+                        }
+                    )
+                )
+            }
 
         case let .updateLoggedInUserPostData(newLoggedInUserPostData):
             state.loggedInUserPostData = newLoggedInUserPostData
-            print(newLoggedInUserPostData)
+            state.toggleToRefresh.toggle()
             return .none
 
         case let .updateLoggedInUserSensitiveMetadata(newLoggedInUserSensitiveMetadata):
             state.loggedInUserSensitiveMetadata = newLoggedInUserSensitiveMetadata
-            print(newLoggedInUserSensitiveMetadata)
             return .none
+
+        case let .processUpdateUserResponse(updateUserResponseEither, backendPath, bannerMessage, userPostDataUpdateAction):
+            let _state = state
+            let newLoggedInUserPostaDataEither = updateUserResponseEither.processResponseFromServer(
+                notificationBannerViewStore: notificationBannerViewStore,
+                state: _state,
+                path: backendPath
+            ).flatMap { updateUserResponse in userPostDataUpdateAction.wrapped(updateUserResponse, _state) }^
+
+            switch newLoggedInUserPostaDataEither.toEnum() {
+            case .left:
+                return .none
+            case let .right(newLoggedInUserPostaData as UserPostData):
+                notificationBannerViewStore.send(.showNotificationBanner(bannerMessage.rawValue, .info))
+                return .task { .updateLoggedInUserPostData(newLoggedInUserPostaData) }
+            case let .right(newLoggedInSensitiveUserMetadata as SensitiveUserMetadata):
+                notificationBannerViewStore.send(.showNotificationBanner(bannerMessage.rawValue, .info))
+                return .task { .updateLoggedInUserSensitiveMetadata(newLoggedInSensitiveUserMetadata) }
+            case let .right(userData):
+                logger.error(
+                    "newLoggedInUserPostaDataEither has unsupported type",
+                    metadata: [
+                        "userData": "\(userData)",
+                    ]
+                )
+                return .none
+            }
         }
     }
 }
@@ -165,12 +295,12 @@ struct EditProfileField: View {
     @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
 
     var body: some View {
-        EditTextView(
+        EditText(
             prompt: prompt,
             createButtonLabel: "Update",
             keyboardType: keyboardType,
-            createButtonAction: { newText in
-                updateButtonAction(newText)
+            createButtonAction: { state in
+                updateButtonAction(state.text)
                 self.presentationMode.wrappedValue.dismiss()
             },
             validateTextAction: validateTextAction
@@ -306,7 +436,7 @@ struct EditPrivateProfileDataView: View {
 }
 
 /// Display and edit profile data
-struct EditProfileView: View {
+struct EditProfile: View {
     @ObservedObject private var symbolWithDropDownMenu: SymbolWithDropDownMenu<ProfileSection> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
         symbolSize: 20,
@@ -314,16 +444,21 @@ struct EditProfileView: View {
         menuOptions: ProfileSection.allCases,
         initialMenuSelection: .Public
     )
-    private var store: StoreOf<EditProfileReducer>
+    private var store: ComposableArchitecture.StoreOf<EditProfileReducer>
 
-    /// Inits a EditProfileView
-    /// - Parameter loggedInUserPostData: UserPostData for the logged in user
-    init(loggedInUserPostData: UserPostData) {
+    init(
+        loggedInUserPostData: UserPostData,
+        backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore
+    ) {
         store = Store(
             initialState: EditProfileReducer.State(
                 loggedInUserPostData: loggedInUserPostData
             ),
-            reducer: EditProfileReducer()
+            reducer: EditProfileReducer(
+                backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore
+            )
         )
     }
 

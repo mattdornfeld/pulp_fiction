@@ -16,8 +16,8 @@ def pulp_fiction_dependencies():
 
     http_archive(
         name = "com_github_buildbuddy_io_rules_xcodeproj",
-        sha256 = "564381b33261ba29e3c8f505de82fc398452700b605d785ce3e4b9dd6c73b623",
-        url = "https://github.com/buildbuddy-io/rules_xcodeproj/releases/download/0.9.0/release.tar.gz",
+        sha256 = "b4e71c7740bb8cfa4bc0b91c0f18ac512debcc111ebe471280e24f579a3b0782",
+        url = "https://github.com/buildbuddy-io/rules_xcodeproj/releases/download/0.10.2/release.tar.gz",
     )
 
     http_archive(

@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 /// View that scrolls through the logged in user's profile along with their posts
-struct LoggedInUserProfileScrollView<Content: View>: ImagePostScrollView {
+struct LoggedInUserProfileScrollView<Content: View>: ScrollViewParent {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
@@ -19,7 +19,9 @@ struct LoggedInUserProfileScrollView<Content: View>: ImagePostScrollView {
     var body: some View {
         ContentScrollView(
             prependToBeginningOfScroll: userProfileViewBuilder(),
-            postViewEitherSupplier: postViewEitherSupplier
+            postFeedMessenger: postFeedMessenger,
+            backendMessenger: backendMessenger,
+            notificationBannerViewStore: notificationBannerViewStore
         ) { viewStore in
             postFeedMessenger
                 .getUserProfilePostFeed(

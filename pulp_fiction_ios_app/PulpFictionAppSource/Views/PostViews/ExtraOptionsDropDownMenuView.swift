@@ -39,10 +39,11 @@ struct ExtraOptionsDropDownMenuReducer: ReducerProtocol {
 }
 
 /// View that shows the extra options for post actions
-struct ExtraOptionsDropDownMenuView: View {
+struct ExtraOptionsDropDownMenuView<A: ScrollableContentView>: View {
     let postMetadata: PostMetadata
     let backendMessenger: BackendMessenger
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
+    let contentScrollViewStore: ContentScrollViewStore<A>
     @ObservedObject private var viewStore: PulpFictionViewStore<ExtraOptionsDropDownMenuReducer>
 
     /// Enumeration of the extra post action
@@ -57,16 +58,24 @@ struct ExtraOptionsDropDownMenuView: View {
             case .Delete:
                 return false
             case .Report:
-                return false
+                return true
             }
         }
 
-        @ViewBuilder func destinationViewBuilder(postMetadata: PostMetadata) -> some View {
+        @ViewBuilder func destinationViewBuilder(
+            postMetadata: PostMetadata,
+            backendMessenger: BackendMessenger,
+            notificationBannerViewStore: NotificationnotificationBannerViewStore
+        ) -> some View {
             switch self {
             case .Delete:
                 EmptyView()
             case .Report:
-                ReportPostView(postMetadata: postMetadata)
+                ReportPost(
+                    postMetadata: postMetadata,
+                    backendMessenger: backendMessenger,
+                    notificationBannerViewStore: notificationBannerViewStore
+                )
             }
         }
 
@@ -96,11 +105,13 @@ struct ExtraOptionsDropDownMenuView: View {
     init(
         postMetadata: PostMetadata,
         backendMessenger: BackendMessenger,
-        notificationBannerViewStore: NotificationnotificationBannerViewStore
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
+        contentScrollViewStore: ContentScrollViewStore<A>
     ) {
         self.postMetadata = postMetadata
         self.backendMessenger = backendMessenger
         self.notificationBannerViewStore = notificationBannerViewStore
+        self.contentScrollViewStore = contentScrollViewStore
         viewStore = ExtraOptionsDropDownMenuView.buildViewStore()
     }
 
@@ -119,7 +130,11 @@ struct ExtraOptionsDropDownMenuView: View {
                 .padding(.bottom, 4),
             menuOptions: ExtraOptions.allCases,
             destinationSupplier: { menuOption in
-                menuOption.destinationViewBuilder(postMetadata: postMetadata)
+                menuOption.destinationViewBuilder(
+                    postMetadata: postMetadata,
+                    backendMessenger: backendMessenger,
+                    notificationBannerViewStore: notificationBannerViewStore
+                )
             }
         ) { menuOption in
             menuOption.getNavigationAction(viewStore: viewStore)
@@ -131,8 +146,9 @@ struct ExtraOptionsDropDownMenuView: View {
                 postMetadata: postMetadata,
                 extraOptionsDropDownMenuViewStore: viewStore,
                 backendMessenger: backendMessenger,
-                notificationBannerViewStore: notificationBannerViewStore
-            )
+                notificationBannerViewStore: notificationBannerViewStore,
+                contentScrollViewStore: contentScrollViewStore
+            ).presentationDetents([.fraction(0.2)])
         }
     }
 }

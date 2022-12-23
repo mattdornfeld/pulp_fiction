@@ -16,6 +16,7 @@ public struct PostMetadata: Codable, Equatable, PostDataIdentifiable {
     public let postState: Post.PostState
     public let createdAt: Date
     public let postCreatorUserId: UUID
+    public var postId: UUID { postUpdateIdentifier.postId }
 
     private enum CodingKeys: String, CodingKey {
         case postType

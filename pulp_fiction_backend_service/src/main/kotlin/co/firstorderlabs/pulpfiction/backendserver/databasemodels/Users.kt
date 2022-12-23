@@ -1,10 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
-import arrow.core.Option
-import arrow.core.Some
 import arrow.core.continuations.either
-import arrow.core.none
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
@@ -15,8 +12,9 @@ import co.firstorderlabs.protos.pulpfiction.UserKt.userMetadata
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
+import co.firstorderlabs.pulpfiction.backendserver.utils.toInstant
+import co.firstorderlabs.pulpfiction.backendserver.utils.toLocalDate
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
-import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
 import com.password4j.Password
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
@@ -66,7 +64,7 @@ interface User : Entity<User> {
             this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto(userPostDatum)
             this.phoneNumber = user.phoneNumber
             user.email?.let { this.email = it }
-            user.dateOfBirth?.let { this.dateOfBirth = it.toYearMonthDay() }
+            user.dateOfBirth?.let { this.dateOfBirth = it.toInstant().toTimestamp() }
         }
     }
 
@@ -83,24 +81,9 @@ interface User : Entity<User> {
     }
 
     companion object : Entity.Factory<User>() {
-        fun getDateOfBirth(dateOfBirth: String?): Either<RequestParsingError, Option<LocalDate>> {
-            if (dateOfBirth == null) {
-                return Either.Right(none())
-            }
-
-            return try {
-                val yearMonthDay = dateOfBirth.split("-").map { it.toInt() }
-                val localDateMaybe = Some(LocalDate.of(yearMonthDay[0], yearMonthDay[1], yearMonthDay[2]))
-                Either.Right(localDateMaybe)
-            } catch (cause: Throwable) {
-                Either.Left(RequestParsingError(cause))
-            }
-        }
-
         suspend fun fromRequest(
             request: PulpFictionProtos.CreateUserRequest
         ): Either<RequestParsingError, User> {
-            val dateOfBirth = getDateOfBirth(request.dateOfBirth)
             return either {
                 User {
                     this.userId = UUID.randomUUID()
@@ -109,7 +92,7 @@ interface User : Entity<User> {
                     this.phoneNumber = request.phoneNumber
                     this.hashedPassword = Password.hash(request.password).withBcrypt().result
                     this.email = request.email
-                    this.dateOfBirth = dateOfBirth.bind().orNull()
+                    this.dateOfBirth = request.dateOfBirth.toLocalDate()
                 }
             }
         }

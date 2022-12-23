@@ -70,6 +70,20 @@ public extension Optional {
         return value
     }
 
+    func getOrElse(_ defaultValueSuplier: () -> Wrapped) -> Wrapped {
+        guard let value = self else {
+            return defaultValueSuplier()
+        }
+
+        return value
+    }
+
+    func orElse(_ block: () -> Void) {
+        if self == nil {
+            block()
+        }
+    }
+
     func toResult<E: Error>(_ error: E) -> Swift.Result<Wrapped, E> {
         return map { success in Swift.Result.success(success) }
             .getOrElse(Swift.Result.failure(error))
