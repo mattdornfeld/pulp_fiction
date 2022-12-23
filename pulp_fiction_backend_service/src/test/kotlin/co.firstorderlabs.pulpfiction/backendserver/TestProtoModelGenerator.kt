@@ -3,6 +3,9 @@ package co.firstorderlabs.pulpfiction.backendserver
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createCommentRequest
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
+import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getFollowingPostFeedRequest
+import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getGlobalPostFeedRequest
+import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getUserPostFeedRequest
 import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
@@ -10,6 +13,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
@@ -19,6 +23,7 @@ import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePhoneNumbe
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateUserInfo
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.createUserRequest
+import co.firstorderlabs.protos.pulpfiction.getFeedRequest
 import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.protos.pulpfiction.loginRequest
 import co.firstorderlabs.protos.pulpfiction.updateUserRequest
@@ -101,6 +106,24 @@ object TestProtoModelGenerator {
             this.oldPassword = currentPassword
             this.newPassword = faker.unique.toString()
         }
+    }
+
+    fun generateRandomGetFollowingPostFeedRequest(loginSession: LoginSession): GetFeedRequest = getFeedRequest {
+        this.loginSession = loginSession
+        this.getFollowingPostFeedRequest = getFollowingPostFeedRequest {
+            this.userId = loginSession.userId
+        }
+    }
+
+    fun generateRandomGetGlobalPostFeedRequest(loginSession: LoginSession): GetFeedRequest = getFeedRequest {
+        this.loginSession = loginSession
+        this.getGlobalPostFeedRequest = getGlobalPostFeedRequest {
+        }
+    }
+
+    fun generateRandomGetUserPostFeedRequest(loginSession: LoginSession): GetFeedRequest = getFeedRequest {
+        this.loginSession = loginSession
+        this.getUserPostFeedRequest = getUserPostFeedRequest {}
     }
 
     fun LoginSession.generateRandomCreatePostRequest(): CreatePostRequest = createPostRequest {

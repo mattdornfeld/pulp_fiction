@@ -21,6 +21,7 @@ import co.firstorderlabs.protos.pulpfiction.updateUserResponse
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.DatabaseOperation
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.logDatabaseMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.EndpointName
+import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.endpointRequestTotal
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.logEndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
@@ -150,6 +151,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
 
     override fun getFeed(requests: Flow<PulpFictionProtos.GetFeedRequest>): Flow<PulpFictionProtos.GetFeedResponse> {
         val endpointName = EndpointName.getFeed
+        endpointRequestTotal.withLabels(endpointName).inc()
         return flow {
             var count = 0
             requests.collect { request ->

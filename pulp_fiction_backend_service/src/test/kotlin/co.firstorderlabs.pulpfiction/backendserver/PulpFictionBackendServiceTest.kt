@@ -10,7 +10,10 @@ import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.protos.pulpfiction.getUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.buildGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetFollowingPostFeedRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetGlobalPostFeedRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetPostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetUserPostFeedRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateEmailRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdatePasswordRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdatePhoneNumberRequest
@@ -41,6 +44,7 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowExcept
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import io.grpc.Status
 import io.grpc.StatusException
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -594,5 +598,64 @@ internal class PulpFictionBackendServiceTest {
             DatabaseMetrics.DatabaseOperation.updateUser
         )
             .assertDatabaseMetricsCorrect(1.0)
+    }
+
+    @Test
+    fun testGetFeed(): Unit = runBlocking {
+        /* Set up feed */
+        val userTuple2 = createUserAndLogin()
+        val user2Tuple2 = createUserAndLogin()
+        val createdPosts = listOf(userTuple2, user2Tuple2).map { tuple2 ->
+            val loginSession = tuple2.first
+            val imagePostRequest = loginSession.generateRandomCreatePostRequest().withRandomCreateImagePostRequest()
+            pulpFictionBackendService.createPost(imagePostRequest)
+        }
+
+        val loginSession = userTuple2.first
+        /* Construct and test global feed */
+        val globalFeedRequest = generateRandomGetGlobalPostFeedRequest(loginSession = loginSession)
+        val globalFeed = pulpFictionBackendService.getFeed(flow { listOf(globalFeedRequest, globalFeedRequest) })
+        globalFeed.collect { response ->
+            val posts = response.postsList
+            posts.size.assertEquals(createdPosts.size)
+            posts.zip(createdPosts.reversed()) { feedPost, createdPost ->
+                feedPost.metadata.postUpdateIdentifier.assertEquals(
+                    createdPost.postMetadata.postUpdateIdentifier
+                )
+            }
+        }
+
+        /* Construct and test user feed */
+        val userFeedRequest = generateRandomGetUserPostFeedRequest(loginSession = loginSession)
+        val userFeed = pulpFictionBackendService.getFeed(flow { listOf(userFeedRequest, userFeedRequest) })
+        userFeed.collect {
+            response ->
+            val posts = response.postsList
+            posts.size.assertEquals(1)
+            posts.zip(createdPosts) { feedPost, createdPost ->
+                if (createdPost.postMetadata.postCreatorId.equals(userTuple2.first.userId)) {
+                    feedPost.metadata.postUpdateIdentifier.assertEquals(
+                        createdPost.postMetadata.postUpdateIdentifier
+                    )
+                }
+            }
+        }
+
+        /* Construct empty following feed */
+        val followingFeedRequest = generateRandomGetFollowingPostFeedRequest(loginSession = loginSession)
+        val followingFeed = pulpFictionBackendService.getFeed(flow { listOf(followingFeedRequest) })
+        followingFeed.collect {
+            response ->
+            response.postsList.assertTrue { it.isEmpty() }
+        }
+
+        /* Metrics tests */
+        EndpointName.getFeed.assertEndpointMetricsCorrect(3.0)
+
+        Tuple2(
+            EndpointName.getFeed,
+            DatabaseMetrics.DatabaseOperation.getFeed
+        )
+            .assertDatabaseMetricsCorrect(5.0)
     }
 }
