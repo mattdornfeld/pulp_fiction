@@ -16,11 +16,12 @@ public struct PulpFictionAppViewBuilder {
     @ViewBuilder public func buildView() -> some View {
         switch externalMessengersCreateResult.toResult() {
         case let .success(externalMessengers):
-            BottomNavigationBarView(
-                loggedInUserPostData: externalMessengers.loginSession.loggedInUserPostData,
-                postFeedMessenger: externalMessengers.postFeedMessenger,
-                backendMessenger: externalMessengers.backendMessenger
-            )
+            Login()
+//            BottomNavigationBarView(
+//                loggedInUserPostData: externalMessengers.loginSession.loggedInUserPostData,
+//                postFeedMessenger: externalMessengers.postFeedMessenger,
+//                backendMessenger: externalMessengers.backendMessenger
+//            )
         case .failure:
             NavigationView {}
         }
