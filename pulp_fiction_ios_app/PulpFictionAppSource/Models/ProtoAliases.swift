@@ -12,6 +12,7 @@ import protos_pulp_fiction_proto
 import SwiftProtobuf
 
 public typealias CreatePostRequest = PulpFiction_Protos_CreatePostRequest
+public typealias CreatePostResponse = PulpFiction_Protos_CreatePostResponse
 public typealias GetFeedRequest = PulpFiction_Protos_GetFeedRequest
 public typealias GetFeedResponse = PulpFiction_Protos_GetFeedResponse
 public typealias ImagePost = PulpFiction_Protos_Post.ImagePost
@@ -20,7 +21,10 @@ public typealias Post = PulpFiction_Protos_Post
 public typealias PulpFictionClientProtocol = PulpFiction_Protos_PulpFictionClientProtocol
 public typealias PulpFictionServiceClient = PulpFiction_Protos_PulpFictionClient
 public typealias PulpFictionTestClient = PulpFiction_Protos_PulpFictionTestClient
+public typealias SensitiveUserMetadataProto = PulpFiction_Protos_User.SensitiveUserMetadata
 public typealias UpdatePostRequest = PulpFiction_Protos_UpdatePostRequest
 public typealias UpdatePostResponse = PulpFiction_Protos_UpdatePostResponse
+public typealias UpdateUserRequest = PulpFiction_Protos_UpdateUserRequest
+public typealias UpdateUserResponse = PulpFiction_Protos_UpdateUserResponse
+public typealias UserFollowingStatus = UpdateUserRequest.UpdateUserFollowingStatus.UserFollowingStatus
 public typealias UserMetadataProto = PulpFiction_Protos_User.UserMetadata
-public typealias SensitiveUserMetadataProto = PulpFiction_Protos_User.SensitiveUserMetadata

@@ -10,8 +10,11 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
+/// Describes the possible options for the main post feed
 enum PostFeedFilter: String, DropDownMenuOption {
+    /// Feed will contain all posts
     case Global
+    /// Feed will contain only the posts from users the logged in user is following
     case Following
 }
 
@@ -51,7 +54,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
 }
 
 /// View that scrolls through a feed of posts
-struct PostFeedScrollView: ImagePostScrollView {
+struct PostFeedScrollView: ScrollViewParent {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
@@ -63,26 +66,31 @@ struct PostFeedScrollView: ImagePostScrollView {
         menuOptions: PostFeedFilter.allCases,
         initialMenuSelection: .Global
     )
-
-    var body: some View {
+    var contentScrollView: ContentScrollView<ImagePostView, EmptyView> {
         ContentScrollView(
-            postViewEitherSupplier: postViewEitherSupplier
+            postFeedMessenger: postFeedMessenger,
+            backendMessenger: backendMessenger,
+            notificationBannerViewStore: notificationBannerViewStore
         ) { viewStore in
             getPostFeed(
                 postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
                 viewStore: viewStore
             )
         }
-        .toolbar {
-            PostFeedTopNavigationBar(
-                postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
-                loggedInUserPostData: loggedInUserPostData,
-                postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view,
-                notificationBannerViewStore: notificationBannerViewStore
-            )
-        }
+    }
+
+    var body: some View {
+        contentScrollView
+            .toolbar {
+                PostFeedTopNavigationBar(
+                    postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
+                    postFeedMessenger: postFeedMessenger,
+                    backendMessenger: backendMessenger,
+                    loggedInUserPostData: loggedInUserPostData,
+                    postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view,
+                    notificationBannerViewStore: notificationBannerViewStore
+                )
+            }
     }
 
     private func getPostFeed(

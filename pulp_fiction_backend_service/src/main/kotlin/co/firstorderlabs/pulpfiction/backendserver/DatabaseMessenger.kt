@@ -35,7 +35,6 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User.Companion.getDateOfBirth
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
@@ -67,6 +66,7 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
 import co.firstorderlabs.pulpfiction.backendserver.utils.getOrThrow
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
+import co.firstorderlabs.pulpfiction.backendserver.utils.toLocalDate
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import com.password4j.Password
 import org.ktorm.database.Database
@@ -405,9 +405,11 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val user = getUserFromUserId(userId).bind()
 
             when {
-                request.hasUpdateUserInfo() -> {
-                    user.currentDisplayName = request.updateUserInfo.newDisplayName
-                    user.dateOfBirth = getDateOfBirth(request.updateUserInfo.newDateOfBirth).bind().orNull()
+                request.hasUpdateDisplayName() -> {
+                    user.currentDisplayName = request.updateDisplayName.newDisplayName
+                }
+                request.hasUpdateDateOfBirth() -> {
+                    user.dateOfBirth = request.updateDateOfBirth.newDateOfBirth.toLocalDate()
                 }
                 request.hasUpdateEmail() -> {
                     user.email = request.updateEmail.newEmail

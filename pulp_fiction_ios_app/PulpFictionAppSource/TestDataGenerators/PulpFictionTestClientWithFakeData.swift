@@ -9,6 +9,7 @@ import Foundation
 import GRPC
 import Logging
 import protos_pulp_fiction_grpc_swift
+import SwiftProtobuf
 
 /// Backend client used during testing and for the preview version of the app. Generates fake data on each request then returns it.
 public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
@@ -17,14 +18,21 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     public var channel: GRPC.GRPCChannel
     public var defaultCallOptions: GRPC.CallOptions = CallOptions()
     public var interceptors: PulpFiction_Protos_PulpFictionClientInterceptorFactoryProtocol?
+    var requestBuffers: RequestBuffers = .init()
 
     private enum Path: String {
+        case createPost = "/pulp_fiction.protos.PulpFiction/CreatePost"
         case getFeed = "/pulp_fiction.protos.PulpFiction/GetFeed"
         case updatePost = "/pulp_fiction.protos.PulpFiction/UpdatePost"
+        case updateUser = "/pulp_fiction.protos.PulpFiction/UpdateUser"
     }
 
-    var getFeedRequests: [GetFeedRequest] = .init()
-    var updatePostRequests: [UpdatePostRequest] = .init()
+    class RequestBuffers {
+        var createPost: [CreatePostRequest] = .init()
+        var getFeed: [GetFeedRequest] = .init()
+        var updatePost: [UpdatePostRequest] = .init()
+        var updateUser: [UpdateUserRequest] = .init()
+    }
 
     public init() {
         fakeChannel = .init()
@@ -70,7 +78,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
                         ]
                     )
 
-                    self.getFeedRequests.append(getFeedRequest)
+                    self.requestBuffers.getFeed.append(getFeedRequest)
 
                     var posts: [Post] {
                         switch getFeedRequest.getFeedRequest {
@@ -137,23 +145,35 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         )
     }
 
-    public func updatePost(
-        _ request: UpdatePostRequest,
-        callOptions _: CallOptions? = nil
-    ) -> UnaryCall<UpdatePostRequest, UpdatePostResponse> {
+    private func processUnaryRequest<Request: SwiftProtobuf.Message, Response: SwiftProtobuf.Message>(
+        request: Request,
+        responseSupplier: @escaping (Request) -> Response,
+        path: Path
+    ) -> UnaryCall<Request, Response> where Response: Equatable {
         logger.debug(
-            "Received UpdatePostRequest",
+            "Received request",
             metadata: [
                 "request": "\(request)",
+                "path": "\(path.rawValue)",
             ]
         )
 
-        let responseBuffer: Queue<UpdatePostResponse> = .init(maxSize: 1)
-        let stream: FakeUnaryResponse<UpdatePostRequest, UpdatePostResponse> = fakeChannel.makeFakeUnaryResponse(path: Path.updatePost.rawValue) { fakeRequestPart in
+        let responseBuffer: Queue<Response> = .init(maxSize: 1)
+        let stream: FakeUnaryResponse<Request, Response> = fakeChannel.makeFakeUnaryResponse(path: path.rawValue) { fakeRequestPart in
             switch fakeRequestPart {
-            case let .message(updatePostRequest):
-                self.updatePostRequests.append(updatePostRequest)
-                responseBuffer.enqueue(UpdatePostResponse())
+            case let .message(request):
+                switch request {
+                case let request as UpdateUserRequest:
+                    self.requestBuffers.updateUser.append(request)
+                case let request as UpdatePostRequest:
+                    self.requestBuffers.updatePost.append(request)
+                case let request as CreatePostRequest:
+                    self.requestBuffers.createPost.append(request)
+                default:
+                    break
+                }
+
+                responseBuffer.enqueue(responseSupplier(request))
                 /// TODO (matt): For some reason tests fails if you take out this sleep. Unclear why.
                 /// Figure out in future. This code block is only run in tests.
                 Thread.sleep(forTimeInterval: 0.05)
@@ -167,9 +187,10 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         DispatchQueue.global(qos: .userInitiated).async {
             responseBuffer.dequeue().map { response in
                 self.logger.debug(
-                    "Sending UpdatePostResponse",
+                    "Sending response",
                     metadata: [
                         "response": "\(response)",
+                        "path": "\(path.rawValue)",
                     ]
                 )
 
@@ -178,8 +199,41 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         }
 
         return makeUnaryCall(
-            path: Path.updatePost.rawValue,
+            path: path.rawValue,
             request: request
+        )
+    }
+
+    public func createPost(
+        _ request: CreatePostRequest,
+        callOptions _: CallOptions? = nil
+    ) -> UnaryCall<CreatePostRequest, CreatePostResponse> {
+        processUnaryRequest(
+            request: request,
+            responseSupplier: { _ in CreatePostResponse() },
+            path: Path.createPost
+        )
+    }
+
+    public func updatePost(
+        _ request: UpdatePostRequest,
+        callOptions _: CallOptions? = nil
+    ) -> UnaryCall<UpdatePostRequest, UpdatePostResponse> {
+        processUnaryRequest(
+            request: request,
+            responseSupplier: { _ in UpdatePostResponse() },
+            path: Path.updatePost
+        )
+    }
+
+    public func updateUser(
+        _ request: UpdateUserRequest,
+        callOptions _: CallOptions? = nil
+    ) -> UnaryCall<UpdateUserRequest, UpdateUserResponse> {
+        processUnaryRequest(
+            request: request,
+            responseSupplier: { _ in UpdateUserResponse() },
+            path: Path.updateUser
         )
     }
 }
@@ -203,10 +257,24 @@ public extension PulpFictionClientProtocol {
         getClient().getFeed(callOptions: callOptions, handler: handler)
     }
 
+    func createPost(
+        _ request: CreatePostRequest,
+        callOptions: CallOptions? = nil
+    ) -> UnaryCall<CreatePostRequest, CreatePostResponse> {
+        getClient().createPost(request, callOptions: callOptions)
+    }
+
     func updatePost(
         _ request: UpdatePostRequest,
         callOptions: CallOptions? = nil
     ) -> UnaryCall<UpdatePostRequest, UpdatePostResponse> {
         getClient().updatePost(request, callOptions: callOptions)
+    }
+
+    func updateUser(
+        _ request: UpdateUserRequest,
+        callOptions: CallOptions? = nil
+    ) -> UnaryCall<UpdateUserRequest, UpdateUserResponse> {
+        getClient().updateUser(request, callOptions: callOptions)
     }
 }

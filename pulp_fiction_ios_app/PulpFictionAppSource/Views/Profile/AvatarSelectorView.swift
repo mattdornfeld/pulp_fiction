@@ -35,7 +35,7 @@ struct AvatarSelectorView: View {
         symbolSize: 20,
         symbolColor: .gray,
         menuOptions: ImageSourceType.allCases,
-        initialMenuSelection: .Camera
+        initialMenuSelection: .Album
     )
 
     var body: some View {

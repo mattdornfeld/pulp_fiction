@@ -8,6 +8,20 @@
 import Foundation
 import Logging
 
+private extension NSConditionLock {
+    func lockForDuration(whenCondition condition: Int, for durationMaybe: TimeInterval? = nil) {
+        durationMaybe
+            .map { lock(whenCondition: condition, before: Date.now.advanced(by: $0)) }
+            .orElse { lock(whenCondition: condition) }
+    }
+
+    func lockForDuration(for durationMaybe: TimeInterval? = nil) {
+        durationMaybe
+            .map { lock(before: Date.now.advanced(by: $0)) }
+            .orElse { lock() }
+    }
+}
+
 /// Thread safe implementation of queue with a maxSize property
 class Queue<A>: Equatable where A: Equatable {
     let maxSize: Int
@@ -48,13 +62,13 @@ class Queue<A>: Equatable where A: Equatable {
 
     /// Enqueue a elements to the queue. Blocks if full. No-op if closed.
     @discardableResult
-    func enqueue(_ value: A) -> Queue<A> {
-        enqueue([value])
+    func enqueue(_ value: A, for durationMaybe: TimeInterval? = nil) -> Queue<A> {
+        enqueue([value], for: durationMaybe)
     }
 
     /// Enqueue a elements to the queue. Blocks if full. No-op if closed.
     @discardableResult
-    func enqueue(_ values: [A]) -> Queue<A> {
+    func enqueue(_ values: [A], for durationMaybe: TimeInterval? = nil) -> Queue<A> {
         if isClosedAtomicBoolean.getValue() {
             logger.debug("Attempted to enqueue element to closed queue")
             return self
@@ -71,14 +85,9 @@ class Queue<A>: Equatable where A: Equatable {
             ]
         )
 
-//        Thread.sleep(forTimeInterval: 0.1)
-
-        isFull.lock(whenCondition: 0)
-        isEmpty.lock()
+        isFull.lockForDuration(whenCondition: 0, for: durationMaybe)
+        isEmpty.lockForDuration(for: durationMaybe)
         values.map { self.elements.append($0) }
-//        queue.sync {
-//            values.map { self.elements.append($0) }
-//        }
 
         isEmpty.unlock(withCondition: 0)
         if getSize() >= maxSize {
@@ -115,15 +124,15 @@ class Queue<A>: Equatable where A: Equatable {
 
     /// Dequeues elements from the queue. Blocks if empty. No-op if closed.
     @discardableResult
-    func dequeue(numElements: Int) -> [A] {
+    func dequeue(numElements: Int, for durationMaybe: TimeInterval? = nil) -> [A] {
         (1 ... numElements)
-            .map { _ in dequeue().toOption() }
+            .map { _ in dequeue(for: durationMaybe).toOption() }
             .flattenOption()
     }
 
     /// Dequeues an element from the queue. Blocks if empty. No-op if closed.
     @discardableResult
-    func dequeue() -> A? {
+    func dequeue(for durationMaybe: TimeInterval? = nil) -> A? {
         if isClosedAtomicBoolean.getValue() {
             logger.debug("Attempted to dequeue element from closed queue")
             return nil
@@ -138,8 +147,8 @@ class Queue<A>: Equatable where A: Equatable {
                 "maxSize": "\(maxSize)",
             ]
         )
-        isEmpty.lock(whenCondition: 0)
-        isFull.lock()
+        isEmpty.lockForDuration(whenCondition: 0, for: durationMaybe)
+        isFull.lockForDuration(for: durationMaybe)
 
         // Check if closed a second time in case queue is closed while stuck in above lock
         if isClosedAtomicBoolean.getValue() {
@@ -147,10 +156,6 @@ class Queue<A>: Equatable where A: Equatable {
         }
 
         let element = elements.removeFirst()
-
-//        let element = queue.sync {
-//            self.elements.removeFirst()
-//        }
 
         isFull.unlock(withCondition: 0)
         if getSize() == 0 {

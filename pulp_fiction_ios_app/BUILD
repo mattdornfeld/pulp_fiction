@@ -3,6 +3,8 @@ load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 load("@cgrindel_rules_swiftformat//swiftformat:defs.bzl", "swiftformat_pkg", "swiftformat_library", "swiftformat_format", "swiftformat_test")
 load("@com_github_buildbuddy_io_rules_xcodeproj//xcodeproj:defs.bzl", "xcodeproj")
 
+MINIMUM_IOS_VERSION = "16.0"
+
 platform(
     name = "myplatform",
     constraint_values = [
@@ -74,7 +76,7 @@ ios_application(
         "iphone",
         "ipad",
     ],
-    minimum_os_version = "15.0",
+    minimum_os_version = MINIMUM_IOS_VERSION,
     infoplists = [":PulpFictionApp/Info.plist"],
     visibility = ["//visibility:public"],
     deps = [
@@ -99,7 +101,7 @@ ios_application(
         "ipad",
     ],
     resources = [":preview_app_assets"],
-    minimum_os_version = "15.0",
+    minimum_os_version = MINIMUM_IOS_VERSION,
     infoplists = [":PulpFictionApp/Info.plist"],
     visibility = ["//visibility:public"],
     deps = [
@@ -122,7 +124,7 @@ ios_unit_test(
         "resourceBundleFileIdentifier": "co.firstorderlabs.PulpFictionTests",
         "isTestMode": "true",
     },
-    minimum_os_version = "15.0",
+    minimum_os_version = MINIMUM_IOS_VERSION,
     visibility = ["//visibility:public"],
 )
 

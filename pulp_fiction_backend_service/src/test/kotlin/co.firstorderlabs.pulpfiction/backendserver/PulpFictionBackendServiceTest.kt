@@ -14,10 +14,11 @@ import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.gener
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetGlobalPostFeedRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetUserPostFeedRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateDateOfBirthRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateDisplayNameRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateEmailRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdatePasswordRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdatePhoneNumberRequest
-import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserInfoRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
@@ -504,30 +505,31 @@ internal class PulpFictionBackendServiceTest {
     fun testSuccessfulUpdateUser(): Unit = runBlocking {
         val loginSession = createUserAndLogin().first
 
-        val updateUserInfoProto = generateRandomUpdateUserInfoRequest(loginSession)
-        val updatePhoneNumberProto = generateRandomUpdatePhoneNumberRequest(loginSession)
-        val updateEmailProto = generateRandomUpdateEmailRequest(loginSession)
-
-        val updateUserProtos = listOf(
-            updateUserInfoProto,
-            updatePhoneNumberProto,
-            updateEmailProto,
+        val updateDisplayNameRequest = generateRandomUpdateDisplayNameRequest(loginSession)
+        val updateDateOfBirthRequest = generateRandomUpdateDateOfBirthRequest(loginSession)
+        val updatePhoneNumberRequest = generateRandomUpdatePhoneNumberRequest(loginSession)
+        val updateEmailRequest = generateRandomUpdateEmailRequest(loginSession)
+        val requests = listOf(
+            updateDisplayNameRequest,
+            updateDateOfBirthRequest,
+            updatePhoneNumberRequest,
+            updateEmailRequest,
         )
 
         /* By testing the last response in a sequence of requests,
         * we can test both the endpoint response
         * and that the modification of the user row has been correctly resolved
         * in the database for each modification. */
-        val finalResponse = updateUserProtos.map { updateUserRequest ->
+        val finalResponse = requests.map { updateUserRequest ->
             pulpFictionBackendService.updateUser(updateUserRequest)
         }.last()
 
         finalResponse.assertEquals(
             tupleOf(
-                updateUserInfoProto.updateUserInfo.newDisplayName,
-                updateUserInfoProto.updateUserInfo.newDateOfBirth,
-                updatePhoneNumberProto.updatePhoneNumber.newPhoneNumber,
-                updateEmailProto.updateEmail.newEmail,
+                updateDisplayNameRequest.updateDisplayName.newDisplayName,
+                updateDateOfBirthRequest.updateDateOfBirth.newDateOfBirth,
+                updatePhoneNumberRequest.updatePhoneNumber.newPhoneNumber,
+                updateEmailRequest.updateEmail.newEmail,
             )
         ) {
             tupleOf(
@@ -538,13 +540,13 @@ internal class PulpFictionBackendServiceTest {
             )
         }
 
-        EndpointName.updateUser.assertEndpointMetricsCorrect(3.0)
+        EndpointName.updateUser.assertEndpointMetricsCorrect(requests.size.toDouble())
 
         Tuple2(
             EndpointName.updateUser,
             DatabaseMetrics.DatabaseOperation.updateUser
         )
-            .assertDatabaseMetricsCorrect(3.0)
+            .assertDatabaseMetricsCorrect(requests.size.toDouble())
     }
 
     @Test

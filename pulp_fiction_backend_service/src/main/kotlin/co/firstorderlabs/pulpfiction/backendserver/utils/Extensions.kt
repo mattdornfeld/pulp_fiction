@@ -12,6 +12,7 @@ import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import com.google.protobuf.Timestamp
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -25,6 +26,18 @@ fun Instant.toTimestamp(): Timestamp {
         .setSeconds(this.epochSecond)
         .setNanos(this.nano)
         .build()
+}
+
+val UTC_TIMEZONE: ZoneId = ZoneId.of("UTC")
+
+fun LocalDate.toInstant(): Instant {
+    return atStartOfDay(UTC_TIMEZONE).toInstant()
+}
+
+fun Timestamp.toInstant(): Instant = Instant.ofEpochSecond(this.seconds, this.nanos.toLong())
+
+fun Timestamp.toLocalDate(): LocalDate {
+    return this.toInstant().atZone(UTC_TIMEZONE).toLocalDate()
 }
 
 suspend fun <A, B : PulpFictionError> Effect<B, A>.getResultAndThrowException(): A {

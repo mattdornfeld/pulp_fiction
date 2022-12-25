@@ -1,6 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver.testutils
 
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
+import co.firstorderlabs.pulpfiction.backendserver.utils.toInstant
 import com.google.protobuf.ByteString
 import com.google.protobuf.Timestamp
 import org.junit.jupiter.api.Assertions
@@ -13,8 +14,6 @@ fun Random.nextByteString(size: Int): ByteString {
     this.nextBytes(bytesArray)
     return ByteString.copyFrom(bytesArray)
 }
-
-fun Timestamp.toInstant(): Instant = Instant.ofEpochSecond(this.seconds, this.nanos.toLong())
 
 fun Instant.isWithinLast(millis: Long): Boolean {
     val earlierInstant = nowTruncated().minusMillis(millis)

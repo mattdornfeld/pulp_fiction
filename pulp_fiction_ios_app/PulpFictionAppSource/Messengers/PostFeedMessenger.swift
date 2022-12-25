@@ -29,7 +29,7 @@ public struct PostFeedMessenger {
             pulpFictionClientProtocol: pulpFictionClientProtocol,
             getFeedRequest: getFeedRequest
         ) { postIndicesAndPosts in
-            DispatchQueue.main.sync { viewStore.send(.enqueuePostsToScroll(postIndicesAndPosts)) }
+            DispatchQueue.main.sync { viewStore.send(.enqueuePostsToScroll(postIndicesAndPosts, viewStore)) }
         }
     }
 

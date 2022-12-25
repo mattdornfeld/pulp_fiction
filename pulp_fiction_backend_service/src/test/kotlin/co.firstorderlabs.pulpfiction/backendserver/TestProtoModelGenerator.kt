@@ -17,10 +17,11 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateDateOfBirth
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateDisplayName
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateEmail
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePassword
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePhoneNumber
-import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateUserInfo
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.createUserRequest
 import co.firstorderlabs.protos.pulpfiction.getFeedRequest
@@ -29,8 +30,8 @@ import co.firstorderlabs.protos.pulpfiction.loginRequest
 import co.firstorderlabs.protos.pulpfiction.updateUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.testutils.nextByteString
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
+import co.firstorderlabs.pulpfiction.backendserver.utils.toInstant
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
-import co.firstorderlabs.pulpfiction.backendserver.utils.toYearMonthDay
 import io.github.serpro69.kfaker.Faker
 import java.util.Random
 import java.util.UUID
@@ -49,7 +50,7 @@ object TestProtoModelGenerator {
         this.displayName = faker.name.firstName()
         this.email = faker.internet.email()
         this.phoneNumber = faker.phoneNumber.phoneNumber()
-        this.dateOfBirth = faker.person.birthDate(30).toYearMonthDay()
+        this.dateOfBirth = faker.person.birthDate(30).toInstant().toTimestamp()
         this.password = faker.unique.toString()
         this.optInToEmails = random.nextBoolean()
         this.avatarJpg = random.nextByteString(100)
@@ -78,11 +79,17 @@ object TestProtoModelGenerator {
         this.avatarJpg = random.nextByteString(100)
     }
 
-    fun generateRandomUpdateUserInfoRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
+    fun generateRandomUpdateDisplayNameRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
         this.loginSession = loginSession
-        this.updateUserInfo = updateUserInfo {
+        this.updateDisplayName = updateDisplayName {
             this.newDisplayName = faker.name.firstName()
-            this.newDateOfBirth = faker.person.birthDate(31).toYearMonthDay()
+        }
+    }
+
+    fun generateRandomUpdateDateOfBirthRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
+        this.loginSession = loginSession
+        this.updateDateOfBirth = updateDateOfBirth {
+            this.newDateOfBirth = faker.person.birthDate(31).toInstant().toTimestamp()
         }
     }
 
@@ -100,13 +107,14 @@ object TestProtoModelGenerator {
         }
     }
 
-    fun generateRandomUpdatePasswordRequest(loginSession: LoginSession, currentPassword: String): UpdateUserRequest = updateUserRequest {
-        this.loginSession = loginSession
-        this.updatePassword = updatePassword {
-            this.oldPassword = currentPassword
-            this.newPassword = faker.unique.toString()
+    fun generateRandomUpdatePasswordRequest(loginSession: LoginSession, currentPassword: String): UpdateUserRequest =
+        updateUserRequest {
+            this.loginSession = loginSession
+            this.updatePassword = updatePassword {
+                this.oldPassword = currentPassword
+                this.newPassword = faker.unique.toString()
+            }
         }
-    }
 
     fun generateRandomGetFollowingPostFeedRequest(loginSession: LoginSession): GetFeedRequest = getFeedRequest {
         this.loginSession = loginSession

@@ -8,7 +8,7 @@
 import BowOptics
 import Foundation
 
-struct SensitiveUserMetadata: Equatable, AutoSetter {
+struct SensitiveUserMetadata: UserData, Equatable, AutoSetter {
     var email: String
     var phoneNumber: String
     var dateOfBirth: Date
