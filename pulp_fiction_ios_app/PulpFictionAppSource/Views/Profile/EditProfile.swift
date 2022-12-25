@@ -13,6 +13,8 @@ import SwiftUI
 
 /// Enumerates the sections of a user profile that can be edited
 enum ProfileSection: String, DropDownMenuOption {
+    /// General profile options
+    case General
     /// The public facing data
     case Public
     /// User's private data
@@ -20,8 +22,8 @@ enum ProfileSection: String, DropDownMenuOption {
 }
 
 /// Reducer for EditProfileView
-struct EditProfileReducer: ReducerProtocol {
-    let backendMessenger: BackendMessenger
+struct EditProfileReducer: PulpFictionReducerProtocol {
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     private let logger: Logger = .init(label: String(describing: EditProfileReducer.self))
 
@@ -326,137 +328,32 @@ extension EditProfileField {
     }
 }
 
-/// Edit and display publicly facing profile data
-struct EditPublicProfileDataView: View {
-    /// ViewStore for EditProfileView
-    let viewStore: ViewStore<EditProfileReducer.State, EditProfileReducer.Action>
-
-    var body: some View {
-        VStack {
-            CircularImage(
-                uiImage: viewStore.loggedInUserPostData.userAvatarUIImage,
-                radius: 40,
-                borderColor: .red,
-                borderWidth: 1
-            )
-            .padding([.leading, .top], 5)
-            Caption(
-                text: "Edit Profile Picture",
-                color: .gray
-            )
-        }.navigateOnTap(destination: AvatarSelectorView(updateButtonAction: { uiImage in
-            viewStore.send(.updateUserAvatarUIImage(uiImage))
-        }))
-
-        ProfileField(
-            fieldName: "Display Name",
-            fieldValue: viewStore.loggedInUserPostData.userDisplayName
-        ).navigateOnTap(
-            destination: EditProfileField(
-                prompt: viewStore.loggedInUserPostData.userDisplayName,
-                updateButtonAction: { viewStore.send(.updateDisplayName($0)) }
-            )
-        )
-
-        ProfileField(
-            fieldName: "Bio",
-            fieldValue: viewStore.loggedInUserPostData.bio
-        ).navigateOnTap(
-            destination: EditProfileField(
-                prompt: viewStore.loggedInUserPostData.bio,
-                updateButtonAction: { viewStore.send(.updateBio($0)) }
-            )
-        )
-
-        Spacer()
-    }
-}
-
-/// Edit and display private profile data
-struct EditPrivateProfileDataView: View {
-    /// ViewStore for EditProfileView
-    let viewStore: ViewStore<EditProfileReducer.State, EditProfileReducer.Action>
-
-    var body: some View {
-        VStack {
-            Caption(
-                text: "This data is private and will not be shared with anyone",
-                alignment: .center,
-                color: .gray
-            ).padding()
-
-            ProfileField(
-                fieldName: "Email",
-                fieldValue: viewStore.loggedInUserSensitiveMetadata.email
-            ).navigateOnTap(
-                destination: EditProfileField(
-                    prompt: viewStore.loggedInUserSensitiveMetadata.email,
-                    keyboardType: .emailAddress,
-                    updateButtonAction: { viewStore.send(.updateEmail($0)) },
-                    validateTextAction: { $0.isValidEmail() }
-                )
-            )
-
-            ProfileField(
-                fieldName: "Phone Number",
-                fieldValue: viewStore.loggedInUserSensitiveMetadata.phoneNumber
-            ).navigateOnTap(
-                destination: EditProfileField(
-                    prompt: viewStore.loggedInUserSensitiveMetadata.phoneNumber,
-                    keyboardType: .phonePad,
-                    updateButtonAction: { viewStore.send(.updatePhoneNumber($0)) },
-                    validateTextAction: { $0.isValidPhoneNumber() }
-                )
-            )
-
-            ProfileField(
-                fieldName: "Date of Birth",
-                fieldValue: viewStore.loggedInUserSensitiveMetadata.getFormattedDateOfBirth()
-            ).sheetOnTap {
-                DatePicker(
-                    "Date of Birth",
-                    selection: viewStore.binding(
-                        get: \.loggedInUserSensitiveMetadata.dateOfBirth,
-                        send: { newDateOfBirth in .updateDateOfBirth(newDateOfBirth) }
-                    ),
-                    displayedComponents: [.date]
-                ).datePickerStyle(.graphical)
-            }
-
-            Button("Change Password") {
-                print("Change Password")
-            }
-            .padding()
-            .foregroundColor(.white)
-            .background(.orange)
-
-            Spacer()
-        }
-    }
-}
-
 /// Display and edit profile data
-struct EditProfile: View {
+struct EditProfile: PulpFictionView {
+    let externalMessengers: ExternalMessengers
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var symbolWithDropDownMenu: SymbolWithDropDownMenu<ProfileSection> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
         symbolSize: 20,
         symbolColor: .gray,
         menuOptions: ProfileSection.allCases,
-        initialMenuSelection: .Public
+        initialMenuSelection: .General
     )
     private var store: ComposableArchitecture.StoreOf<EditProfileReducer>
 
     init(
         loggedInUserPostData: UserPostData,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) {
+        self.externalMessengers = externalMessengers
+        self.notificationBannerViewStore = notificationBannerViewStore
         store = Store(
             initialState: EditProfileReducer.State(
                 loggedInUserPostData: loggedInUserPostData
             ),
             reducer: EditProfileReducer(
-                backendMessenger: backendMessenger,
+                externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore
             )
         )
@@ -466,10 +363,15 @@ struct EditProfile: View {
         WithViewStore(store) { viewStore in
             VStack {
                 switch symbolWithDropDownMenu.currentSelection {
+                case .General:
+                    GeneralProfileOptions(
+                        externalMessengers: externalMessengers,
+                        notificationBannerViewStore: notificationBannerViewStore
+                    )
                 case .Public:
-                    EditPublicProfileDataView(viewStore: viewStore)
+                    EditPublicProfileData(viewStore: viewStore)
                 case .Private:
-                    EditPrivateProfileDataView(viewStore: viewStore)
+                    EditPrivateProfileData(viewStore: viewStore)
                 }
             }
             .toolbar { EditProfileTopNavigationBar(

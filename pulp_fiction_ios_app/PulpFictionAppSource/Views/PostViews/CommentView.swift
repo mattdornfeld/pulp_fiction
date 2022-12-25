@@ -33,9 +33,8 @@ struct CommentView: PostLikeOnSwipeView {
     let commentPostData: CommentPostData
     let creatorUserPostData: UserPostData
     let id: Int
-    let postFeedMessenger: PostFeedMessenger
+    let externalMessengers: ExternalMessengers
     let loggedInUserPostData: UserPostData
-    let backendMessenger: BackendMessenger
     let contentScrollViewStore: ContentScrollViewStore<CommentView>
     var postMetadata: PostMetadata { commentPostData.postMetadata }
     private static let logger = Logger(label: String(describing: CommentView.self))
@@ -47,8 +46,7 @@ struct CommentView: PostLikeOnSwipeView {
         commentPostData: CommentPostData,
         creatorUserPostData: UserPostData,
         id: Int,
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         loggedInUserPostData: UserPostData,
         notificationBannerViewStore: NotificationnotificationBannerViewStore,
         contentScrollViewStore: ContentScrollViewStore<CommentView>
@@ -56,13 +54,12 @@ struct CommentView: PostLikeOnSwipeView {
         self.commentPostData = commentPostData
         self.creatorUserPostData = creatorUserPostData
         self.id = id
-        self.postFeedMessenger = postFeedMessenger
+        self.externalMessengers = externalMessengers
         self.loggedInUserPostData = loggedInUserPostData
-        self.backendMessenger = backendMessenger
         self.notificationBannerViewStore = notificationBannerViewStore
         self.contentScrollViewStore = contentScrollViewStore
         swipablePostStore = CommentView.buildStore(
-            backendMessenger: backendMessenger,
+            externalMessengers: externalMessengers,
             postMetadata: commentPostData.postMetadata,
             postInteractionAggregates: commentPostData.postInteractionAggregates,
             loggedInUserPostInteractions: commentPostData.loggedInUserPostInteractions,
@@ -94,8 +91,7 @@ struct CommentView: PostLikeOnSwipeView {
                             destination: UserProfileView(
                                 userProfileOwnerPostData: creatorUserPostData,
                                 loggedInUserPostData: loggedInUserPostData,
-                                postFeedMessenger: postFeedMessenger,
-                                backendMessenger: backendMessenger,
+                                externalMessengers: externalMessengers,
                                 notificationBannerViewStore: notificationBannerViewStore
                             )
                         ) { viewStore.send(.updateShouldLoadUserProfileView(true)) }
@@ -107,7 +103,7 @@ struct CommentView: PostLikeOnSwipeView {
                     )
                     ExtraOptionsDropDownMenuView(
                         postMetadata: commentPostData.postMetadata,
-                        backendMessenger: backendMessenger,
+                        externalMessengers: externalMessengers,
                         notificationBannerViewStore: notificationBannerViewStore,
                         contentScrollViewStore: contentScrollViewStore
                     )
@@ -123,8 +119,7 @@ struct CommentView: PostLikeOnSwipeView {
         postViewIndex: Int,
         commentPostData: CommentPostData,
         userPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         loggedInUserPostData: UserPostData,
         notificationBannerViewStore: NotificationnotificationBannerViewStore,
         contentScrollViewStore: ContentScrollViewStore<CommentView>
@@ -134,8 +129,7 @@ struct CommentView: PostLikeOnSwipeView {
                 commentPostData: commentPostData,
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
+                externalMessengers: externalMessengers,
                 loggedInUserPostData: loggedInUserPostData,
                 notificationBannerViewStore: notificationBannerViewStore,
                 contentScrollViewStore: contentScrollViewStore
@@ -151,8 +145,7 @@ struct CommentView: PostLikeOnSwipeView {
     }
 
     static func getPostViewEitherSupplier(
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) -> PostViewEitherSupplier<CommentView> {
         { postViewIndex, postProto, contentScrollViewStore in
@@ -161,11 +154,11 @@ struct CommentView: PostLikeOnSwipeView {
             let commentViewEither = Either<PulpFictionRequestError, CommentView>.var()
 
             return binding(
-                commentPostDataEither <- postFeedMessenger.postDataMessenger
+                commentPostDataEither <- externalMessengers.postDataMessenger
                     .getPostData(postProto)
                     .unsafeRunSyncEither(on: .global(qos: .userInteractive))
                     .flatMap { postDataOneOf in postDataOneOf.toCommentPostData() }^,
-                userPostDataEither <- postFeedMessenger.postDataMessenger
+                userPostDataEither <- externalMessengers.postDataMessenger
                     .getPostData(postProto.comment.postCreatorLatestUserPost)
                     .unsafeRunSyncEither(on: .global(qos: .userInteractive))
                     .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
@@ -173,9 +166,8 @@ struct CommentView: PostLikeOnSwipeView {
                     postViewIndex: postViewIndex,
                     commentPostData: commentPostDataEither.get,
                     userPostData: userPostDataEither.get,
-                    postFeedMessenger: postFeedMessenger,
-                    backendMessenger: backendMessenger,
-                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
+                    externalMessengers: externalMessengers,
+                    loggedInUserPostData: externalMessengers.postFeedMessenger.loginSession.loggedInUserPostData,
                     notificationBannerViewStore: notificationBannerViewStore,
                     contentScrollViewStore: contentScrollViewStore
                 ),

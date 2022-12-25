@@ -24,6 +24,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         case createLoginSession = "/pulp_fiction.protos.PulpFiction/CreateLoginSession"
         case createPost = "/pulp_fiction.protos.PulpFiction/CreatePost"
         case getFeed = "/pulp_fiction.protos.PulpFiction/GetFeed"
+        case updateLoginSession = "/pulp_fiction.protos.PulpFiction/UpdateLoginSession"
         case updatePost = "/pulp_fiction.protos.PulpFiction/UpdatePost"
         case updateUser = "/pulp_fiction.protos.PulpFiction/UpdateUser"
     }
@@ -32,6 +33,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         var createLoginSession: [CreateLoginSessionRequest] = .init()
         var createPost: [CreatePostRequest] = .init()
         var getFeed: [GetFeedRequest] = .init()
+        var updateLoginSession: [UpdateLoginSessionRequest] = .init()
         var updatePost: [UpdatePostRequest] = .init()
         var updateUser: [UpdateUserRequest] = .init()
     }
@@ -165,12 +167,16 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
             switch fakeRequestPart {
             case let .message(request):
                 switch request {
+                case let request as CreateLoginSessionRequest:
+                    self.requestBuffers.createLoginSession.append(request)
+                case let request as CreatePostRequest:
+                    self.requestBuffers.createPost.append(request)
+                case let request as UpdateLoginSessionRequest:
+                    self.requestBuffers.updateLoginSession.append(request)
                 case let request as UpdateUserRequest:
                     self.requestBuffers.updateUser.append(request)
                 case let request as UpdatePostRequest:
                     self.requestBuffers.updatePost.append(request)
-                case let request as CreatePostRequest:
-                    self.requestBuffers.createPost.append(request)
                 default:
                     break
                 }
@@ -228,6 +234,17 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         )
     }
 
+    public func updateLoginSession(
+        _ request: UpdateLoginSessionRequest,
+        callOptions _: CallOptions? = nil
+    ) -> UnaryCall<UpdateLoginSessionRequest, UpdateLoginSessionResponse> {
+        processUnaryRequest(
+            request: request,
+            responseSupplier: { _ in UpdateLoginSessionResponse() },
+            path: Path.updateLoginSession
+        )
+    }
+
     public func updatePost(
         _ request: UpdatePostRequest,
         callOptions _: CallOptions? = nil
@@ -282,6 +299,13 @@ public extension PulpFictionClientProtocol {
         callOptions: CallOptions? = nil
     ) -> UnaryCall<CreatePostRequest, CreatePostResponse> {
         getClient().createPost(request, callOptions: callOptions)
+    }
+
+    func updateLoginSession(
+        _ request: UpdateLoginSessionRequest,
+        callOptions: CallOptions? = nil
+    ) -> UnaryCall<UpdateLoginSessionRequest, UpdateLoginSessionResponse> {
+        getClient().updateLoginSession(request, callOptions: callOptions)
     }
 
     func updatePost(

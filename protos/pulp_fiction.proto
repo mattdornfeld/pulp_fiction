@@ -220,7 +220,7 @@ message CreateLoginSessionRequest {
 
   string password = 1;
   string device_id = 2;
-  oneof login_request {
+  oneof create_login_session_request {
     EmailLogin email_login = 3;
     PhoneNumberLogin phone_number_login = 4;
   }
@@ -235,6 +235,52 @@ message CreateLoginSessionResponse {
     User.UserMetadata userMetadata = 5;
   }
   LoginSession loginSession = 1;
+}
+
+message UpdateLoginSessionRequest {
+  message Logout {}
+
+  CreateLoginSessionResponse.LoginSession loginSession = 1;
+  oneof update_login_session_request {
+    Logout logout = 2;
+  }
+}
+
+message UpdateLoginSessionResponse {}
+
+message UpdatePostRequest {
+  message UpdatePostLikeStatus {
+    Post.PostLike newPostLikeStatus = 1;
+  }
+
+  message DeletePost {
+  }
+
+  message UpdateImagePost {
+    string new_caption = 1;
+  }
+
+  message UpdateComment {
+    string new_body = 1;
+  }
+
+  message ReportPost {
+    string reportReason = 1;
+  }
+
+  CreateLoginSessionResponse.LoginSession loginSession = 1;
+  string post_id = 2;
+  oneof update_post_request {
+    UpdatePostLikeStatus updatePostLikeStatus = 3;
+    DeletePost deletePost = 4;
+    UpdateImagePost updateImagePost = 5;
+    UpdateComment updateComment = 6;
+    ReportPost reportPost = 7;
+  }
+}
+
+message UpdatePostResponse {
+  Post post = 1;
 }
 
 message UpdateUserRequest {
@@ -297,41 +343,6 @@ message UpdateUserResponse {
   User.SensitiveUserMetadata sensitiveUserMetadata = 1;
 }
 
-message UpdatePostRequest {
-  message UpdatePostLikeStatus {
-    Post.PostLike newPostLikeStatus = 1;
-  }
-
-  message DeletePost {
-  }
-
-  message UpdateImagePost {
-    string new_caption = 1;
-  }
-
-  message UpdateComment {
-    string new_body = 1;
-  }
-
-  message ReportPost {
-    string reportReason = 1;
-  }
-
-  CreateLoginSessionResponse.LoginSession loginSession = 1;
-  string post_id = 2;
-  oneof update_post_request {
-    UpdatePostLikeStatus updatePostLikeStatus = 3;
-    DeletePost deletePost = 4;
-    UpdateImagePost updateImagePost = 5;
-    UpdateComment updateComment = 6;
-    ReportPost reportPost = 7;
-  }
-}
-
-message UpdatePostResponse {
-  Post post = 1;
-}
-
 service PulpFiction {
   rpc CreateLoginSession (CreateLoginSessionRequest) returns (CreateLoginSessionResponse) {}
   rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {}
@@ -339,6 +350,7 @@ service PulpFiction {
   rpc GetFeed (stream GetFeedRequest) returns (stream GetFeedResponse) {}
   rpc GetPost (GetPostRequest) returns (GetPostResponse) {}
   rpc GetUser (GetUserRequest) returns (GetUserResponse) {}
-  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+  rpc UpdateLoginSession (UpdateLoginSessionRequest) returns (UpdateLoginSessionResponse) {}
   rpc UpdatePost(UpdatePostRequest) returns (UpdatePostResponse) {}
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
 }

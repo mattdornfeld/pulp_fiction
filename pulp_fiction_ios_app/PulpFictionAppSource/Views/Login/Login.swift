@@ -64,7 +64,7 @@ struct LoginReducer: ReducerProtocol {
     }
 }
 
-struct Login: View {
+struct Login: PulpFictionView {
     let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
@@ -101,8 +101,7 @@ struct Login: View {
         bottomNavigationBarNavigationLink = .init {
             .init(
                 loggedInUserPostData: externalMessengers.loginSession.loggedInUserPostData,
-                postFeedMessenger: externalMessengers.postFeedMessenger,
-                backendMessenger: externalMessengers.backendMessenger,
+                externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore
             )
         }

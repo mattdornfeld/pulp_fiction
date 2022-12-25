@@ -11,8 +11,6 @@ import Foundation
 import SwiftUI
 
 /// Parent for a views for scrolling through posts
-protocol ScrollViewParent: View {
-    var postFeedMessenger: PostFeedMessenger { get }
-    var backendMessenger: BackendMessenger { get }
+protocol ScrollViewParent: PulpFictionView {
     var notificationBannerViewStore: NotificationnotificationBannerViewStore { get }
 }

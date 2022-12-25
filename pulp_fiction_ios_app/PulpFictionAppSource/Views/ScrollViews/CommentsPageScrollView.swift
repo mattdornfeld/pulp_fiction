@@ -38,26 +38,22 @@ struct CommentsPageTopNavigationBar: ToolbarContent {
 /// View that scrolls through the comments page for a post
 struct CommentsPageScrollView: ScrollViewParent {
     let imagePostView: ImagePostView
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     init(
         imagePostView: ImagePostView,
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) {
         self.imagePostView = imagePostView
-        self.postFeedMessenger = postFeedMessenger
-        self.backendMessenger = backendMessenger
+        self.externalMessengers = externalMessengers
         self.notificationBannerViewStore = notificationBannerViewStore
     }
 
     var body: some View {
         ContentScrollView(
-            postFeedMessenger: postFeedMessenger,
-            backendMessenger: backendMessenger,
+            externalMessengers: externalMessengers,
             notificationBannerViewStore: notificationBannerViewStore
         ) { viewStore in
             postFeedMessenger

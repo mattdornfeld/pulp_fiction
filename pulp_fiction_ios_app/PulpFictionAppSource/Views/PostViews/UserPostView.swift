@@ -27,11 +27,10 @@ struct UserPostViewReducer: ReducerProtocol {
     }
 }
 
-struct UserPostView: View {
+struct UserPostView: PulpFictionView {
     let userPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
+    let externalMessengers: ExternalMessengers
     let loggedInUserPostData: UserPostData
-    let backendMessenger: BackendMessenger
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     private let store: ComposableArchitecture.StoreOf<UserPostViewReducer> = Store(
         initialState: UserPostViewReducer.State(),
@@ -62,8 +61,7 @@ struct UserPostView: View {
                 destination: UserProfileView(
                     userProfileOwnerPostData: userPostData,
                     loggedInUserPostData: loggedInUserPostData,
-                    postFeedMessenger: postFeedMessenger,
-                    backendMessenger: backendMessenger,
+                    externalMessengers: externalMessengers,
                     notificationBannerViewStore: notificationBannerViewStore
                 )
             ) {

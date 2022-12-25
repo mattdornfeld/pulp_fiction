@@ -37,8 +37,7 @@ struct UserConnectionsTopNavigationBar: ToolbarContent {
 /// View thay scrolls through a user's connections (e.g. their followers and followees)
 struct UserConnectionsScrollView: ScrollViewParent {
     let loggedInUserPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var userConnectionsFilterDropDownMenu: SymbolWithDropDownMenu<UserConnectionsFilter> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
@@ -50,20 +49,17 @@ struct UserConnectionsScrollView: ScrollViewParent {
 
     init(
         loggedInUserPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) {
         self.loggedInUserPostData = loggedInUserPostData
-        self.postFeedMessenger = postFeedMessenger
-        self.backendMessenger = backendMessenger
+        self.externalMessengers = externalMessengers
         self.notificationBannerViewStore = notificationBannerViewStore
     }
 
     var body: some View {
         ContentScrollView(
-            postFeedMessenger: postFeedMessenger,
-            backendMessenger: backendMessenger,
+            externalMessengers: externalMessengers,
             notificationBannerViewStore: notificationBannerViewStore
         ) { viewStore in
             buildPostViewFeed(

@@ -14,15 +14,14 @@ import SwiftUI
 typealias PostViewEitherSupplier<A: ScrollableContentView> = (Int, Post, ContentScrollViewStore<A>) -> Either<PulpFictionRequestError, A>
 
 /// A protocol from which which all Views that can be embedded in a scroll should inherit
-protocol ScrollableContentView: View, Identifiable, Equatable {
+protocol ScrollableContentView: PulpFictionView, Identifiable, Equatable {
     /// The integer position of the piece of content in the feed
     var id: Int { get }
     /// The metadata for the post
     var postMetadata: PostMetadata { get }
     /// Function for constructing a PostViewEitherSupplier
     static func getPostViewEitherSupplier(
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) -> PostViewEitherSupplier<Self>
 }
@@ -265,23 +264,20 @@ struct ContentScrollView<A: ScrollableContentView, B: PrepenedToScrollView>: Vie
     /// Builds a ContentScrollView
     /// - Parameters:
     ///   - prependToBeginningOfScroll: View to prepend to beginning of scroll
-    ///   - postFeedMessenger:
-    ///   - backendMessenger:
+    ///   - externalMessengers:
     ///   - notificationBannerViewStore:
     ///   - postViewEitherSupplier: Function constructs a ScrollableContentView from a Post and its index in the feed
     ///   - postStreamSupplier: Function that constructs a PostStream
     init(
         prependToBeginningOfScroll: B = EmptyView(),
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore,
         postStreamSupplier: @escaping (ViewStore<ContentScrollViewReducer<A>.State, ContentScrollViewReducer<A>.Action>) -> PostStream
 
     ) {
         self.prependToBeginningOfScroll = prependToBeginningOfScroll
         viewStore = ContentScrollView.buildViewStore(postViewEitherSupplier: A.getPostViewEitherSupplier(
-            postFeedMessenger: postFeedMessenger,
-            backendMessenger: backendMessenger,
+            externalMessengers: externalMessengers,
             notificationBannerViewStore: notificationBannerViewStore
         ))
         viewStore.send(.startPostStream(postStreamSupplier(viewStore)))

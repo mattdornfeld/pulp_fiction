@@ -11,26 +11,23 @@ import Foundation
 import SwiftUI
 
 /// Constructs a view for a users profile
-struct UserProfileView: View {
+struct UserProfileView: PulpFictionView {
     let userProfileOwnerPostData: UserPostData
     let loggedInUserPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     var body: some View {
         if userProfileOwnerPostData == loggedInUserPostData {
             LoggedInUserProfileScrollView(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
+                externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore
             ) { userProfileViewBuilder() }
         } else {
             UserProfileScrollView(
                 userProfileOwnerPostData: userProfileOwnerPostData,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
+                externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore
             ) { userProfileViewBuilder() }
         }

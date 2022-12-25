@@ -10,8 +10,8 @@ import Foundation
 import SwiftUI
 
 /// View for creating and posting images + captions
-struct CaptionCreator: View {
-    let backendMessenger: BackendMessenger
+struct CaptionCreator: PulpFictionView {
+    let externalMessengers: ExternalMessengers
     let uiImageMaybeSupplier: () -> UIImage?
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var emptyNavigationLink: EmptyNavigationLink<BottomNavigationBarView>
@@ -43,19 +43,17 @@ struct CaptionCreator: View {
 
     init(
         loggedInUserPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore,
         uiImageMaybeSupplier: @escaping () -> UIImage?
     ) {
-        self.backendMessenger = backendMessenger
+        self.externalMessengers = externalMessengers
         self.notificationBannerViewStore = notificationBannerViewStore
         self.uiImageMaybeSupplier = uiImageMaybeSupplier
         emptyNavigationLink = EmptyNavigationLink(
             destination: BottomNavigationBarView(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
+                externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore,
                 currentMainView: .loggedInUserProfileView
             )

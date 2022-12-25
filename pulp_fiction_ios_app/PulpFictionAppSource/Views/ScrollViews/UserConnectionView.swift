@@ -89,8 +89,7 @@ struct UserConnectionViewReducer: ReducerProtocol {
 struct UserConnectionView: ScrollableContentView {
     let id: Int
     let userPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let loggedInUserPostData: UserPostData
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     var postMetadata: PostMetadata { userPostData.postMetadata }
@@ -132,9 +131,8 @@ struct UserConnectionView: ScrollableContentView {
                 HStack {
                     UserPostView(
                         userPostData: userPostData,
-                        postFeedMessenger: postFeedMessenger,
+                        externalMessengers: externalMessengers,
                         loggedInUserPostData: loggedInUserPostData,
-                        backendMessenger: backendMessenger,
                         notificationBannerViewStore: notificationBannerViewStore
                     )
                     Spacer()
@@ -162,24 +160,22 @@ struct UserConnectionView: ScrollableContentView {
     }
 
     static func getPostViewEitherSupplier(
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) -> PostViewEitherSupplier<UserConnectionView> {
         { postViewIndex, postProto, _ in
             let userPostDataEither = Either<PulpFictionRequestError, UserPostData>.var()
 
             return binding(
-                userPostDataEither <- postFeedMessenger.postDataMessenger
+                userPostDataEither <- externalMessengers.postDataMessenger
                     .getPostData(postProto)
                     .unsafeRunSyncEither(on: .global(qos: .userInteractive))
                     .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
                 yield: UserConnectionView(
                     id: postViewIndex,
                     userPostData: userPostDataEither.get,
-                    postFeedMessenger: postFeedMessenger,
-                    backendMessenger: backendMessenger,
-                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
+                    externalMessengers: externalMessengers,
+                    loggedInUserPostData: externalMessengers.postFeedMessenger.loginSession.loggedInUserPostData,
                     notificationBannerViewStore: notificationBannerViewStore
                 )
             )^
