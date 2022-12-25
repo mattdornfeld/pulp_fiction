@@ -116,3 +116,23 @@ extension NavigationText {
         self.init(text: text, alignment: .leading, color: nil)
     }
 }
+
+struct HeadlineText: TextView {
+    let text: Text
+    let alignment: TextAlignment
+}
+
+extension HeadlineText {
+    init(text: String, alignment: TextAlignment, color: Color?) {
+        self.text = Text(text).font(.headline).foregroundColor(color)
+        self.alignment = alignment
+    }
+
+    init(text: String, alignment: TextAlignment) {
+        self.init(text: text, alignment: alignment, color: nil)
+    }
+
+    init(_ text: String) {
+        self.init(text: text, alignment: .leading, color: nil)
+    }
+}

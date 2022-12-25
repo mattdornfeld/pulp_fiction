@@ -49,18 +49,20 @@ struct BottomNavigationBarView: View {
     let loggedInUserPostData: UserPostData
     let postFeedMessenger: PostFeedMessenger
     let backendMessenger: BackendMessenger
-    private let banner: NotificationBanner = .init()
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var viewStore: ViewStore<BottomNavigationBarReducer.State, BottomNavigationBarReducer.Action>
 
     init(
         loggedInUserPostData: UserPostData,
         postFeedMessenger: PostFeedMessenger,
         backendMessenger: BackendMessenger,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
         currentMainView: BottomNavigationBarReducer.MainView = .postFeedScrollView
     ) {
         self.loggedInUserPostData = loggedInUserPostData
         self.postFeedMessenger = postFeedMessenger
         self.backendMessenger = backendMessenger
+        self.notificationBannerViewStore = notificationBannerViewStore
         viewStore = {
             let store = Store(
                 initialState: BottomNavigationBarReducer.State(currentMainView: currentMainView),
@@ -71,16 +73,11 @@ struct BottomNavigationBarView: View {
     }
 
     var body: some View {
-        NavigationView {
-            VStack {
-                buildMainView(viewStore.state.currentMainView)
-                buildBottomNavigationBar(viewStore)
-            }
+        VStack {
+            buildMainView(viewStore.state.currentMainView)
+            buildBottomNavigationBar(viewStore)
         }
         .accentColor(.black)
-        .overlay {
-            banner
-        }
     }
 
     @ViewBuilder private func buildMainView(_ currentMainView: BottomNavigationBarReducer.MainView) -> some View {
@@ -90,7 +87,7 @@ struct BottomNavigationBarView: View {
                 loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger,
                 backendMessenger: backendMessenger,
-                notificationBannerViewStore: banner.viewStore
+                notificationBannerViewStore: notificationBannerViewStore
             )
         case .loggedInUserProfileView:
             UserProfileView(
@@ -98,14 +95,14 @@ struct BottomNavigationBarView: View {
                 loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger,
                 backendMessenger: backendMessenger,
-                notificationBannerViewStore: banner.viewStore
+                notificationBannerViewStore: notificationBannerViewStore
             )
         case .loggedInUserFollowedScrollView:
             UserConnectionsScrollView(
                 loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger,
                 backendMessenger: backendMessenger,
-                notificationBannerViewStore: banner.viewStore
+                notificationBannerViewStore: notificationBannerViewStore
             )
         }
     }

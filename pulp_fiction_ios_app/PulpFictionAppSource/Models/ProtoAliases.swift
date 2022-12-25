@@ -11,6 +11,7 @@ import protos_pulp_fiction_grpc_swift
 import protos_pulp_fiction_proto
 import SwiftProtobuf
 
+public typealias CreateLoginSessionRequest = PulpFiction_Protos_CreateLoginSessionRequest
 public typealias CreateLoginSessionResponse = PulpFiction_Protos_CreateLoginSessionResponse
 public typealias CreatePostRequest = PulpFiction_Protos_CreatePostRequest
 public typealias CreatePostResponse = PulpFiction_Protos_CreatePostResponse

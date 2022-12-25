@@ -21,6 +21,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     var requestBuffers: RequestBuffers = .init()
 
     private enum Path: String {
+        case createLoginSession = "/pulp_fiction.protos.PulpFiction/CreateLoginSession"
         case createPost = "/pulp_fiction.protos.PulpFiction/CreatePost"
         case getFeed = "/pulp_fiction.protos.PulpFiction/GetFeed"
         case updatePost = "/pulp_fiction.protos.PulpFiction/UpdatePost"
@@ -28,6 +29,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     }
 
     class RequestBuffers {
+        var createLoginSession: [CreateLoginSessionRequest] = .init()
         var createPost: [CreatePostRequest] = .init()
         var getFeed: [GetFeedRequest] = .init()
         var updatePost: [UpdatePostRequest] = .init()
@@ -204,6 +206,17 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         )
     }
 
+    public func createLoginSession(
+        _ request: CreateLoginSessionRequest,
+        callOptions _: CallOptions? = nil
+    ) -> UnaryCall<CreateLoginSessionRequest, CreateLoginSessionResponse> {
+        processUnaryRequest(
+            request: request,
+            responseSupplier: { _ in CreateLoginSessionResponse() },
+            path: Path.createPost
+        )
+    }
+
     public func createPost(
         _ request: CreatePostRequest,
         callOptions _: CallOptions? = nil
@@ -255,6 +268,13 @@ public extension PulpFictionClientProtocol {
         handler: @escaping (GetFeedResponse) -> Void
     ) -> BidirectionalStreamingCall<GetFeedRequest, GetFeedResponse> {
         getClient().getFeed(callOptions: callOptions, handler: handler)
+    }
+
+    func createLoginSession(
+        _ request: CreateLoginSessionRequest,
+        callOptions: CallOptions? = nil
+    ) -> UnaryCall<CreateLoginSessionRequest, CreateLoginSessionResponse> {
+        getClient().createLoginSession(request, callOptions: callOptions)
     }
 
     func createPost(

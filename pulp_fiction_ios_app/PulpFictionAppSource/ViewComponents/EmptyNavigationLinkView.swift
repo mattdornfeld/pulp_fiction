@@ -59,17 +59,24 @@ struct EmptyNavigationLinkView<Destination: View>: View {
     }
 }
 
+/// Convenience type for ViewStore<EmptyNavigationLinkViewReducer.State, EmptyNavigationLinkViewReducer.Action>
+typealias EmptyNavigationLinkViewStore = ViewStore<EmptyNavigationLinkViewReducer.State, EmptyNavigationLinkViewReducer.Action>
+
 /// ObservableObject class that contains a EmptyNavigationLinkView and its ViewStore. Useful for when you want to update a parent view when navigation is triggered.
 class EmptyNavigationLink<Destination: View>: ObservableObject {
     /// The view for the EmptyNavigationLink. This has to be specified somewhere inside of the NavigationView for the navigation action to take effect.
     let view: EmptyNavigationLinkView<Destination>
     /// The ViewStore for the EmptyNavigationLinkView. This decorated with the Published property, so changes to the ViewStore can trigger a change in parent views.
-    @Published var viewStore: ComposableArchitecture.ViewStore<EmptyNavigationLinkViewReducer.State, EmptyNavigationLinkViewReducer.Action>
+    @Published var viewStore: EmptyNavigationLinkViewStore
 
     /// Inits a EmptyNavigationLink
     /// - Parameter destination: The Destination view
     init(destination: Destination) {
         view = EmptyNavigationLinkView(destination: destination)
         viewStore = view.viewStore
+    }
+
+    convenience init(destinationSupplier: () -> Destination) {
+        self.init(destination: destinationSupplier())
     }
 }

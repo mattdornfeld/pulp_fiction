@@ -11,25 +11,29 @@ import SwiftUI
 
 /// Build the primary view for the app
 public struct PulpFictionAppViewBuilder {
-    let externalMessengersCreateResult: Either<PulpFictionStartupError, ExternalMessengers>
+    let externalMessengersEither: Either<PulpFictionStartupError, ExternalMessengers>
+    private let notificationBanner: NotificationBanner = .init()
 
     @ViewBuilder public func buildView() -> some View {
-        switch externalMessengersCreateResult.toResult() {
-        case let .success(externalMessengers):
-            Login()
-//            BottomNavigationBarView(
-//                loggedInUserPostData: externalMessengers.loginSession.loggedInUserPostData,
-//                postFeedMessenger: externalMessengers.postFeedMessenger,
-//                backendMessenger: externalMessengers.backendMessenger
-//            )
-        case .failure:
-            NavigationView {}
+        NavigationView {
+            externalMessengersEither
+                .mapLeft { _ in EmptyView() }
+                .mapRight { externalMessengers in
+                    Login(
+                        externalMessengers: externalMessengers,
+                        notificationBannerViewStore: notificationBanner.viewStore
+                    )
+                }
+                .toEitherView()
+        }
+        .overlay {
+            notificationBanner
         }
     }
 }
 
 public extension PulpFictionAppViewBuilder {
-    init(_ externalMessengersCreateResult: Either<PulpFictionStartupError, ExternalMessengers>) {
-        self.init(externalMessengersCreateResult: externalMessengersCreateResult)
+    init(_ externalMessengersEither: Either<PulpFictionStartupError, ExternalMessengers>) {
+        self.init(externalMessengersEither: externalMessengersEither)
     }
 }

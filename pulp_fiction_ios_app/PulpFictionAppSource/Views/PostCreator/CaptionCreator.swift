@@ -56,6 +56,7 @@ struct CaptionCreator: View {
                 loggedInUserPostData: loggedInUserPostData,
                 postFeedMessenger: postFeedMessenger,
                 backendMessenger: backendMessenger,
+                notificationBannerViewStore: notificationBannerViewStore,
                 currentMainView: .loggedInUserProfileView
             )
         )

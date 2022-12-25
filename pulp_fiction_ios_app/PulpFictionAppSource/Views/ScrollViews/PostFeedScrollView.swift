@@ -27,7 +27,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
+        ToolbarItem(placement: .navigationBarLeading) {
             Title("Pulp Fiction")
                 .foregroundColor(.gray)
         }

@@ -18,6 +18,7 @@ public struct BackendMessenger {
     public let updatePostBackendMessenger: UpdatePostBackendMessenger
     public let updateUserBackendMessenger: UpdateUserBackendMessenger
     public let createPostBackendMessenger: CreatePostBackendMessenger
+    public let createLoginSessionBackendMessenger: CreateLogginSessionBackendMessenger
 
     public init(pulpFictionClientProtocol: PulpFictionClientProtocol, loginSession: LoginSession) {
         self.pulpFictionClientProtocol = pulpFictionClientProtocol
@@ -31,6 +32,10 @@ public struct BackendMessenger {
             loginSession: loginSession
         )
         createPostBackendMessenger = .init(
+            pulpFictionClientProtocol: pulpFictionClientProtocol,
+            loginSession: loginSession
+        )
+        createLoginSessionBackendMessenger = .init(
             pulpFictionClientProtocol: pulpFictionClientProtocol,
             loginSession: loginSession
         )
