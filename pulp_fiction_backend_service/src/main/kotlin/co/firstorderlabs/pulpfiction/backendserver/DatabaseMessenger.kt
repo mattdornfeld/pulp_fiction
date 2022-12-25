@@ -473,10 +473,9 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, List<PulpFictionProtos.Post>> = effect {
         val userId = request.loginSession.userId.toUUID().bind()
 
-        val unsortedPostQuery = getPostsQuery(request, userId)
-        val sortedPostsQuery = unsortedPostQuery
+        val unsortedPostsQuery = getPostsQuery(request, userId)
+        val sortedPostsQuery = unsortedPostsQuery
             .bind()
-            .where { Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE }
             .orderBy(Posts.createdAt.desc())
 
         val pagination = 2000
@@ -509,18 +508,25 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             request.hasGetGlobalPostFeedRequest() -> {
                 postsTable
                     .select(columns)
+                    .where { Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE }
             }
             request.hasGetUserPostFeedRequest() -> {
                 postsTable
                     .select(columns)
-                    .where { Posts.postCreatorId eq userId }
+                    .where {
+                        (Posts.postCreatorId eq userId) and
+                            (Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE)
+                    }
             }
             request.hasGetFollowingPostFeedRequest() -> {
                 database
                     .from(Followers)
                     .rightJoin(Posts, on = Followers.userId eq Posts.postCreatorId)
                     .select(columns)
-                    .where { Followers.followerId eq userId }
+                    .where {
+                        (Followers.followerId eq userId) and
+                            (Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE)
+                    }
             }
             else -> { shift(RequestParsingError("Feed request received without valid instruction.")) }
         }

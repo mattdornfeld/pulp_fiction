@@ -32,6 +32,7 @@ import software.amazon.awssdk.http.apache.ApacheHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest
+import java.time.Duration
 
 abstract class S3AndPostgresContainers {
     protected abstract val postgreSQLContainer: PostgreSQLContainer<Nothing>
@@ -106,9 +107,10 @@ abstract class S3AndPostgresContainers {
     }
 
     protected fun createPostgreSQLContainer(): PostgreSQLContainer<Nothing> =
-        PostgreSQLContainer<Nothing>(POSTGRES_IMAGE)
+        PostgreSQLContainer<Nothing>(POSTGRES_IMAGE).withStartupTimeout(Duration.ofSeconds(90))
 
     protected fun createLockStackContainer(): LocalStackContainer = LocalStackContainer(LOCAL_STACK_IMAGE)
         .withServices(LocalStackContainer.Service.S3)
         .withServices(LocalStackContainer.Service.KMS)
+        .withStartupTimeout(Duration.ofSeconds(90))
 }

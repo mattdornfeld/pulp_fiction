@@ -121,9 +121,9 @@ object TestProtoModelGenerator {
         }
     }
 
-    fun generateRandomGetUserPostFeedRequest(loginSession: LoginSession): GetFeedRequest = getFeedRequest {
+    fun generateRandomGetUserPostFeedRequest(loginSession: LoginSession, userId: String): GetFeedRequest = getFeedRequest {
         this.loginSession = loginSession
-        this.getUserPostFeedRequest = getUserPostFeedRequest {}
+        this.getUserPostFeedRequest = getUserPostFeedRequest { this.userId = userId }
     }
 
     fun LoginSession.generateRandomCreatePostRequest(): CreatePostRequest = createPostRequest {

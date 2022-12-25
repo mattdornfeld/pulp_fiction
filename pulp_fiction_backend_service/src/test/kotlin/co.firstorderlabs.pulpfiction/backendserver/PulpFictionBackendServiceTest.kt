@@ -45,6 +45,8 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import io.grpc.Status
 import io.grpc.StatusException
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -614,43 +616,47 @@ internal class PulpFictionBackendServiceTest {
         val loginSession = userTuple2.first
         /* Construct and test global feed */
         val globalFeedRequest = generateRandomGetGlobalPostFeedRequest(loginSession = loginSession)
-        val globalFeed = pulpFictionBackendService.getFeed(flow { listOf(globalFeedRequest, globalFeedRequest) })
-        globalFeed.collect { response ->
-            val posts = response.postsList
-            posts.size.assertEquals(createdPosts.size)
-            posts.zip(createdPosts.reversed()) { feedPost, createdPost ->
-                feedPost.metadata.postUpdateIdentifier.assertEquals(
-                    createdPost.postMetadata.postUpdateIdentifier
-                )
-            }
-        }
-
-        /* Construct and test user feed */
-        val userFeedRequest = generateRandomGetUserPostFeedRequest(loginSession = loginSession)
-        val userFeed = pulpFictionBackendService.getFeed(flow { listOf(userFeedRequest, userFeedRequest) })
-        userFeed.collect {
-            response ->
-            val posts = response.postsList
-            posts.size.assertEquals(1)
-            posts.zip(createdPosts) { feedPost, createdPost ->
-                if (createdPost.postMetadata.postCreatorId.equals(userTuple2.first.userId)) {
-                    feedPost.metadata.postUpdateIdentifier.assertEquals(
-                        createdPost.postMetadata.postUpdateIdentifier
-                    )
+        val globalFeed = pulpFictionBackendService.getFeed(flow { listOf(emit(globalFeedRequest), emit(globalFeedRequest)) })
+        val feedList = globalFeed.take(2).toList()
+        feedList
+            .map { resp ->
+                resp.postsList.map {
+                    post ->
+                    post.metadata.postUpdateIdentifier.postId
                 }
             }
-        }
+            .assertEquals(
+                listOf(
+                    createdPosts.map {
+                        request ->
+                        request.postMetadata.postUpdateIdentifier.postId
+                    }.reversed(),
+                    emptyList()
+                )
+            )
+
+        /* Construct and test user feed */
+        val userFeedRequest = generateRandomGetUserPostFeedRequest(loginSession = loginSession, userId = loginSession.userId)
+        val userFeed = pulpFictionBackendService.getFeed(flow { listOf(emit(userFeedRequest), emit(userFeedRequest)) })
+        val userFeedList = userFeed.take(2).toList()
+        userFeedList
+            .map { resp ->
+                resp.postsList.map {
+                    post ->
+                    post.metadata.postUpdateIdentifier.postId
+                }
+            }
+            .assertEquals(
+                listOf(
+                    listOf(createdPosts.first().postMetadata.postUpdateIdentifier.postId).reversed(),
+                    emptyList()
+                )
+            )
 
         /* Construct empty following feed */
         val followingFeedRequest = generateRandomGetFollowingPostFeedRequest(loginSession = loginSession)
-        val followingFeed = pulpFictionBackendService.getFeed(flow { listOf(followingFeedRequest) })
-        followingFeed.collect {
-            response ->
-            response.postsList.assertTrue { it.isEmpty() }
-        }
-
-        /* Metrics tests */
-        EndpointName.getFeed.assertEndpointMetricsCorrect(3.0)
+        val followingFeed = pulpFictionBackendService.getFeed(flow { listOf(emit(followingFeedRequest)) })
+        followingFeed.take(1).toList().forEach { it.postsList.isEmpty() }
 
         Tuple2(
             EndpointName.getFeed,
