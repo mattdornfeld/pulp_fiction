@@ -5,6 +5,7 @@
 //  Created by Matthew Dornfeld on 12/24/22.
 //
 
+import Bow
 import ComposableArchitecture
 import Foundation
 import SwiftUI
@@ -22,6 +23,8 @@ struct LoginReducer: ReducerProtocol {
         case createLoginSession
         case processCreateLoginSessionResponse(PulpFictionRequestEither<CreateLoginSessionResponse>)
     }
+
+    class UnrecognizedCreateLoginSessionResponse: PulpFictionRequestError {}
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
@@ -46,19 +49,31 @@ struct LoginReducer: ReducerProtocol {
 
         case let .processCreateLoginSessionResponse(createLoginSessionResponseEither):
             createLoginSessionResponseEither
+                .flatMap { (createLoginSessionResponse: CreateLoginSessionResponse) -> Either<PulpFictionRequestError, CreateLoginSessionResponse> in
+                    switch createLoginSessionResponse.createLoginSessionResponse {
+                    case .loginSession:
+                        notificationBannerViewStore.send(.showNotificationBanner("Successfully logged in!", .success))
+                        bottomNavigationBarNavigationLinkViewStore.send(.navigateToDestionationView())
+                        return .right(createLoginSessionResponse)
+                    case .invalidEmail:
+                        notificationBannerViewStore.send(.showNotificationBanner("Invalid email", .error))
+                        return .right(createLoginSessionResponse)
+                    case .invalidPhoneNumber:
+                        notificationBannerViewStore.send(.showNotificationBanner("Invalid phone number", .error))
+                        return .right(createLoginSessionResponse)
+                    case .invalidPassword:
+                        notificationBannerViewStore.send(.showNotificationBanner("Invalid password", .error))
+                        return .right(createLoginSessionResponse)
+                    case .none:
+                        return .left(UnrecognizedCreateLoginSessionResponse())
+                    }
+                }^
                 .processResponseFromServer(
                     notificationBannerViewStore: notificationBannerViewStore,
                     state: state,
                     path: CreateLogginSessionBackendMessenger.BackendPath.createLoginSession.rawValue
                 )
 
-            switch createLoginSessionResponseEither.toEnum() {
-            case .left:
-                return .none
-            case .right:
-                notificationBannerViewStore.send(.showNotificationBanner("Successfully logged in!", .success))
-                bottomNavigationBarNavigationLinkViewStore.send(.navigateToDestionationView())
-            }
             return .none
         }
     }

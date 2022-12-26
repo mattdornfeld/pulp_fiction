@@ -216,9 +216,19 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         _ request: CreateLoginSessionRequest,
         callOptions _: CallOptions? = nil
     ) -> UnaryCall<CreateLoginSessionRequest, CreateLoginSessionResponse> {
-        processUnaryRequest(
+        let userMetadataProto = UserMetadataProto.generate()
+        return processUnaryRequest(
             request: request,
-            responseSupplier: { _ in CreateLoginSessionResponse() },
+            responseSupplier: { _ in CreateLoginSessionResponse.with {
+                $0.loginSession = CreateLoginSessionResponse.LoginSession.with {
+                    $0.sessionToken = UUID().uuidString
+                    $0.userID = userMetadataProto.userID
+                    $0.createdAt = .init(date: .now)
+                    $0.deviceID = UUID().uuidString
+                    $0.userMetadata = userMetadataProto
+                }
+            }
+            },
             path: Path.createPost
         )
     }

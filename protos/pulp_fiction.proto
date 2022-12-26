@@ -234,7 +234,17 @@ message CreateLoginSessionResponse {
     string device_id = 4;
     User.UserMetadata userMetadata = 5;
   }
-  LoginSession loginSession = 1;
+
+  message InvalidEmail {}
+  message InvalidPhoneNumber {}
+  message InvalidPassword {}
+
+  oneof create_login_session_response {
+    LoginSession login_session = 1;
+    InvalidEmail invalid_email = 2;
+    InvalidPhoneNumber invalid_phone_number = 3;
+    InvalidPassword invalid_password = 4;
+  }
 }
 
 message UpdateLoginSessionRequest {
