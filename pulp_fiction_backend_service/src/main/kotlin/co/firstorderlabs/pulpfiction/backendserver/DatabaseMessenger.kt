@@ -473,9 +473,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         request: GetFeedRequest,
         count: Int
     ): Effect<PulpFictionRequestError, List<PulpFictionProtos.Post>> = effect {
-        val userId = request.loginSession.userId.toUUID().bind()
 
-        val unsortedPostsQuery = getPostsQuery(request, userId)
+        val unsortedPostsQuery = getPostsQuery(request)
         val sortedPostsQuery = unsortedPostsQuery
             .bind()
             .orderBy(Posts.createdAt.desc())
@@ -486,7 +485,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val postId = row[Posts.postId] ?: shift(PostNotFoundError())
             val postUpdate = getPostUpdate(postId).bind()
             val postCreatorId = row[Posts.postCreatorId] ?: shift(UserNotFoundError("Null"))
-            val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
+            val loggedInUser = request.loginSession.userId.toUUID().bind()
+            val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, loggedInUser).bind()
             val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
             post {
                 this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
@@ -501,7 +501,6 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     private fun getPostsQuery(
         request: GetFeedRequest,
-        userId: UUID
     ): Effect<PulpFictionRequestError, Query> = effect {
         val postsTable = database
             .from(Posts)
@@ -513,6 +512,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     .where { Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE }
             }
             request.hasGetUserPostFeedRequest() -> {
+                val userId = request.getUserPostFeedRequest.userId.toUUID().bind()
                 postsTable
                     .select(columns)
                     .where {
@@ -521,6 +521,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     }
             }
             request.hasGetFollowingPostFeedRequest() -> {
+                val userId = request.getFollowingPostFeedRequest.userId.toUUID().bind()
                 database
                     .from(Followers)
                     .rightJoin(Posts, on = Followers.userId eq Posts.postCreatorId)
