@@ -479,22 +479,38 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .bind()
             .orderBy(Posts.createdAt.desc())
 
-        val pagination = 2000
+        val pagination = 500
         val paginatedPosts = sortedPostsQuery.limit(offset = count * pagination, limit = pagination)
         paginatedPosts.map { row ->
             val postId = row[Posts.postId] ?: shift(PostNotFoundError())
             val postUpdate = getPostUpdate(postId).bind()
             val postCreatorId = row[Posts.postCreatorId] ?: shift(UserNotFoundError("Null"))
             val loggedInUser = request.loginSession.userId.toUUID().bind()
-            val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, loggedInUser).bind()
-            val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
-            post {
-                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
-                this.imagePost = getPostData(postId, ImagePostData).bind()
-                    .toProto(
-                        loggedInUserPostInteractions,
-                        postInteractionAggregates
-                    )
+
+            when (row[Posts.postType]) {
+                PulpFictionProtos.Post.PostType.IMAGE -> {
+                    feedImagePostCreator(
+                        postId = postId,
+                        postCreatorId = postCreatorId,
+                        loggedInUserId = loggedInUser,
+                        postUpdate = postUpdate
+                    ).bind()
+                }
+                PulpFictionProtos.Post.PostType.USER -> {
+                    feedUserPostCreator(
+                        postId = postId,
+                        postCreatorId = postCreatorId, postUpdate = postUpdate
+                    ).bind()
+                }
+                PulpFictionProtos.Post.PostType.COMMENT -> {
+                    feedCommentPostCreator(
+                        postId = postId,
+                        postCreatorId = postCreatorId,
+                        loggedInUserId = loggedInUser,
+                        postUpdate = postUpdate
+                    ).bind()
+                }
+                else -> { shift(FunctionalityNotImplementedError()) }
             }
         }
     }
@@ -504,7 +520,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, Query> = effect {
         val postsTable = database
             .from(Posts)
-        val columns = listOf(Posts.postId, Posts.postCreatorId)
+        val columns = listOf(Posts.postId, Posts.postCreatorId, Posts.postType)
         when {
             request.hasGetGlobalPostFeedRequest() -> {
                 postsTable
@@ -529,6 +545,35 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     .where {
                         (Followers.followerId eq userId) and
                             (Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE)
+                    }
+            }
+            request.hasGetCommentFeedRequest() -> {
+                val postId = request.getCommentFeedRequest.postId.toUUID().bind()
+                postsTable
+                    .rightJoin(CommentData, on = CommentData.postId eq Posts.postId)
+                    .select(columns)
+                    .where {
+                        CommentData.parentPostId eq postId
+                    }
+            }
+            request.hasGetFollowersFeedRequest() -> {
+                val userId = request.getFollowersFeedRequest.userId.toUUID().bind()
+                database
+                    .from(Followers)
+                    .select(columns)
+                    .where {
+                        (Followers.userId eq userId) and
+                            (Posts.postType eq PulpFictionProtos.Post.PostType.USER)
+                    }
+            }
+            request.hasGetFollowingFeedRequest() -> {
+                val userId = request.getFollowingFeedRequest.userId.toUUID().bind()
+                database
+                    .from(Followers)
+                    .select(columns)
+                    .where {
+                        (Followers.followerId eq userId) and
+                            (Posts.postType eq PulpFictionProtos.Post.PostType.USER)
                     }
             }
             else -> { shift(RequestParsingError("Feed request received without valid instruction.")) }
@@ -558,4 +603,55 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .firstOrOption()
             .getOrElse { shift(PostNotFoundError()) }
     }
+
+    private suspend fun feedImagePostCreator(
+        postId: UUID,
+        postCreatorId: UUID,
+        loggedInUserId: UUID,
+        postUpdate: PostUpdate
+    ):
+        Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
+            val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, loggedInUserId).bind()
+            val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
+            post {
+                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.imagePost = getPostData(postId, ImagePostData).bind()
+                    .toProto(
+                        loggedInUserPostInteractions,
+                        postInteractionAggregates
+                    )
+            }
+        }
+
+    private suspend fun feedCommentPostCreator(
+        postId: UUID,
+        postCreatorId: UUID,
+        loggedInUserId: UUID,
+        postUpdate: PostUpdate
+    ):
+        Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
+            val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, loggedInUserId).bind()
+            val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
+            post {
+                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.comment = getPostData(postId, CommentData).bind()
+                    .toProto(
+                        loggedInUserPostInteractions,
+                        postInteractionAggregates
+                    )
+            }
+        }
+
+    private suspend fun feedUserPostCreator(
+        postId: UUID,
+        postCreatorId: UUID,
+        postUpdate: PostUpdate
+    ):
+        Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
+
+            post {
+                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.userPost = getPostData(postId, UserPostData).bind().toProto()
+            }
+        }
 }
