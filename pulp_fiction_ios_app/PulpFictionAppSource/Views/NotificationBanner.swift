@@ -17,9 +17,19 @@ struct NotificationBannerReducer: ReducerProtocol {
         /// If true will show NotificationBanner
         var shouldShowNotification: Bool = false
         /// Text displayed in NotficationBanner
-        var notificationTextMaybe: String? = nil
+        var notificationTextMaybe: String?
         /// The BannerType
-        var bannerTypeMaybe: BannerType? = nil
+        var bannerTypeMaybe: BannerType?
+
+        init(
+            shouldShowNotification: Bool = false,
+            notificationTextMaybe: String? = nil,
+            bannerTypeMaybe: NotificationBannerReducer.BannerType? = nil
+        ) {
+            self.shouldShowNotification = shouldShowNotification
+            self.notificationTextMaybe = notificationTextMaybe
+            self.bannerTypeMaybe = bannerTypeMaybe
+        }
 
         /// Gets the bannerType or default if not specified
         func getBannerTypeOrDefault() -> BannerType {

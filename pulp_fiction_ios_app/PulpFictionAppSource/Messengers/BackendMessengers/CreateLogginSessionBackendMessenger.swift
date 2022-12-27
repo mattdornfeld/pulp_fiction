@@ -27,7 +27,7 @@ public struct CreateLogginSessionBackendMessenger {
         .logError("Error calling createLoginSession")
     }
 
-    private func getDeviceId() -> String {
+    func getDeviceId() -> String {
         UIDevice
             .current
             .identifierForVendor

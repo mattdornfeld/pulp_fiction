@@ -27,13 +27,12 @@ struct PulpFictionTextFieldReducer: ReducerProtocol {
     }
 }
 
+typealias PulpFictionTextFieldViewStore = PulpFictionViewStore<PulpFictionTextFieldReducer>
+
 struct PulpFictionTextField: View {
     let prompt: String
     let textFieldType: TextFieldType
-    @ObservedObject var viewStore: PulpFictionViewStore<PulpFictionTextFieldReducer> = .init(
-        initialState: PulpFictionTextFieldReducer.State(),
-        reducer: PulpFictionTextFieldReducer()
-    )
+    @ObservedObject var viewStore: PulpFictionTextFieldViewStore = PulpFictionTextField.buildViewStore()
     private let lightGrey: Color = .init(
         red: 239.0 / 255.0,
         green: 243.0 / 255.0,
@@ -58,6 +57,13 @@ struct PulpFictionTextField: View {
         .background(lightGrey)
         .cornerRadius(5.0)
         .padding(.bottom, 20)
+    }
+
+    static func buildViewStore() -> PulpFictionTextFieldViewStore {
+        .init(
+            initialState: PulpFictionTextFieldReducer.State(),
+            reducer: PulpFictionTextFieldReducer()
+        )
     }
 }
 

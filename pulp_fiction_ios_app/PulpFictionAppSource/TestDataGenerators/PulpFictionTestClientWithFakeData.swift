@@ -20,6 +20,19 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     public var interceptors: PulpFiction_Protos_PulpFictionClientInterceptorFactoryProtocol?
     var requestBuffers: RequestBuffers = .init()
 
+    static let createLoginSessionResponse: CreateLoginSessionResponse = {
+        let userMetadataProto = UserMetadataProto.generate()
+        return CreateLoginSessionResponse.with {
+            $0.loginSession = CreateLoginSessionResponse.LoginSession.with {
+                $0.sessionToken = UUID().uuidString
+                $0.userID = userMetadataProto.userID
+                $0.createdAt = .init(date: .now)
+                $0.deviceID = UUID().uuidString
+                $0.userMetadata = userMetadataProto
+            }
+        }
+    }()
+
     private enum Path: String {
         case createLoginSession = "/pulp_fiction.protos.PulpFiction/CreateLoginSession"
         case createPost = "/pulp_fiction.protos.PulpFiction/CreatePost"
@@ -219,16 +232,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         let userMetadataProto = UserMetadataProto.generate()
         return processUnaryRequest(
             request: request,
-            responseSupplier: { _ in CreateLoginSessionResponse.with {
-                $0.loginSession = CreateLoginSessionResponse.LoginSession.with {
-                    $0.sessionToken = UUID().uuidString
-                    $0.userID = userMetadataProto.userID
-                    $0.createdAt = .init(date: .now)
-                    $0.deviceID = UUID().uuidString
-                    $0.userMetadata = userMetadataProto
-                }
-            }
-            },
+            responseSupplier: { _ in PulpFictionTestClientWithFakeData.createLoginSessionResponse },
             path: Path.createPost
         )
     }

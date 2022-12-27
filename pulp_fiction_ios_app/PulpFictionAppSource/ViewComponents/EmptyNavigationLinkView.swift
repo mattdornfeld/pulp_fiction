@@ -40,13 +40,7 @@ struct EmptyNavigationLinkView<Destination: View>: View {
     /// The destination View
     let destination: Destination
     /// ViewStore for this object
-    @ObservedObject var viewStore: ComposableArchitecture.ViewStore<EmptyNavigationLinkViewReducer.State, EmptyNavigationLinkViewReducer.Action> = {
-        let store = Store(
-            initialState: EmptyNavigationLinkViewReducer.State(),
-            reducer: EmptyNavigationLinkViewReducer()
-        )
-        return ViewStore(store)
-    }()
+    @ObservedObject var viewStore: EmptyNavigationLinkViewStore = EmptyNavigationLinkView.buildViewStore()
 
     var body: some View {
         NavigationLink(
@@ -56,6 +50,13 @@ struct EmptyNavigationLinkView<Destination: View>: View {
                 send: .updateShouldLoadDestionationView(false)
             )
         ) { EmptyView() }
+    }
+
+    static func buildViewStore() -> EmptyNavigationLinkViewStore {
+        .init(
+            initialState: EmptyNavigationLinkViewReducer.State(),
+            reducer: EmptyNavigationLinkViewReducer()
+        )
     }
 }
 

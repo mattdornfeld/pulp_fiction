@@ -29,7 +29,7 @@ class PostLikeOnSwipeViewTest: XCTestCase {
                 .logError("Error creating ExternalMessengers")
                 .mapLeft { PulpFictionRequestError($0) },
             yield: PostLikeArrowReducer(
-                backendMessenger: externalMessengersEither.get.backendMessenger,
+                externalMessengers: externalMessengersEither.get,
                 postMetadata: imagePostDataEither.get.postMetadata,
                 notificationBannerViewStore: NotificationBanner.buildViewStore()
             )

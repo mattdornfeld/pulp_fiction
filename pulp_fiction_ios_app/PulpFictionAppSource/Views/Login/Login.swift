@@ -12,8 +12,8 @@ import SwiftUI
 
 struct LoginReducer: ReducerProtocol {
     let externalMessengers: ExternalMessengers
-    let emailOrPhoneTextFieldViewStore: PulpFictionViewStore<PulpFictionTextFieldReducer>
-    let passwordTextFieldViewStore: PulpFictionViewStore<PulpFictionTextFieldReducer>
+    let emailOrPhoneTextFieldViewStore: PulpFictionTextFieldViewStore
+    let passwordTextFieldViewStore: PulpFictionTextFieldViewStore
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     let bottomNavigationBarNavigationLinkViewStore: EmptyNavigationLinkViewStore
     var backendMessenger: BackendMessenger { externalMessengers.backendMessenger }

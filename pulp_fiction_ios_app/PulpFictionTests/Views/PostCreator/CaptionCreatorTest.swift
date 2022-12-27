@@ -38,8 +38,7 @@ class CaptionCreatorTest: XCTestCase {
                 .mapLeft { PulpFictionRequestError($0) },
             yield: CaptionCreator(
                 loggedInUserPostData: userPostDataEither.get,
-                postFeedMessenger: externalMessengersEither.get.postFeedMessenger,
-                backendMessenger: externalMessengersEither.get.backendMessenger,
+                externalMessengers: externalMessengersEither.get,
                 notificationBannerViewStore: NotificationBanner.buildViewStore(),
                 uiImageMaybeSupplier: { uiImageEither.get }
             )

@@ -29,7 +29,7 @@ class EditProfileTest: XCTestCase {
                 .logError("Error creating ExternalMessengers")
                 .mapLeft { PulpFictionRequestError($0) },
             yield: EditProfileReducer(
-                backendMessenger: externalMessengersEither.get.backendMessenger,
+                externalMessengers: externalMessengersEither.get,
                 notificationBannerViewStore: NotificationBanner.buildViewStore()
             )
         )^.getOrThrow()
