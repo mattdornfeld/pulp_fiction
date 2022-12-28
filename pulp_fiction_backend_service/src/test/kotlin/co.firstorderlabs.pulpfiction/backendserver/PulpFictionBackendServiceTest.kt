@@ -10,6 +10,7 @@ import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.protos.pulpfiction.getUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.buildGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetCommentFeedRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetFollowingPostFeedRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetGlobalPostFeedRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetPostRequest
@@ -605,17 +606,17 @@ internal class PulpFictionBackendServiceTest {
     }
 
     @Test
-    fun testGetFeed(): Unit = runBlocking {
+    fun testGetImageFeed(): Unit = runBlocking {
         /* Set up feed */
-        val userTuple2 = createUserAndLogin()
-        val user2Tuple2 = createUserAndLogin()
-        val createdPosts = listOf(userTuple2, user2Tuple2).map { tuple2 ->
+        val userTuples = (1..2).map { createUserAndLogin() }
+        val createdPosts = userTuples.map { tuple2 ->
             val loginSession = tuple2.first
             val imagePostRequest = loginSession.generateRandomCreatePostRequest().withRandomCreateImagePostRequest()
             pulpFictionBackendService.createPost(imagePostRequest)
         }
 
-        val loginSession = userTuple2.first
+        val loginSession = userTuples.first().first
+
         /* Construct and test global feed */
         val globalFeedRequest = generateRandomGetGlobalPostFeedRequest(loginSession = loginSession)
         val globalFeed = pulpFictionBackendService.getFeed(flow { listOf(emit(globalFeedRequest), emit(globalFeedRequest)) })
@@ -665,5 +666,52 @@ internal class PulpFictionBackendServiceTest {
             DatabaseMetrics.DatabaseOperation.getFeed
         )
             .assertDatabaseMetricsCorrect(5.0)
+    }
+
+    @Test
+    fun testGetCommentFeed(): Unit = runBlocking {
+        /* Set up feed */
+        val userTuples = (1..6).map { createUserAndLogin() }
+        val loginSession = userTuples.first().first
+        val imagePostRequest = loginSession.generateRandomCreatePostRequest().withRandomCreateImagePostRequest()
+        val imagePostResponse = pulpFictionBackendService.createPost(imagePostRequest)
+        val imagePostMetadata = imagePostResponse.postMetadata
+
+        /* Each user creates a comment */
+        val createdComments = userTuples.map {
+            val createCommentRequest = loginSession.generateRandomCreatePostRequest()
+                .withRandomCreateCommentRequest(imagePostMetadata.postUpdateIdentifier.postId)
+            pulpFictionBackendService.createPost(createCommentRequest).postMetadata
+        }
+
+        val commentFeedRequest = generateRandomGetCommentFeedRequest(
+            loginSession,
+            imagePostMetadata.postUpdateIdentifier.postId
+        )
+        val commentFeed = pulpFictionBackendService.getFeed(
+            flow {
+                listOf(
+                    emit(commentFeedRequest),
+                    emit(commentFeedRequest)
+                )
+            }
+        )
+        val feedList = commentFeed.take(2).toList()
+        feedList
+            .map { resp ->
+                resp.postsList.map {
+                    post ->
+                    post.metadata.postUpdateIdentifier.postId
+                }
+            }
+            .assertEquals(
+                listOf(
+                    createdComments.map {
+                        postMetadata ->
+                        postMetadata.postUpdateIdentifier.postId
+                    }.reversed(),
+                    emptyList()
+                )
+            )
     }
 }

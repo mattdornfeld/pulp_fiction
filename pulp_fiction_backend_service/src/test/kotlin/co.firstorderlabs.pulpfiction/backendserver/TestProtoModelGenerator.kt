@@ -3,6 +3,7 @@ package co.firstorderlabs.pulpfiction.backendserver
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createCommentRequest
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
+import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getCommentFeedRequest
 import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getFollowingPostFeedRequest
 import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getGlobalPostFeedRequest
 import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getUserPostFeedRequest
@@ -132,6 +133,11 @@ object TestProtoModelGenerator {
     fun generateRandomGetUserPostFeedRequest(loginSession: LoginSession, userId: String): GetFeedRequest = getFeedRequest {
         this.loginSession = loginSession
         this.getUserPostFeedRequest = getUserPostFeedRequest { this.userId = userId }
+    }
+
+    fun generateRandomGetCommentFeedRequest(loginSession: LoginSession, postId: String): GetFeedRequest = getFeedRequest {
+        this.loginSession = loginSession
+        this.getCommentFeedRequest = getCommentFeedRequest { this.postId = postId }
     }
 
     fun LoginSession.generateRandomCreatePostRequest(): CreatePostRequest = createPostRequest {
