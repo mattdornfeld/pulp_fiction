@@ -83,6 +83,11 @@ class FunctionalityNotImplementedError() : PulpFictionRequestError() {
         StatusException(Status.UNIMPLEMENTED.withCause(this))
 }
 
+class FeedNotImplementedError(postType: String) : PulpFictionRequestError("Feed for post type: $postType not implemented.") {
+    override fun toStatusException(): StatusException =
+        StatusException(Status.UNIMPLEMENTED.withCause(this))
+}
+
 class ServiceStartupError(cause: Throwable) : PulpFictionStartupError(cause)
 
 class IOError(cause: Throwable) : PulpFictionStartupError(cause)
