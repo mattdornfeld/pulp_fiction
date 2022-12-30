@@ -21,6 +21,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.post
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
+import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_PAGE_SIZE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
@@ -54,6 +55,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseConnectionError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseUrl
+import co.firstorderlabs.pulpfiction.backendserver.types.FeedNotImplementedError
 import co.firstorderlabs.pulpfiction.backendserver.types.FunctionalityNotImplementedError
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
@@ -474,13 +476,10 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         count: Int
     ): Effect<PulpFictionRequestError, List<PulpFictionProtos.Post>> = effect {
 
-        val unsortedPostsQuery = getPostsQuery(request)
-        val sortedPostsQuery = unsortedPostsQuery
+        val paginatedPosts = getPostsQuery(request)
             .bind()
             .orderBy(Posts.createdAt.desc())
-
-        val pagination = 500
-        val paginatedPosts = sortedPostsQuery.limit(offset = count * pagination, limit = pagination)
+            .limit(offset = count * MAX_PAGE_SIZE, limit = MAX_PAGE_SIZE)
         paginatedPosts.map { row ->
             val postId = row[Posts.postId] ?: shift(PostNotFoundError())
             val postUpdate = getPostUpdate(postId).bind()
@@ -489,7 +488,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
             when (row[Posts.postType]) {
                 PulpFictionProtos.Post.PostType.IMAGE -> {
-                    feedImagePostCreator(
+                    buildImagePostFeed(
                         postId = postId,
                         postCreatorId = postCreatorId,
                         loggedInUserId = loggedInUser,
@@ -497,20 +496,20 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     ).bind()
                 }
                 PulpFictionProtos.Post.PostType.USER -> {
-                    feedUserPostCreator(
+                    buildUserPostFeed(
                         postId = postId,
                         postCreatorId = postCreatorId, postUpdate = postUpdate
                     ).bind()
                 }
                 PulpFictionProtos.Post.PostType.COMMENT -> {
-                    feedCommentPostCreator(
+                    buildCommentPostFeed(
                         postId = postId,
                         postCreatorId = postCreatorId,
                         loggedInUserId = loggedInUser,
                         postUpdate = postUpdate
                     ).bind()
                 }
-                else -> { shift(FunctionalityNotImplementedError()) }
+                else -> { shift(FeedNotImplementedError(row[Posts.postType].toString())) }
             }
         }
     }
@@ -521,13 +520,13 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         val postsTable = database
             .from(Posts)
         val columns = listOf(Posts.postId, Posts.postCreatorId, Posts.postType)
-        when {
-            request.hasGetGlobalPostFeedRequest() -> {
+        when (request.getFeedRequestCase) {
+            GetFeedRequest.GetFeedRequestCase.GET_GLOBAL_POST_FEED_REQUEST -> {
                 postsTable
                     .select(columns)
                     .where { Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE }
             }
-            request.hasGetUserPostFeedRequest() -> {
+            GetFeedRequest.GetFeedRequestCase.GET_USER_POST_FEED_REQUEST -> {
                 val userId = request.getUserPostFeedRequest.userId.toUUID().bind()
                 postsTable
                     .select(columns)
@@ -536,7 +535,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                             (Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE)
                     }
             }
-            request.hasGetFollowingPostFeedRequest() -> {
+            GetFeedRequest.GetFeedRequestCase.GET_FOLLOWING_POST_FEED_REQUEST -> {
                 val userId = request.getFollowingPostFeedRequest.userId.toUUID().bind()
                 database
                     .from(Followers)
@@ -547,7 +546,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                             (Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE)
                     }
             }
-            request.hasGetCommentFeedRequest() -> {
+            GetFeedRequest.GetFeedRequestCase.GET_COMMENT_FEED_REQUEST -> {
                 val postId = request.getCommentFeedRequest.postId.toUUID().bind()
                 postsTable
                     .rightJoin(CommentData, on = CommentData.postId eq Posts.postId)
@@ -556,7 +555,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                         CommentData.parentPostId eq postId
                     }
             }
-            request.hasGetFollowersFeedRequest() -> {
+            GetFeedRequest.GetFeedRequestCase.GET_FOLLOWERS_FEED_REQUEST -> {
                 val userId = request.getFollowersFeedRequest.userId.toUUID().bind()
                 database
                     .from(Followers)
@@ -566,7 +565,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                             (Posts.postType eq PulpFictionProtos.Post.PostType.USER)
                     }
             }
-            request.hasGetFollowingFeedRequest() -> {
+            GetFeedRequest.GetFeedRequestCase.GET_FOLLOWING_FEED_REQUEST -> {
                 val userId = request.getFollowingFeedRequest.userId.toUUID().bind()
                 database
                     .from(Followers)
@@ -604,7 +603,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .getOrElse { shift(PostNotFoundError()) }
     }
 
-    private suspend fun feedImagePostCreator(
+    private suspend fun buildImagePostFeed(
         postId: UUID,
         postCreatorId: UUID,
         loggedInUserId: UUID,
@@ -623,7 +622,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             }
         }
 
-    private suspend fun feedCommentPostCreator(
+    private suspend fun buildCommentPostFeed(
         postId: UUID,
         postCreatorId: UUID,
         loggedInUserId: UUID,
@@ -642,7 +641,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             }
         }
 
-    private suspend fun feedUserPostCreator(
+    private suspend fun buildUserPostFeed(
         postId: UUID,
         postCreatorId: UUID,
         postUpdate: PostUpdate
