@@ -1,5 +1,11 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
+import arrow.core.Either
+import arrow.core.continuations.either
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
+import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
 import org.ktorm.entity.sequenceOf
@@ -18,11 +24,23 @@ object Followers : Table<Follower>("followers") {
 }
 
 interface Follower : Entity<Follower> {
-    companion object : Entity.Factory<Follower>()
     val id: Long
     var userId: UUID
     var followerId: UUID
     var createdAt: Instant
+    companion object : Entity.Factory<Follower>() {
+        suspend fun fromRequest(request: PulpFictionProtos.UpdateUserRequest):
+        Either<RequestParsingError, Follower> {
+            return either {
+                Follower {
+                    this.userId = request.loginSession.userId.toUUID().bind()
+                    this.followerId = request.updateUserFollowingStatus.targetUserId.toUUID().bind()
+                    this.createdAt = nowTruncated()
+                }
+            }
+        }
+    }
+
 }
 
 val Database.followers get() = this.sequenceOf(Followers)
