@@ -661,6 +661,7 @@ internal class PulpFictionBackendServiceTest {
         val followingFeed = pulpFictionBackendService.getFeed(flow { listOf(emit(followingFeedRequest)) })
         followingFeed.take(1).toList().forEach { it.postsList.isEmpty() }
 
+        EndpointName.getFeed.assertEndpointMetricsCorrect(3.0)
         Tuple2(
             EndpointName.getFeed,
             DatabaseMetrics.DatabaseOperation.getFeed
