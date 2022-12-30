@@ -748,5 +748,12 @@ internal class PulpFictionBackendServiceTest {
                     emptyList()
                 )
             )
+
+        EndpointName.getFeed.assertEndpointMetricsCorrect(1.0)
+        Tuple2(
+            EndpointName.getFeed,
+            DatabaseMetrics.DatabaseOperation.getFeed
+        )
+            .assertDatabaseMetricsCorrect(2.0)
     }
 }
