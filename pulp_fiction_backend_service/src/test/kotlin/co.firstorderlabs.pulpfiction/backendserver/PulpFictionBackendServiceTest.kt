@@ -605,10 +605,9 @@ internal class PulpFictionBackendServiceTest {
             .assertDatabaseMetricsCorrect(1.0)
     }
 
-    @Test
-    fun testGetImageFeed(): Unit = runBlocking {
-        /* Set up feed */
-        val userTuples = (1..2).map { createUserAndLogin() }
+    private suspend fun setupTestFeed(numUsers: Int): Tuple2<LoginSession,
+        List<PulpFictionProtos.CreatePostResponse>> {
+        val userTuples = (1..numUsers).map { createUserAndLogin() }
         val createdPosts = userTuples.map { tuple2 ->
             val loginSession = tuple2.first
             val imagePostRequest = loginSession.generateRandomCreatePostRequest().withRandomCreateImagePostRequest()
@@ -616,11 +615,23 @@ internal class PulpFictionBackendServiceTest {
         }
 
         val loginSession = userTuples.first().first
+        return Tuple2(loginSession, createdPosts)
+    }
 
-        /* Construct and test global feed */
-        val globalFeedRequest = generateRandomGetGlobalPostFeedRequest(loginSession = loginSession)
-        val globalFeed = pulpFictionBackendService.getFeed(flow { listOf(emit(globalFeedRequest), emit(globalFeedRequest)) })
-        val feedList = globalFeed.take(2).toList()
+    @Test
+    fun testGetGlobalPostFeed(): Unit = runBlocking {
+        val (loginSession, createdPosts) = setupTestFeed(2)
+
+        val clientFeedRequests = listOf(
+            generateRandomGetGlobalPostFeedRequest(loginSession = loginSession),
+            generateRandomGetGlobalPostFeedRequest(loginSession = loginSession)
+        )
+        val globalFeed = pulpFictionBackendService.getFeed(
+            flow {
+                clientFeedRequests.map { emit(it) }
+            }
+        )
+        val feedList = globalFeed.take(clientFeedRequests.size).toList()
         feedList
             .map { resp ->
                 resp.postsList.map {
@@ -638,14 +649,26 @@ internal class PulpFictionBackendServiceTest {
                 )
             )
 
-        /* Construct and test user feed */
-        val userFeedRequest = generateRandomGetUserPostFeedRequest(loginSession = loginSession, userId = loginSession.userId)
-        val userFeed = pulpFictionBackendService.getFeed(flow { listOf(emit(userFeedRequest), emit(userFeedRequest)) })
-        val userFeedList = userFeed.take(2).toList()
+        EndpointName.getFeed.assertEndpointMetricsCorrect(1.0)
+        Tuple2(
+            EndpointName.getFeed,
+            DatabaseMetrics.DatabaseOperation.getFeed
+        )
+            .assertDatabaseMetricsCorrect(2.0)
+    }
+
+    @Test
+    fun testGetUserPostFeed(): Unit = runBlocking {
+        val (loginSession, createdPosts) = setupTestFeed(2)
+
+        val userFeedRequest =
+            generateRandomGetUserPostFeedRequest(loginSession = loginSession, userId = loginSession.userId)
+        val clientFeedRequests = listOf(userFeedRequest, userFeedRequest)
+        val userFeed = pulpFictionBackendService.getFeed(flow { clientFeedRequests.map { emit(it) } })
+        val userFeedList = userFeed.take(clientFeedRequests.size).toList()
         userFeedList
             .map { resp ->
-                resp.postsList.map {
-                    post ->
+                resp.postsList.map { post ->
                     post.metadata.postUpdateIdentifier.postId
                 }
             }
@@ -656,17 +679,30 @@ internal class PulpFictionBackendServiceTest {
                 )
             )
 
-        /* Construct empty following feed */
-        val followingFeedRequest = generateRandomGetFollowingPostFeedRequest(loginSession = loginSession)
-        val followingFeed = pulpFictionBackendService.getFeed(flow { listOf(emit(followingFeedRequest)) })
-        followingFeed.take(1).toList().forEach { it.postsList.isEmpty() }
-
-        EndpointName.getFeed.assertEndpointMetricsCorrect(3.0)
+        EndpointName.getFeed.assertEndpointMetricsCorrect(1.0)
         Tuple2(
             EndpointName.getFeed,
             DatabaseMetrics.DatabaseOperation.getFeed
         )
-            .assertDatabaseMetricsCorrect(5.0)
+            .assertDatabaseMetricsCorrect(2.0)
+    }
+
+    @Test
+    fun testFollowingPostFeed(): Unit = runBlocking {
+        /* TODO(Ceena): Properly test following post feed after following endpoint is implemented */
+        val (loginSession, _) = setupTestFeed(2)
+
+        val followingFeedRequest = generateRandomGetFollowingPostFeedRequest(loginSession = loginSession)
+        val clientFeedRequests = listOf(followingFeedRequest)
+        val followingFeed = pulpFictionBackendService.getFeed(flow { listOf(clientFeedRequests.map { emit(it) }) })
+        followingFeed.take(clientFeedRequests.size).toList().forEach { it.postsList.isEmpty() }
+
+        EndpointName.getFeed.assertEndpointMetricsCorrect(1.0)
+        Tuple2(
+            EndpointName.getFeed,
+            DatabaseMetrics.DatabaseOperation.getFeed
+        )
+            .assertDatabaseMetricsCorrect(1.0)
     }
 
     @Test
@@ -689,15 +725,13 @@ internal class PulpFictionBackendServiceTest {
             loginSession,
             imagePostMetadata.postUpdateIdentifier.postId
         )
+        val clientFeedRequests = listOf(commentFeedRequest, commentFeedRequest)
         val commentFeed = pulpFictionBackendService.getFeed(
             flow {
-                listOf(
-                    emit(commentFeedRequest),
-                    emit(commentFeedRequest)
-                )
+                clientFeedRequests.map { emit(it) }
             }
         )
-        val feedList = commentFeed.take(2).toList()
+        val feedList = commentFeed.take(clientFeedRequests.size).toList()
         feedList
             .map { resp ->
                 resp.postsList.map {
