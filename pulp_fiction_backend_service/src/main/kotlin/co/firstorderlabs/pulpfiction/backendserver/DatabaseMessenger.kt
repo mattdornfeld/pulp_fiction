@@ -11,6 +11,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateUserPostRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
@@ -20,8 +21,10 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.post
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
+import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_PAGE_SIZE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
@@ -31,6 +34,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractio
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
@@ -51,6 +55,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseConnectionError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseUrl
+import co.firstorderlabs.pulpfiction.backendserver.types.FeedNotImplementedError
 import co.firstorderlabs.pulpfiction.backendserver.types.FunctionalityNotImplementedError
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
@@ -67,6 +72,7 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.toLocalDate
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import com.password4j.Password
 import org.ktorm.database.Database
+import org.ktorm.dsl.Query
 import org.ktorm.dsl.and
 import org.ktorm.dsl.desc
 import org.ktorm.dsl.eq
@@ -76,6 +82,7 @@ import org.ktorm.dsl.joinReferencesAndSelect
 import org.ktorm.dsl.limit
 import org.ktorm.dsl.map
 import org.ktorm.dsl.orderBy
+import org.ktorm.dsl.rightJoin
 import org.ktorm.dsl.select
 import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
@@ -360,15 +367,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         request: GetPostRequest
     ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         val postId = request.postId.toUUID().bind()
-        val postUpdate = database.from(PostUpdates)
-            .joinReferencesAndSelect()
-            .where(PostUpdates.postId eq postId)
-            .orderBy(PostUpdates.updatedAt.desc())
-            .limit(1)
-            .map { PostUpdates.createEntity(it) }
-            .firstOrOption()
-            .getOrElse { shift(PostNotFoundError()) }
-
+        val postUpdate = getPostUpdate(postId).bind()
         val userMetadata = getPublicUserMetadata(postUpdate.post.postCreatorId.toString()).bind()
 
         val userId = request.loginSession.userId.toUUID().bind()
@@ -472,6 +471,114 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         user.toNonSensitiveUserMetadataProto(userPostDatum)
     }
 
+    suspend fun getFeed(
+        request: GetFeedRequest,
+        count: Int
+    ): Effect<PulpFictionRequestError, List<PulpFictionProtos.Post>> = effect {
+
+        val paginatedPosts = getPostsQuery(request)
+            .bind()
+            .orderBy(Posts.createdAt.desc())
+            .limit(offset = count * MAX_PAGE_SIZE, limit = MAX_PAGE_SIZE)
+        paginatedPosts.map { row ->
+            val postId = row[Posts.postId] ?: shift(PostNotFoundError())
+            val postUpdate = getPostUpdate(postId).bind()
+            val postCreatorId = row[Posts.postCreatorId] ?: shift(UserNotFoundError("Null"))
+            val loggedInUser = request.loginSession.userId.toUUID().bind()
+
+            when (row[Posts.postType]) {
+                PulpFictionProtos.Post.PostType.IMAGE -> {
+                    buildImagePostFeed(
+                        postId = postId,
+                        postCreatorId = postCreatorId,
+                        loggedInUserId = loggedInUser,
+                        postUpdate = postUpdate
+                    ).bind()
+                }
+                PulpFictionProtos.Post.PostType.USER -> {
+                    buildUserPostFeed(
+                        postId = postId,
+                        postCreatorId = postCreatorId, postUpdate = postUpdate
+                    ).bind()
+                }
+                PulpFictionProtos.Post.PostType.COMMENT -> {
+                    buildCommentPostFeed(
+                        postId = postId,
+                        postCreatorId = postCreatorId,
+                        loggedInUserId = loggedInUser,
+                        postUpdate = postUpdate
+                    ).bind()
+                }
+                else -> { shift(FeedNotImplementedError(row[Posts.postType].toString())) }
+            }
+        }
+    }
+
+    private fun getPostsQuery(
+        request: GetFeedRequest,
+    ): Effect<PulpFictionRequestError, Query> = effect {
+        val postsTable = database
+            .from(Posts)
+        val columns = listOf(Posts.postId, Posts.postCreatorId, Posts.postType)
+        when (request.getFeedRequestCase) {
+            GetFeedRequest.GetFeedRequestCase.GET_GLOBAL_POST_FEED_REQUEST -> {
+                postsTable
+                    .select(columns)
+                    .where { Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE }
+            }
+            GetFeedRequest.GetFeedRequestCase.GET_USER_POST_FEED_REQUEST -> {
+                val userId = request.getUserPostFeedRequest.userId.toUUID().bind()
+                postsTable
+                    .select(columns)
+                    .where {
+                        (Posts.postCreatorId eq userId) and
+                            (Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE)
+                    }
+            }
+            GetFeedRequest.GetFeedRequestCase.GET_FOLLOWING_POST_FEED_REQUEST -> {
+                val userId = request.getFollowingPostFeedRequest.userId.toUUID().bind()
+                database
+                    .from(Followers)
+                    .rightJoin(Posts, on = Followers.userId eq Posts.postCreatorId)
+                    .select(columns)
+                    .where {
+                        (Followers.followerId eq userId) and
+                            (Posts.postType eq PulpFictionProtos.Post.PostType.IMAGE)
+                    }
+            }
+            GetFeedRequest.GetFeedRequestCase.GET_COMMENT_FEED_REQUEST -> {
+                val postId = request.getCommentFeedRequest.postId.toUUID().bind()
+                postsTable
+                    .rightJoin(CommentData, on = CommentData.postId eq Posts.postId)
+                    .select(columns)
+                    .where {
+                        CommentData.parentPostId eq postId
+                    }
+            }
+            GetFeedRequest.GetFeedRequestCase.GET_FOLLOWERS_FEED_REQUEST -> {
+                val userId = request.getFollowersFeedRequest.userId.toUUID().bind()
+                database
+                    .from(Followers)
+                    .select(columns)
+                    .where {
+                        (Followers.userId eq userId) and
+                            (Posts.postType eq PulpFictionProtos.Post.PostType.USER)
+                    }
+            }
+            GetFeedRequest.GetFeedRequestCase.GET_FOLLOWING_FEED_REQUEST -> {
+                val userId = request.getFollowingFeedRequest.userId.toUUID().bind()
+                database
+                    .from(Followers)
+                    .select(columns)
+                    .where {
+                        (Followers.followerId eq userId) and
+                            (Posts.postType eq PulpFictionProtos.Post.PostType.USER)
+                    }
+            }
+            else -> { shift(RequestParsingError("Feed request received without valid instruction.")) }
+        }
+    }
+
     fun checkUserPasswordValid(
         request: LoginRequest
     ): Effect<PulpFictionRequestError, Boolean> = effect {
@@ -484,4 +591,66 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             true
         }
     }
+
+    private suspend fun getPostUpdate(postId: UUID): Effect<PulpFictionRequestError, PostUpdate> = effect {
+        database.from(PostUpdates)
+            .joinReferencesAndSelect()
+            .where(PostUpdates.postId eq postId)
+            .orderBy(PostUpdates.updatedAt.desc())
+            .limit(1)
+            .map { PostUpdates.createEntity(it) }
+            .firstOrOption()
+            .getOrElse { shift(PostNotFoundError()) }
+    }
+
+    private suspend fun buildImagePostFeed(
+        postId: UUID,
+        postCreatorId: UUID,
+        loggedInUserId: UUID,
+        postUpdate: PostUpdate
+    ):
+        Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
+            val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, loggedInUserId).bind()
+            val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
+            post {
+                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.imagePost = getPostData(postId, ImagePostData).bind()
+                    .toProto(
+                        loggedInUserPostInteractions,
+                        postInteractionAggregates
+                    )
+            }
+        }
+
+    private suspend fun buildCommentPostFeed(
+        postId: UUID,
+        postCreatorId: UUID,
+        loggedInUserId: UUID,
+        postUpdate: PostUpdate
+    ):
+        Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
+            val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, loggedInUserId).bind()
+            val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
+            post {
+                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.comment = getPostData(postId, CommentData).bind()
+                    .toProto(
+                        loggedInUserPostInteractions,
+                        postInteractionAggregates
+                    )
+            }
+        }
+
+    private suspend fun buildUserPostFeed(
+        postId: UUID,
+        postCreatorId: UUID,
+        postUpdate: PostUpdate
+    ):
+        Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
+
+            post {
+                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.userPost = getPostData(postId, UserPostData).bind().toProto()
+            }
+        }
 }

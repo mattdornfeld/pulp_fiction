@@ -9,6 +9,9 @@ import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.finally
 import co.firstorderlabs.pulpfiction.backendserver.utils.onError
 import co.firstorderlabs.pulpfiction.backendserver.utils.toLabelValue
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onCompletion
 
 object EndpointMetrics {
     val endpointRequestTotal: PulpFictionCounter = PulpFictionCounter(
@@ -34,6 +37,7 @@ object EndpointMetrics {
         createUser,
         getPost,
         getUser,
+        getFeed,
         login,
         updateUser;
 
@@ -48,5 +52,15 @@ object EndpointMetrics {
         return this@logEndpointMetrics
             .onError { endpointRequestErrorTotal.withLabels(endpointName, it.toLabelValue()).inc() }
             .finally { timer.close() }
+    }
+
+    fun <T> Flow<T>.logEndpointMetrics(endpointName: EndpointName): Flow<T> {
+        val timer = endpointRequestDurationSeconds.withLabels(endpointName).startTimer()
+        endpointRequestTotal.withLabels(endpointName).inc()
+        return this@logEndpointMetrics.catch {
+            endpointRequestTotal.withLabels(endpointName, it.toLabelValue()).inc()
+            throw it
+        }
+            .onCompletion { timer.close() }
     }
 }

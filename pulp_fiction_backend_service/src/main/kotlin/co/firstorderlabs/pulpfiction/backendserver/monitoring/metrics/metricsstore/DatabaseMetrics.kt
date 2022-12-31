@@ -35,6 +35,7 @@ object DatabaseMetrics {
         createPost,
         createUser,
         getUser,
+        getFeed,
         login,
         getPost,
         updateUser;
