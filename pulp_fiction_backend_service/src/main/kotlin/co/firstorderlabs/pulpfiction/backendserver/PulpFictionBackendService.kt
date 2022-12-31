@@ -168,4 +168,17 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
         }
             .logEndpointMetrics(endpointName)
     }
+
+    override suspend fun updateUserFollowingStatus(request: PulpFictionProtos.UpdateUserFollowingStatusRequest):
+            PulpFictionProtos.UpdateUserFollowingStatusResponse {
+        val endpointName = EndpointName.updateUserFollowingStatus
+        return effect<PulpFictionRequestError, UpdateUserFollowingStatusResponse> {
+            checkLoginSessionValid(request.loginSession, endpointName).bind()
+
+            val followingStatus = databaseMessenger
+                .updateUserFollowingStatus(request)
+                .logDatabaseMetrics(endpointName, DatabaseOperation.updateUserFollowingStatus)
+                .bind()
+        }
+    }
 }

@@ -6,6 +6,7 @@ import arrow.core.getOrElse
 import arrow.core.toOption
 import co.firstorderlabs.protos.pulpfiction.PostKt.interactionAggregates
 import co.firstorderlabs.protos.pulpfiction.PostKt.loggedInUserPostInteractions
+import co.firstorderlabs.protos.pulpfiction.UpdateUserFollowingStatusResponseKt
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
@@ -15,9 +16,11 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserFollowingStatusRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.SensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserFollowingStatusRequest.UserFollowingStatus
 import co.firstorderlabs.protos.pulpfiction.post
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
@@ -25,6 +28,7 @@ import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_PA
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Follower
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
@@ -48,6 +52,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.CreatePostDataMetrics.logCreatePostDataMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics
@@ -441,6 +446,22 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val userPostDatum = getMostRecentUserPostDatum(user.userId).bind()
             user.toSensitiveUserMetadataProto(userPostDatum)
         }
+
+    suspend fun updateUserFollowingStatus(request: UpdateUserFollowingStatusRequest):
+            Effect<PulpFictionRequestError, UserFollowingStatus> =
+        effect {
+            when (request.userFollowingStatus) {
+                UserFollowingStatus.FOLLOWING -> {
+                    val follow = Follower.fromRequest(request).bind()
+                    database.transactionToEffect {
+                        effectWithDatabaseError { database.followers.add(follow) }.bind()
+                    }.bind()
+                     {
+                        this.userFollowingStatus = UserFollowingStatus.FOLLOWING
+                    }
+            }
+        }
+    }
 
     private suspend fun getUserFromUserId(
         userId: String

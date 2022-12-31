@@ -39,7 +39,9 @@ object EndpointMetrics {
         getUser,
         getFeed,
         login,
-        updateUser;
+        updateUser,
+        updateUserFollowingStatus;
+
 
         override fun getValue(): String = name
     }

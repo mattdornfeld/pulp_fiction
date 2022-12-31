@@ -259,15 +259,6 @@ message UpdateUserRequest {
   message ResetPassword {
   }
 
-  message UpdateUserFollowingStatus {
-    enum UserFollowingStatus {
-      NOT_FOLLOWING = 0;
-      FOLLOWING = 1;
-    }
-    string target_user_id = 1;
-    UserFollowingStatus user_following_status = 2;
-  }
-
   LoginResponse.LoginSession loginSession = 1;
   oneof update_user_request {
     UpdateUserAvatar update_user_avatar = 2;
@@ -278,8 +269,21 @@ message UpdateUserRequest {
     UpdateDateOfBirth update_date_of_birth = 7;
     UpdatePassword update_password = 8;
     ResetPassword reset_password = 9;
-    UpdateUserFollowingStatus update_user_following_status = 10;
   }
+}
+
+message UpdateUserFollowingStatusRequest {
+  enum UserFollowingStatus {
+    NOT_FOLLOWING = 0;
+    FOLLOWING = 1;
+  }
+  LoginResponse.LoginSession LoginSession = 1;
+  string target_user_id = 2;
+  UserFollowingStatus user_following_status = 3;
+}
+
+message UpdateUserFollowingStatusResponse {
+  UpdateUserFollowingStatusRequest.UserFollowingStatus user_following_status = 1;
 }
 
 message UpdateUserResponse {
@@ -330,4 +334,5 @@ service PulpFiction {
   rpc Login (LoginRequest) returns (LoginResponse) {}
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
   rpc UpdatePost(UpdatePostRequest) returns (UpdatePostResponse) {}
+  rpc UpdateUserFollowingStatus(UpdateUserFollowingStatusRequest) returns (UpdateUserFollowingStatusResponse) {}
 }

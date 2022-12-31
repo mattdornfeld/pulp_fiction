@@ -29,16 +29,24 @@ interface Follower : Entity<Follower> {
     var followerId: UUID
     var createdAt: Instant
     companion object : Entity.Factory<Follower>() {
-        suspend fun fromRequest(request: PulpFictionProtos.UpdateUserRequest):
+        suspend fun fromRequest(request: PulpFictionProtos.UpdateUserFollowingStatusRequest):
         Either<RequestParsingError, Follower> {
             return either {
                 Follower {
                     this.userId = request.loginSession.userId.toUUID().bind()
-                    this.followerId = request.updateUserFollowingStatus.targetUserId.toUUID().bind()
+                    this.followerId = request.userFollowingStatus.targetUserId.toUUID().bind()
                     this.createdAt = nowTruncated()
                 }
             }
         }
+
+        fun toProto(): PulpFictionProtos.UpdateUserFollowingStatusResponse {
+            return PulpFictionProtos.updateUserFoll
+            this.numLikes = numLikes
+            this.numDislikes = numDislikes
+            this.numChildComments = numChildComments
+    }
+
     }
 
 }
