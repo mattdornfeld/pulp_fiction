@@ -13,7 +13,7 @@ import SwiftUI
 struct GeneralProfileOptionsReducer: PulpFictionReducerProtocol {
     let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
-    let loginNavigationLinkViewStore: EmptyNavigationLinkViewStore
+    let landingNavigationLinkViewStore: EmptyNavigationLinkViewStore
 
     struct State: Equatable {}
 
@@ -41,7 +41,7 @@ struct GeneralProfileOptionsReducer: PulpFictionReducerProtocol {
                     UpdateLogginSessionBackendMessenger.BackendPath.logout.rawValue,
                     .logout,
                     EquatableWrapper { _, _ in
-                        loginNavigationLinkViewStore.send(.navigateToDestionationView())
+                        landingNavigationLinkViewStore.send(.navigateToDestionationView())
                     }
                 )
             }
@@ -75,7 +75,7 @@ struct GeneralProfileOptionsReducer: PulpFictionReducerProtocol {
 struct GeneralProfileOptions: PulpFictionView {
     let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
-    private let loginNavigationLink: EmptyNavigationLink<Login>
+    private let landingNavigationLink: EmptyNavigationLink<Landing>
     @ObservedObject private var viewStore: PulpFictionViewStore<GeneralProfileOptionsReducer>
 
     init(
@@ -84,7 +84,7 @@ struct GeneralProfileOptions: PulpFictionView {
     ) {
         self.externalMessengers = externalMessengers
         self.notificationBannerViewStore = notificationBannerViewStore
-        loginNavigationLink = .init {
+        landingNavigationLink = .init {
             .init(
                 externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore
@@ -95,14 +95,14 @@ struct GeneralProfileOptions: PulpFictionView {
             reducer: GeneralProfileOptionsReducer(
                 externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore,
-                loginNavigationLinkViewStore: loginNavigationLink.viewStore
+                landingNavigationLinkViewStore: landingNavigationLink.viewStore
             )
         )
     }
 
     var body: some View {
         VStack {
-            loginNavigationLink.view
+            landingNavigationLink.view
             Spacer()
             Button("Logout") {
                 viewStore.send(.logout)

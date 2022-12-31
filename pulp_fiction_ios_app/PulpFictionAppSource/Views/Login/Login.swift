@@ -130,17 +130,10 @@ struct Login: PulpFictionView {
                     emailOrPhoneTextField
                     passwordTextField
                 }
-                Button(action: { viewStore.send(.createLoginSession) }) {
-                    HeadlineText(
-                        text: "LOGIN",
-                        alignment: .center,
-                        color: .white
-                    )
-                    .padding()
-                    .frame(width: 220, height: 60)
-                    .background(.orange)
-                    .cornerRadius(15.0)
-                }
+                PulpFictionButton(
+                    text: "LOGIN",
+                    backgroundColor: .orange
+                ) { viewStore.send(.createLoginSession) }
             }
             .padding()
         }

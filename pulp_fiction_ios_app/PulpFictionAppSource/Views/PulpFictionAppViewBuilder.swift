@@ -19,7 +19,7 @@ public struct PulpFictionAppViewBuilder {
             externalMessengersEither
                 .mapLeft { _ in EmptyView() }
                 .mapRight { externalMessengers in
-                    Login(
+                    Landing(
                         externalMessengers: externalMessengers,
                         notificationBannerViewStore: notificationBanner.viewStore
                     )
