@@ -32,16 +32,39 @@ extension String {
         return Either.right(uuid)
     }
 
+    private func isValid(_ regularExpression: String) -> Bool {
+        NSPredicate(format: "SELF MATCHES %@", regularExpression).evaluate(with: self)
+    }
+
     func isValidEmail() -> Bool {
-        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
-        let emailTest = NSPredicate(format: "SELF MATCHES %@", emailRegEx)
-        return emailTest.evaluate(with: self)
+        isValid("[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}")
     }
 
     func isValidPhoneNumber() -> Bool {
-        let phoneRegex = "^[0-9+]{0,1}+[0-9]{5,16}$"
-        let phoneTest = NSPredicate(format: "SELF MATCHES %@", phoneRegex)
-        return phoneTest.evaluate(with: self)
+        isValid("^[0-9+]{0,1}+[0-9]{5,16}$")
+    }
+
+    func hasAtLeastOneUpperCaseCharacter() -> Bool {
+        isValid("(.*[A-Z].*)")
+    }
+
+    func hasAtLeastOneLowerCaseCharacter() -> Bool {
+        isValid("(.*[a-z].*)")
+    }
+
+    func hasAtLeastOneSpecialCharacter() -> Bool {
+        isValid("(.*[!@#$%^&*].*)")
+    }
+
+    func hasAtLeastNCharacters(_ n: Int) -> Bool {
+        count >= n
+    }
+
+    func isValidPassword() -> Bool {
+        hasAtLeastOneUpperCaseCharacter() &&
+            hasAtLeastOneLowerCaseCharacter() &&
+            hasAtLeastOneSpecialCharacter() &&
+            hasAtLeastNCharacters(8)
     }
 }
 

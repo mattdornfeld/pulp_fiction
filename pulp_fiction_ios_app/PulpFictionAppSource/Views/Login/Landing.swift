@@ -20,7 +20,10 @@ struct Landing: PulpFictionView {
                 text: "CREATE ACCOUNT",
                 backgroundColor: .orange
             ) {
-                EmptyView()
+                CreateAccount(
+                    externalMessengers: externalMessengers,
+                    notificationBannerViewStore: notificationBannerViewStore
+                )
             }
             .padding(.bottom)
             PulpFictionNavigationButton(

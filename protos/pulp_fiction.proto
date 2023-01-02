@@ -138,14 +138,23 @@ message CreatePostResponse {
 }
 
 message CreateUserRequest {
-  string display_name = 1;
-  string email = 2;
-  string phone_number = 3;
-  google.protobuf.Timestamp date_of_birth = 4;
-  string password = 5;
-  bool opt_in_to_emails = 6;
-  bytes avatar_jpg = 7;
-  string bio = 8;
+  message PhoneNumberVerification {
+    string phone_number = 1;
+  }
+
+  message EmailVerification {
+    string email = 1;
+  }
+
+  string password = 1;
+  string password_confirmation = 2;
+  oneof contact_verification {
+    PhoneNumberVerification phone_number_verification = 3;
+    EmailVerification email_verification = 4;
+  }
+}
+
+message CreateUserResponse {
 }
 
 message GetUserResponse {
@@ -198,10 +207,6 @@ message GetPostRequest {
 
 message GetPostResponse {
   Post post = 1;
-}
-
-message CreateUserResponse {
-  Post userPost = 1;
 }
 
 message GetUserRequest {

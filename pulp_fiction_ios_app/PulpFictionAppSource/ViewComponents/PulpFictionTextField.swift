@@ -32,7 +32,8 @@ typealias PulpFictionTextFieldViewStore = PulpFictionViewStore<PulpFictionTextFi
 struct PulpFictionTextField: View {
     let prompt: String
     let textFieldType: TextFieldType
-    @ObservedObject var viewStore: PulpFictionTextFieldViewStore = PulpFictionTextField.buildViewStore()
+    @ObservedObject var viewStore: PulpFictionViewStore<PulpFictionTextFieldReducer>
+    private let store: PulpFictionStore<PulpFictionTextFieldReducer>
     private let lightGrey: Color = .init(
         red: 239.0 / 255.0,
         green: 243.0 / 255.0,
@@ -46,17 +47,32 @@ struct PulpFictionTextField: View {
     }
 
     var body: some View {
-        TextField(
-            prompt,
-            text: viewStore.binding(
-                get: \.text,
-                send: { newText in .updateText(newText) }
+        buildTextView(viewStore)
+            .padding()
+            .background(lightGrey)
+            .cornerRadius(5.0)
+            .padding(.bottom, 20)
+    }
+
+    @ViewBuilder private func buildTextView(_ viewStore: PulpFictionViewStore<PulpFictionTextFieldReducer>) -> some View {
+        switch textFieldType {
+        case .insecure:
+            TextField(
+                prompt,
+                text: viewStore.binding(
+                    get: \.text,
+                    send: { newText in .updateText(newText) }
+                )
             )
-        )
-        .padding()
-        .background(lightGrey)
-        .cornerRadius(5.0)
-        .padding(.bottom, 20)
+        case .secure:
+            SecureField(
+                prompt,
+                text: viewStore.binding(
+                    get: \.text,
+                    send: { newText in .updateText(newText) }
+                )
+            )
+        }
     }
 
     static func buildViewStore() -> PulpFictionTextFieldViewStore {
@@ -68,8 +84,40 @@ struct PulpFictionTextField: View {
 }
 
 extension PulpFictionTextField {
-    init(prompt: String) {
+    init(prompt: String, textFieldType: TextFieldType, store: PulpFictionStore<PulpFictionTextFieldReducer>) {
         self.prompt = prompt
-        textFieldType = .insecure
+        self.store = store
+        self.textFieldType = textFieldType
+        viewStore = ViewStore(store)
+    }
+
+    init(prompt: String, store: PulpFictionStore<PulpFictionTextFieldReducer>) {
+        self.init(
+            prompt: prompt,
+            textFieldType: .insecure,
+            store: store
+        )
+    }
+
+    init(prompt: String, textFieldType: TextFieldType) {
+        self.init(
+            prompt: prompt,
+            textFieldType: textFieldType,
+            store: .init(
+                initialState: .init(),
+                reducer: PulpFictionTextFieldReducer()
+            )
+        )
+    }
+
+    init(prompt: String) {
+        self.init(
+            prompt: prompt,
+            textFieldType: .insecure,
+            store: .init(
+                initialState: .init(),
+                reducer: PulpFictionTextFieldReducer()
+            )
+        )
     }
 }
