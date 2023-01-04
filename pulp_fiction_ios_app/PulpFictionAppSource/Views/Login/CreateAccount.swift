@@ -24,7 +24,7 @@ struct CreateAccountReducer: ReducerProtocol {
 
     struct State: Equatable {
         var contactVerification: ContactVerificationDropDownMenuReducer.State = .init(currentSelection: .Phone)
-        var phone: PulpFictionTextFieldReducer.State = .init()
+        var phone: PhoneNumberFieldReducer.State = .init()
         var email: PulpFictionTextFieldReducer.State = .init()
         var password: PulpFictionTextFieldReducer.State = .init()
         var passwordConfirmation: PulpFictionTextFieldReducer.State = .init()
@@ -32,7 +32,7 @@ struct CreateAccountReducer: ReducerProtocol {
 
     enum Action: Equatable {
         case contactVerification(ContactVerificationDropDownMenuReducer.Action)
-        case phone(PulpFictionTextFieldReducer.Action)
+        case phone(PhoneNumberFieldReducer.Action)
         case email(PulpFictionTextFieldReducer.Action)
         case password(PulpFictionTextFieldReducer.Action)
         case passwordConfirmation(PulpFictionTextFieldReducer.Action)
@@ -46,7 +46,7 @@ struct CreateAccountReducer: ReducerProtocol {
             ContactVerificationDropDownMenuReducer()
         }
         Scope(state: \.phone, action: /Action.phone) {
-            PulpFictionTextFieldReducer()
+            PhoneNumberFieldReducer()
         }
         Scope(state: \.email, action: /Action.email) {
             PulpFictionTextFieldReducer()
@@ -65,12 +65,20 @@ struct CreateAccountReducer: ReducerProtocol {
 
             case .createUser:
                 let currentSelection = state.contactVerification.currentSelection
-                let phone = state.phone.text
+                let phone = state.phone.phoneNumber
                 let email = state.email.text
                 let passwordText = state.password.text
                 let passwordConfirmationText = state.passwordConfirmation.text
 
                 return .task {
+                    if !passwordText.isValidPassword() {
+                        return .showNotificationBanner("Please enter a valid password", .info)
+                    }
+
+                    if passwordText != passwordConfirmationText {
+                        return .showNotificationBanner("Confirmation password must match password", .info)
+                    }
+
                     switch currentSelection {
                     case .Phone where !phone.isValidPhoneNumber():
                         return .showNotificationBanner("Please enter a valid phone number", .info)
@@ -211,47 +219,61 @@ struct CreateAccount: View {
 
                 buildContactVerificationCaptionAndStatus(viewStore)
 
-                CaptionAndStatus(text: "Password has at least one upper case character") {
-                    let text = viewStore.password.text
-                    if text.count == 0 {
-                        return .empty
-                    } else if text.hasAtLeastOneUpperCaseCharacter() {
-                        return .valid
-                    } else {
-                        return .invalid
+                Group {
+                    CaptionAndStatus(text: "Password has at least one upper case character") {
+                        let text = viewStore.password.text
+                        if text.count == 0 {
+                            return .empty
+                        } else if text.hasAtLeastOneUpperCaseCharacter() {
+                            return .valid
+                        } else {
+                            return .invalid
+                        }
                     }
-                }
 
-                CaptionAndStatus(text: "Password has at least one lower case character") {
-                    let text = viewStore.password.text
-                    if text.count == 0 {
-                        return .empty
-                    } else if text.hasAtLeastOneLowerCaseCharacter() {
-                        return .valid
-                    } else {
-                        return .invalid
+                    CaptionAndStatus(text: "Password has at least one lower case character") {
+                        let text = viewStore.password.text
+                        if text.count == 0 {
+                            return .empty
+                        } else if text.hasAtLeastOneLowerCaseCharacter() {
+                            return .valid
+                        } else {
+                            return .invalid
+                        }
                     }
-                }
 
-                CaptionAndStatus(text: "Password has at least one special character") {
-                    let text = viewStore.password.text
-                    if text.count == 0 {
-                        return .empty
-                    } else if text.hasAtLeastOneSpecialCharacter() {
-                        return .valid
-                    } else {
-                        return .invalid
+                    CaptionAndStatus(text: "Password has at least one special character") {
+                        let text = viewStore.password.text
+                        if text.count == 0 {
+                            return .empty
+                        } else if text.hasAtLeastOneSpecialCharacter() {
+                            return .valid
+                        } else {
+                            return .invalid
+                        }
                     }
-                }
 
-                CaptionAndStatus(text: "Password has at least 8 characters") {
-                    let text = viewStore.password.text
-                    if text.count == 0 {
-                        return .empty
-                    } else if text.hasAtLeastNCharacters(8) {
-                        return .valid
-                    } else {
-                        return .invalid
+                    CaptionAndStatus(text: "Password has at least 8 characters") {
+                        let text = viewStore.password.text
+                        if text.count == 0 {
+                            return .empty
+                        } else if text.hasAtLeastNCharacters(8) {
+                            return .valid
+                        } else {
+                            return .invalid
+                        }
+                    }
+
+                    CaptionAndStatus(text: "Passwords match") {
+                        let passwordText = viewStore.password.text
+                        let passwordConfirmationText = viewStore.passwordConfirmation.text
+                        if passwordText.count == 0 || passwordConfirmationText.count == 0 {
+                            return .empty
+                        } else if passwordText == passwordConfirmationText {
+                            return .valid
+                        } else {
+                            return .invalid
+                        }
                     }
                 }
             }
@@ -263,14 +285,12 @@ struct CreateAccount: View {
     private func buildContactVerificationInput(_ viewStore: PulpFictionViewStore<CreateAccountReducer>) -> some View {
         switch viewStore.state.contactVerification.currentSelection {
         case .Phone:
-            PulpFictionTextField(
-                prompt: "Phone",
+            PhoneNumberField(
                 store: store.scope(
                     state: \.phone,
                     action: CreateAccountReducer.Action.phone
                 )
-            ).padding([.horizontal])
-
+            )
         case .Email:
             PulpFictionTextField(
                 prompt: "Email",
@@ -287,7 +307,7 @@ struct CreateAccount: View {
         switch viewStore.state.contactVerification.currentSelection {
         case .Phone:
             CaptionAndStatus(text: "Valid phone number") {
-                let text = viewStore.phone.text
+                let text = viewStore.phone.phoneNumber
                 if text.count == 0 {
                     return .empty
                 } else if text.isValidPhoneNumber() {

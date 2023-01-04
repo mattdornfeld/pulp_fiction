@@ -24,6 +24,8 @@ swift_library(
         "@com_github_bow_swift_bow//:BowEffects",
         "@com_github_bow_swift_bow//:BowOptics",
         "@com_github_hyperoslo_cache//:Cache",
+        "@com_github_marmelroy_phonenumberkit//:PhoneNumberKit",
+        "@com_github_mojtabahs_iphonenumberfield//:iPhoneNumberField",
         "@com_github_pointfreeco_swift_composable_architecture//:ComposableArchitecture",
     ],
     module_name = "PulpFictionAppSource"

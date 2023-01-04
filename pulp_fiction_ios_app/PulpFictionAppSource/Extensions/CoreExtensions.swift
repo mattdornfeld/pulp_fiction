@@ -8,6 +8,7 @@
 import Bow
 import Foundation
 import Logging
+import PhoneNumberKit
 import SwiftUI
 
 public extension Data {
@@ -21,6 +22,9 @@ public extension Data {
         }
     }
 }
+
+private let phoneNumberKit = PhoneNumberKit()
+class InvalidPhoneNumber: PulpFictionRequestError {}
 
 extension String {
     public class ErrorParsingUUID: PulpFictionRequestError {}
@@ -40,8 +44,14 @@ extension String {
         isValid("[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}")
     }
 
+    func toPhoneNumber() -> PulpFictionRequestEither<PhoneNumber> {
+        Either.catchError {
+            try phoneNumberKit.parse(self)
+        }^.mapLeft { InvalidPhoneNumber($0) }
+    }
+
     func isValidPhoneNumber() -> Bool {
-        isValid("^[0-9+]{0,1}+[0-9]{5,16}$")
+        toPhoneNumber().isRight
     }
 
     func hasAtLeastOneUpperCaseCharacter() -> Bool {

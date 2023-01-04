@@ -34,12 +34,6 @@ struct PulpFictionTextField: View {
     let textFieldType: TextFieldType
     @ObservedObject var viewStore: PulpFictionViewStore<PulpFictionTextFieldReducer>
     private let store: PulpFictionStore<PulpFictionTextFieldReducer>
-    private let lightGrey: Color = .init(
-        red: 239.0 / 255.0,
-        green: 243.0 / 255.0,
-        blue: 244.0 / 255.0,
-        opacity: 1.0
-    )
 
     enum TextFieldType {
         case insecure
@@ -49,7 +43,7 @@ struct PulpFictionTextField: View {
     var body: some View {
         buildTextView(viewStore)
             .padding()
-            .background(lightGrey)
+            .background(PulpFictionColors.lightGrey)
             .cornerRadius(5.0)
             .padding(.bottom, 20)
     }
