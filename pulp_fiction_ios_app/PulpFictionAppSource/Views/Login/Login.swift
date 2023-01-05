@@ -29,7 +29,7 @@ struct LoginReducer: ReducerProtocol {
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
         case .createLoginSession:
-            if emailOrPhoneTextFieldViewStore.text.contains("@") {
+            if emailOrPhoneTextFieldViewStore.text.isValidEmail() {
                 return .task {
                     let createLoginSessionResponseEither = await backendMessenger.createLoginSessionBackendMessenger.createLoginSession(
                         email: emailOrPhoneTextFieldViewStore.text,

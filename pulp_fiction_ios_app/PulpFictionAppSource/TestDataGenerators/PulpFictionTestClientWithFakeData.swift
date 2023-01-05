@@ -36,6 +36,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     private enum Path: String {
         case createLoginSession = "/pulp_fiction.protos.PulpFiction/CreateLoginSession"
         case createPost = "/pulp_fiction.protos.PulpFiction/CreatePost"
+        case createUser = "/pulp_fiction.protos.PulpFiction/CreateUser"
         case getFeed = "/pulp_fiction.protos.PulpFiction/GetFeed"
         case updateLoginSession = "/pulp_fiction.protos.PulpFiction/UpdateLoginSession"
         case updatePost = "/pulp_fiction.protos.PulpFiction/UpdatePost"
@@ -45,6 +46,7 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
     class RequestBuffers {
         var createLoginSession: [CreateLoginSessionRequest] = .init()
         var createPost: [CreatePostRequest] = .init()
+        var createUser: [CreateUserRequest] = .init()
         var getFeed: [GetFeedRequest] = .init()
         var updateLoginSession: [UpdateLoginSessionRequest] = .init()
         var updatePost: [UpdatePostRequest] = .init()
@@ -237,6 +239,17 @@ public class PulpFictionTestClientWithFakeData: PulpFictionClientProtocol {
         )
     }
 
+    public func createUser(
+        _ request: CreateUserRequest,
+        callOptions _: CallOptions? = nil
+    ) -> UnaryCall<CreateUserRequest, CreateUserResponse> {
+        processUnaryRequest(
+            request: request,
+            responseSupplier: { _ in CreateUserResponse() },
+            path: Path.createUser
+        )
+    }
+
     public func createPost(
         _ request: CreatePostRequest,
         callOptions _: CallOptions? = nil
@@ -313,6 +326,13 @@ public extension PulpFictionClientProtocol {
         callOptions: CallOptions? = nil
     ) -> UnaryCall<CreatePostRequest, CreatePostResponse> {
         getClient().createPost(request, callOptions: callOptions)
+    }
+
+    func createUser(
+        _ request: CreateUserRequest,
+        callOptions: CallOptions? = nil
+    ) -> UnaryCall<CreateUserRequest, CreateUserResponse> {
+        getClient().createUser(request, callOptions: callOptions)
     }
 
     func updateLoginSession(

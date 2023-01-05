@@ -16,16 +16,16 @@ struct EmptyNavigationLinkViewReducer: ReducerProtocol {
         var shouldLoadDestionationView: Bool = false
     }
 
-    enum Action {
+    enum Action: Equatable {
         /// Updates shouldLoadDestionationView
-        case navigateToDestionationView(() -> Void = {})
+        case navigateToDestionationView(EquatableIgnore<() -> Void> = .init(wrappedValue: {}))
         case updateShouldLoadDestionationView(Bool)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
-        case let .navigateToDestionationView(callback):
-            callback()
+        case let .navigateToDestionationView(wrappedCallback):
+            wrappedCallback.wrappedValue()
             return .task { .updateShouldLoadDestionationView(true) }
 
         case let .updateShouldLoadDestionationView(newShouldLoadDestionationView):
@@ -39,6 +39,7 @@ struct EmptyNavigationLinkViewReducer: ReducerProtocol {
 struct EmptyNavigationLinkView<Destination: View>: View {
     /// The destination View
     let destination: Destination
+    let store: PulpFictionStore<EmptyNavigationLinkViewReducer>
     /// ViewStore for this object
     @ObservedObject var viewStore: EmptyNavigationLinkViewStore = EmptyNavigationLinkView.buildViewStore()
 
@@ -56,6 +57,24 @@ struct EmptyNavigationLinkView<Destination: View>: View {
         .init(
             initialState: EmptyNavigationLinkViewReducer.State(),
             reducer: EmptyNavigationLinkViewReducer()
+        )
+    }
+}
+
+extension EmptyNavigationLinkView {
+    init(store: PulpFictionStore<EmptyNavigationLinkViewReducer>, destinationSupplier: () -> Destination) {
+        self.store = store
+        destination = destinationSupplier()
+        viewStore = ViewStore(store)
+    }
+
+    init(destination: Destination) {
+        self.init(
+            store: .init(
+                initialState: .init(),
+                reducer: EmptyNavigationLinkViewReducer()
+            ),
+            destinationSupplier: { destination }
         )
     }
 }

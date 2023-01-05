@@ -36,7 +36,7 @@ struct CaptionCreator: PulpFictionView {
                     notificationBannerViewStore.send(.showNotificationBanner("Your post has been created!", .success))
                 }
 
-                self.emptyNavigationLink.viewStore.send(.navigateToDestionationView {})
+                self.emptyNavigationLink.viewStore.send(.navigateToDestionationView())
             }
         )
     }

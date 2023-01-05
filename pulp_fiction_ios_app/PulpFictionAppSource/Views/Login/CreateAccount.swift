@@ -23,6 +23,7 @@ struct CreateAccountReducer: ReducerProtocol {
     var createUserBackendMessenger: CreateUserBackendMessenger { externalMessengers.backendMessenger.createUserBackendMessenger }
 
     struct State: Equatable {
+        var navigateToVerifyContact: EmptyNavigationLinkViewReducer.State = .init()
         var contactVerification: ContactVerificationDropDownMenuReducer.State = .init(currentSelection: .Phone)
         var phone: PhoneNumberFieldReducer.State = .init()
         var email: PulpFictionTextFieldReducer.State = .init()
@@ -31,6 +32,7 @@ struct CreateAccountReducer: ReducerProtocol {
     }
 
     enum Action: Equatable {
+        case navigateToVerifyContact(EmptyNavigationLinkViewReducer.Action)
         case contactVerification(ContactVerificationDropDownMenuReducer.Action)
         case phone(PhoneNumberFieldReducer.Action)
         case email(PulpFictionTextFieldReducer.Action)
@@ -42,6 +44,9 @@ struct CreateAccountReducer: ReducerProtocol {
     }
 
     var body: some ReducerProtocol<State, Action> {
+        Scope(state: \.navigateToVerifyContact, action: /Action.navigateToVerifyContact) {
+            EmptyNavigationLinkViewReducer()
+        }
         Scope(state: \.contactVerification, action: /Action.contactVerification) {
             ContactVerificationDropDownMenuReducer()
         }
@@ -60,7 +65,7 @@ struct CreateAccountReducer: ReducerProtocol {
 
         Reduce { state, action in
             switch action {
-            case .contactVerification, .phone, .email, .password, .passwordConfirmation:
+            case .navigateToVerifyContact, .contactVerification, .phone, .email, .password, .passwordConfirmation:
                 return .none
 
             case .createUser:
@@ -104,6 +109,14 @@ struct CreateAccountReducer: ReducerProtocol {
                 }
 
             case let .processCreateUserResponse(createUserResponseEither):
+                createUserResponseEither.processResponseFromServer(
+                    notificationBannerViewStore: notificationBannerViewStore,
+                    state: state,
+                    path: CreateUserBackendMessenger.BackendPath.createUser.rawValue
+                ).onSuccess { _ in
+                    notificationBannerViewStore.send(.showNotificationBanner("Account successfully created!", .success))
+                    state.navigateToVerifyContact.shouldLoadDestionationView = true
+                }
                 return .none
 
             case let .showNotificationBanner(bannerText, bannerType):
@@ -164,7 +177,9 @@ struct CreateAccountTopNavigationBar: ToolbarContent {
     }
 }
 
-struct CreateAccount: View {
+struct CreateAccount: PulpFictionView {
+    let externalMessengers: ExternalMessengers
+    let notifictionBannerViewStore: NotificationnotificationBannerViewStore
     let createAccountReducer: CreateAccountReducer
     private var store: PulpFictionStore<CreateAccountReducer>
 
@@ -172,6 +187,8 @@ struct CreateAccount: View {
         externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) {
+        self.externalMessengers = externalMessengers
+        notifictionBannerViewStore = notificationBannerViewStore
         createAccountReducer = .init(
             externalMessengers: externalMessengers,
             notificationBannerViewStore: notificationBannerViewStore
@@ -185,6 +202,18 @@ struct CreateAccount: View {
     var body: some View {
         WithViewStore(store, observe: { $0 }) { viewStore in
             VStack {
+                EmptyNavigationLinkView(
+                    store: store.scope(
+                        state: \.navigateToVerifyContact,
+                        action: CreateAccountReducer.Action.navigateToVerifyContact
+                    )
+                ) {
+                    Login(
+                        externalMessengers: externalMessengers,
+                        notificationBannerViewStore: notifictionBannerViewStore
+                    )
+                }
+
                 BoldCaption(
                     text: "We need your contact info. Tap the top right menu to switch between using your phone or email.",
                     alignment: .center,

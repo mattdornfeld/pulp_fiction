@@ -15,6 +15,10 @@ public struct CreateUserBackendMessenger {
 
     class ErrorCreatingUser: PulpFictionRequestError {}
 
+    enum BackendPath: String {
+        case createUser
+    }
+
     private func buildCreateUserResponse(createUserRequest: CreateUserRequest) async -> Either<PulpFictionRequestError, CreateUserResponse> {
         .invoke({ cause in ErrorCreatingUser(cause) }) {
             try pulpFictionClientProtocol.createUser(createUserRequest).response.wait()
