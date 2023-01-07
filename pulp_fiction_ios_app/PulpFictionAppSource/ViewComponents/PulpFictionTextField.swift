@@ -32,8 +32,22 @@ typealias PulpFictionTextFieldViewStore = PulpFictionViewStore<PulpFictionTextFi
 struct PulpFictionTextField: View {
     let prompt: String
     let textFieldType: TextFieldType
+    let textContentType: UITextContentType?
+    let shouldLoadKeyboardOnAppear: Bool
     @ObservedObject var viewStore: PulpFictionViewStore<PulpFictionTextFieldReducer>
     private let store: PulpFictionStore<PulpFictionTextFieldReducer>
+    private var keyBoardType: UIKeyboardType? {
+        switch textContentType {
+        case .some(.oneTimeCode):
+            return .numberPad
+        case .some(.emailAddress):
+            return .emailAddress
+        default:
+            return nil
+        }
+    }
+
+    @FocusState private var focusedField: Bool
 
     enum TextFieldType {
         case insecure
@@ -46,26 +60,46 @@ struct PulpFictionTextField: View {
             .background(PulpFictionColors.lightGrey)
             .cornerRadius(5.0)
             .padding(.bottom, 20)
+            .padding([.horizontal])
+            .focused($focusedField)
+            .onAppear {
+                focusedField = shouldLoadKeyboardOnAppear
+            }
     }
 
     @ViewBuilder private func buildTextView(_ viewStore: PulpFictionViewStore<PulpFictionTextFieldReducer>) -> some View {
         switch textFieldType {
         case .insecure:
-            TextField(
+            let textField = TextField(
                 prompt,
                 text: viewStore.binding(
                     get: \.text,
                     send: { newText in .updateText(newText) }
                 )
             )
+            .textContentType(textContentType)
+
+            switch keyBoardType {
+            case let .some(keyboardType):
+                textField.keyboardType(keyboardType)
+            case .none:
+                textField
+            }
         case .secure:
-            SecureField(
+            let secureField = SecureField(
                 prompt,
                 text: viewStore.binding(
                     get: \.text,
                     send: { newText in .updateText(newText) }
                 )
-            )
+            ).textContentType(textContentType)
+
+            switch keyBoardType {
+            case let .some(keyboardType):
+                secureField.keyboardType(keyboardType)
+            case .none:
+                secureField
+            }
         }
     }
 
@@ -78,40 +112,21 @@ struct PulpFictionTextField: View {
 }
 
 extension PulpFictionTextField {
-    init(prompt: String, textFieldType: TextFieldType, store: PulpFictionStore<PulpFictionTextFieldReducer>) {
+    init(
+        prompt: String,
+        textFieldType: TextFieldType = .insecure,
+        textContentType: UITextContentType? = nil,
+        shouldLoadKeyboardOnAppear: Bool = false,
+        store: PulpFictionStore<PulpFictionTextFieldReducer> = .init(
+            initialState: .init(),
+            reducer: PulpFictionTextFieldReducer()
+        )
+    ) {
         self.prompt = prompt
         self.store = store
         self.textFieldType = textFieldType
+        self.textContentType = textContentType
+        self.shouldLoadKeyboardOnAppear = shouldLoadKeyboardOnAppear
         viewStore = ViewStore(store)
-    }
-
-    init(prompt: String, store: PulpFictionStore<PulpFictionTextFieldReducer>) {
-        self.init(
-            prompt: prompt,
-            textFieldType: .insecure,
-            store: store
-        )
-    }
-
-    init(prompt: String, textFieldType: TextFieldType) {
-        self.init(
-            prompt: prompt,
-            textFieldType: textFieldType,
-            store: .init(
-                initialState: .init(),
-                reducer: PulpFictionTextFieldReducer()
-            )
-        )
-    }
-
-    init(prompt: String) {
-        self.init(
-            prompt: prompt,
-            textFieldType: .insecure,
-            store: .init(
-                initialState: .init(),
-                reducer: PulpFictionTextFieldReducer()
-            )
-        )
     }
 }

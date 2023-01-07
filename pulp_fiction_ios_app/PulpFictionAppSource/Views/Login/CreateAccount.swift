@@ -74,6 +74,7 @@ struct CreateAccountReducer: ReducerProtocol {
                 let email = state.email.text
                 let passwordText = state.password.text
                 let passwordConfirmationText = state.passwordConfirmation.text
+                state.navigateToVerifyContact.shouldLoadDestionationView = true
 
                 return .task {
                     if !passwordText.isValidPassword() {
@@ -208,7 +209,7 @@ struct CreateAccount: PulpFictionView {
                         action: CreateAccountReducer.Action.navigateToVerifyContact
                     )
                 ) {
-                    Login(
+                    CodeVerifier(
                         externalMessengers: externalMessengers,
                         notificationBannerViewStore: notifictionBannerViewStore
                     )
@@ -226,20 +227,22 @@ struct CreateAccount: PulpFictionView {
                 PulpFictionTextField(
                     prompt: "Password",
                     textFieldType: .secure,
+                    textContentType: .password,
                     store: store.scope(
                         state: \.password,
                         action: CreateAccountReducer.Action.password
                     )
-                ).padding([.horizontal])
+                )
 
                 PulpFictionTextField(
                     prompt: "Confirm Password",
                     textFieldType: .secure,
+                    textContentType: .password,
                     store: store.scope(
                         state: \.passwordConfirmation,
                         action: CreateAccountReducer.Action.passwordConfirmation
                     )
-                ).padding([.horizontal])
+                )
 
                 PulpFictionButton(
                     text: "CREATE ACCOUNT",
@@ -323,11 +326,12 @@ struct CreateAccount: PulpFictionView {
         case .Email:
             PulpFictionTextField(
                 prompt: "Email",
+                textContentType: .emailAddress,
                 store: store.scope(
                     state: \.email,
                     action: CreateAccountReducer.Action.email
                 )
-            ).padding([.horizontal])
+            )
         }
     }
 
