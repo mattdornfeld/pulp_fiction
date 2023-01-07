@@ -29,6 +29,17 @@ struct CreateAccountReducer: ReducerProtocol {
         var email: PulpFictionTextFieldReducer.State = .init()
         var password: PulpFictionTextFieldReducer.State = .init()
         var passwordConfirmation: PulpFictionTextFieldReducer.State = .init()
+
+        func getContactVerificationProto() -> ContactVerificationProto {
+            ContactVerificationProto.with {
+                switch contactVerification.currentSelection {
+                case .Phone:
+                    $0.phoneNumber = phone.phoneNumber
+                case .Email:
+                    $0.email = email.text
+                }
+            }
+        }
     }
 
     enum Action: Equatable {
@@ -211,7 +222,8 @@ struct CreateAccount: PulpFictionView {
                 ) {
                     CodeVerifier(
                         externalMessengers: externalMessengers,
-                        notificationBannerViewStore: notifictionBannerViewStore
+                        notificationBannerViewStore: notifictionBannerViewStore,
+                        contactVerificationProto: viewStore.state.getContactVerificationProto()
                     )
                 }
 

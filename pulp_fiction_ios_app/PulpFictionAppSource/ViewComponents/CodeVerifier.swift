@@ -9,34 +9,72 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
-struct CodeVerifierReducer: ReducerProtocol {
+struct CodeVerifierReducer: PulpFictionReducerProtocol {
     let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
+    let contactVerificationProto: ContactVerificationProto
 
     struct State: Equatable {
+        var navigateToLogin: EmptyNavigationLinkViewReducer.State = .init()
         var verificationCodeTextField: PulpFictionTextFieldReducer.State = .init()
     }
 
     enum Action: Equatable {
+        case navigateToLogin(EmptyNavigationLinkViewReducer.Action)
         case updateVerificationCodeTextField(PulpFictionTextFieldReducer.Action)
+        case showNotificationBanner(String, NotificationBannerReducer.BannerType)
         case submitVerificationCode
+        case processUpdateUserResponse(PulpFictionRequestEither<UpdateUserResponse>)
     }
 
     var body: some ReducerProtocol<State, Action> {
+        Scope(state: \.navigateToLogin, action: /Action.navigateToLogin) {
+            EmptyNavigationLinkViewReducer()
+        }
+
         Scope(state: \.verificationCodeTextField, action: /Action.updateVerificationCodeTextField) {
             PulpFictionTextFieldReducer()
         }
 
-        Reduce { _, action in
+        Reduce { state, action in
             switch action {
-            case .updateVerificationCodeTextField:
+            case .navigateToLogin, .updateVerificationCodeTextField:
                 return .none
+
+            case let .showNotificationBanner(bannerText, bannerType):
+                notificationBannerViewStore.send(.showNotificationBanner(bannerText, bannerType))
+                return .none
+
             case .submitVerificationCode:
-                notificationBannerViewStore.send(.showNotificationBanner(
-                    "Successfully verified contact info!",
-                    .success
-                ))
-                return .none
+                guard let verificationCode = Int32(state.verificationCodeTextField.text) else {
+                    return .task { .showNotificationBanner("Please enter a valid verification code", .info) }
+                }
+
+                return .task {
+                    let updateUserResponseEither = await backendMessenger.updateUserBackendMessenger.verifyContactInformation(
+                        verificationCode: verificationCode,
+                        contactVerificationProto: contactVerificationProto
+                    )
+
+                    return .processUpdateUserResponse(updateUserResponseEither)
+                }
+
+            case let .processUpdateUserResponse(updateUserResponseEither):
+                updateUserResponseEither.processResponseFromServer(
+                    notificationBannerViewStore: notificationBannerViewStore,
+                    state: state,
+                    path: UpdateUserBackendMessenger.BackendPath.verifyContactInformation.rawValue
+                )
+
+                switch updateUserResponseEither.toEnum() {
+                case .left:
+                    return .task { .showNotificationBanner("Sorry we do not recognize this code", .info) }
+                case .right:
+                    state.navigateToLogin.shouldLoadDestionationView = true
+                    return .task {
+                        .showNotificationBanner("Successfully verified contact info!", .success)
+                    }
+                }
             }
         }
     }
@@ -47,14 +85,19 @@ struct CodeVerifier: PulpFictionView {
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     let store: PulpFictionStore<CodeVerifierReducer>
 
-    init(externalMessengers: ExternalMessengers, notificationBannerViewStore: NotificationnotificationBannerViewStore) {
+    init(
+        externalMessengers: ExternalMessengers,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
+        contactVerificationProto: ContactVerificationProto
+    ) {
         self.externalMessengers = externalMessengers
         self.notificationBannerViewStore = notificationBannerViewStore
         store = .init(
             initialState: CodeVerifierReducer.State(),
             reducer: CodeVerifierReducer(
                 externalMessengers: externalMessengers,
-                notificationBannerViewStore: notificationBannerViewStore
+                notificationBannerViewStore: notificationBannerViewStore,
+                contactVerificationProto: contactVerificationProto
             )
         )
     }
@@ -62,6 +105,18 @@ struct CodeVerifier: PulpFictionView {
     var body: some View {
         WithViewStore(store) { viewStore in
             VStack {
+                EmptyNavigationLinkView(
+                    store: store.scope(
+                        state: \.navigateToLogin,
+                        action: CodeVerifierReducer.Action.navigateToLogin
+                    )
+                ) {
+                    Login(
+                        externalMessengers: externalMessengers,
+                        notificationBannerViewStore: notificationBannerViewStore
+                    )
+                }
+
                 BoldCaption(
                     text: "Please enter the verification code we sent to your phone or email.",
                     alignment: .center,
