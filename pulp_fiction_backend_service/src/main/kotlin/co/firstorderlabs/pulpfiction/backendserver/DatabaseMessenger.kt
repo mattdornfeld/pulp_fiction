@@ -7,6 +7,7 @@ import arrow.core.toOption
 import co.firstorderlabs.protos.pulpfiction.PostKt.interactionAggregates
 import co.firstorderlabs.protos.pulpfiction.PostKt.loggedInUserPostInteractions
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
@@ -14,7 +15,6 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.SensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
@@ -169,7 +169,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             createDatabaseConnection(DatabaseConfigs.databaseUrl, DatabaseConfigs.ENCRYPTED_CREDENTIALS_FILE)
     }
 
-    fun checkLoginSessionValid(loginSessionProto: PulpFictionProtos.LoginResponse.LoginSession): Effect<PulpFictionRequestError, Unit> =
+    fun checkLoginSessionValid(loginSessionProto: PulpFictionProtos.CreateLoginSessionResponse.LoginSession): Effect<PulpFictionRequestError, Unit> =
         effect {
             val userId = loginSessionProto.userId.toUUID().bind()
             // TODO (matt): Implement hashing for sessionToken
@@ -199,7 +199,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .getOrElse { shift(LoginSessionInvalidError()) }
         }
 
-    suspend fun createLoginSession(request: LoginRequest): Effect<PulpFictionRequestError, PulpFictionProtos.LoginResponse.LoginSession> =
+    suspend fun createLoginSession(request: PulpFictionProtos.CreateLoginSessionRequest): Effect<PulpFictionRequestError, PulpFictionProtos.CreateLoginSessionResponse.LoginSession> =
         effect {
             val loginSession = LoginSession.fromRequest(request).bind()
             val userMetadata = database.transactionToEffectCatchErrors {
@@ -580,7 +580,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     }
 
     fun checkUserPasswordValid(
-        request: LoginRequest
+        request: CreateLoginSessionRequest
     ): Effect<PulpFictionRequestError, Boolean> = effect {
         val userLoginCandidate = getUserFromUserId(request.userId).bind()
         val hashedPass = userLoginCandidate.hashedPassword
