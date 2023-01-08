@@ -85,7 +85,6 @@ struct CreateAccountReducer: ReducerProtocol {
                 let email = state.email.text
                 let passwordText = state.password.text
                 let passwordConfirmationText = state.passwordConfirmation.text
-                state.navigateToVerifyContact.shouldLoadDestionationView = true
 
                 return .task {
                     if !passwordText.isValidPassword() {
