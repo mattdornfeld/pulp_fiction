@@ -172,19 +172,22 @@ struct CreateAccountTopNavigationBar: ToolbarContent {
     let store: PulpFictionStore<CreateAccountReducer>
 
     var body: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Title("Create Account")
+                .foregroundColor(.gray)
+        }
+
         ToolbarItem(placement: .navigationBarTrailing) {
-            HStack {
-                ContactVerificationDropDownMenuView(
-                    symbolName: "line.3.horizontal.decrease.circle",
-                    symbolSize: 20,
-                    symbolColor: .gray,
-                    menuOptions: ContactVerification.allCases,
-                    store: store.scope(
-                        state: \.contactVerification,
-                        action: CreateAccountReducer.Action.contactVerification
-                    )
+            ContactVerificationDropDownMenuView(
+                symbolName: "line.3.horizontal.decrease.circle",
+                symbolSize: 20,
+                symbolColor: .gray,
+                menuOptions: ContactVerification.allCases,
+                store: store.scope(
+                    state: \.contactVerification,
+                    action: CreateAccountReducer.Action.contactVerification
                 )
-            }
+            )
         }
     }
 }

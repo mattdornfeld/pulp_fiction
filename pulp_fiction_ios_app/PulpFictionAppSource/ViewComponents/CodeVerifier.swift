@@ -109,9 +109,10 @@ struct CodeVerifier: PulpFictionView {
                     store: store.scope(
                         state: \.navigateToLogin,
                         action: CodeVerifierReducer.Action.navigateToLogin
-                    )
+                    ),
+                    hideBackButton: true
                 ) {
-                    Login(
+                    Landing(
                         externalMessengers: externalMessengers,
                         notificationBannerViewStore: notificationBannerViewStore
                     )

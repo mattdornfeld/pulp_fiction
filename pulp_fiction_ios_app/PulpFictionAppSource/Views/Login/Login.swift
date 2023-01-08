@@ -79,6 +79,15 @@ struct LoginReducer: ReducerProtocol {
     }
 }
 
+struct LoginTopNavigationBar: ToolbarContent {
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Title("Login")
+                .foregroundColor(.gray)
+        }
+    }
+}
+
 struct Login: PulpFictionView {
     let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
@@ -136,6 +145,7 @@ struct Login: PulpFictionView {
                 ) { viewStore.send(.createLoginSession) }
             }
             .padding()
+            .toolbar { LoginTopNavigationBar() }
         }
     }
 }

@@ -84,7 +84,7 @@ struct GeneralProfileOptions: PulpFictionView {
     ) {
         self.externalMessengers = externalMessengers
         self.notificationBannerViewStore = notificationBannerViewStore
-        landingNavigationLink = .init {
+        landingNavigationLink = .init(hideBackButton: true) {
             .init(
                 externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore
