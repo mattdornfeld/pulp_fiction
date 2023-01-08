@@ -39,18 +39,30 @@ struct EmptyNavigationLinkViewReducer: ReducerProtocol {
 struct EmptyNavigationLinkView<Destination: View>: View {
     /// The destination View
     let destination: Destination
+    let hideBackButton: Bool
     let store: PulpFictionStore<EmptyNavigationLinkViewReducer>
     /// ViewStore for this object
     @ObservedObject var viewStore: EmptyNavigationLinkViewStore = EmptyNavigationLinkView.buildViewStore()
 
     var body: some View {
         NavigationLink(
-            destination: destination.navigationBarBackButtonHidden(true),
+            destination: buildDestination(),
             isActive: viewStore.binding(
                 get: \.shouldLoadDestionationView,
                 send: .updateShouldLoadDestionationView(false)
             )
         ) { EmptyView() }
+    }
+
+    @ViewBuilder private func buildDestination() -> some View {
+        let _destination = destination
+            .navigationBarBackButtonHidden(true)
+
+        if hideBackButton {
+            _destination
+        } else {
+            _destination.navigationBarItems(leading: BackButton())
+        }
     }
 
     static func buildViewStore() -> EmptyNavigationLinkViewStore {
@@ -62,19 +74,36 @@ struct EmptyNavigationLinkView<Destination: View>: View {
 }
 
 extension EmptyNavigationLinkView {
-    init(store: PulpFictionStore<EmptyNavigationLinkViewReducer>, destinationSupplier: () -> Destination) {
+    init(
+        store: PulpFictionStore<EmptyNavigationLinkViewReducer>,
+        hideBackButton: Bool = false,
+        destinationSupplier: () -> Destination
+    ) {
         self.store = store
+        self.hideBackButton = hideBackButton
         destination = destinationSupplier()
         viewStore = ViewStore(store)
     }
 
-    init(destination: Destination) {
+    init(hideBackButton: Bool = false, destination: Destination) {
         self.init(
             store: .init(
                 initialState: .init(),
                 reducer: EmptyNavigationLinkViewReducer()
             ),
+            hideBackButton: hideBackButton,
             destinationSupplier: { destination }
+        )
+    }
+
+    init(hideBackButton: Bool = false, destinationSupplier: () -> Destination) {
+        self.init(
+            store: .init(
+                initialState: .init(),
+                reducer: EmptyNavigationLinkViewReducer()
+            ),
+            hideBackButton: hideBackButton,
+            destinationSupplier: destinationSupplier
         )
     }
 }
@@ -91,12 +120,18 @@ class EmptyNavigationLink<Destination: View>: ObservableObject {
 
     /// Inits a EmptyNavigationLink
     /// - Parameter destination: The Destination view
-    init(destination: Destination) {
-        view = EmptyNavigationLinkView(destination: destination)
+    init(hideBackButton: Bool = false, destination: Destination) {
+        view = EmptyNavigationLinkView(
+            hideBackButton: hideBackButton,
+            destination: destination
+        )
         viewStore = view.viewStore
     }
 
-    convenience init(destinationSupplier: () -> Destination) {
-        self.init(destination: destinationSupplier())
+    convenience init(hideBackButton: Bool = false, destinationSupplier: () -> Destination) {
+        self.init(
+            hideBackButton: hideBackButton,
+            destination: destinationSupplier()
+        )
     }
 }

@@ -113,7 +113,7 @@ struct Login: PulpFictionView {
     ) {
         self.externalMessengers = externalMessengers
         self.notificationBannerViewStore = notificationBannerViewStore
-        bottomNavigationBarNavigationLink = .init {
+        bottomNavigationBarNavigationLink = .init(hideBackButton: true) {
             .init(
                 loggedInUserPostData: externalMessengers.loginSession.loggedInUserPostData,
                 externalMessengers: externalMessengers,
