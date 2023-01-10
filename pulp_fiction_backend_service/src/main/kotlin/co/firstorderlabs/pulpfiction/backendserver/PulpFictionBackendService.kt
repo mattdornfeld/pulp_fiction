@@ -24,6 +24,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.logEndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
+import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.flow
@@ -63,12 +64,15 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     override suspend fun createUser(request: PulpFictionProtos.CreateUserRequest): PulpFictionProtos.CreateUserResponse {
         val endpointName = EndpointName.createUser
         return effect<PulpFictionRequestError, CreateUserResponse> {
-            databaseMessenger
+            val user = databaseMessenger
                 .createUser(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.createUser)
                 .bind()
 
-            createUserResponse {}
+            createUserResponse {
+                this.userId = user.userId.toString()
+                this.createdAt = user.createdAt.toTimestamp()
+            }
         }
             .logEndpointMetrics(endpointName)
             .getResultAndThrowException()
@@ -94,13 +98,13 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     override suspend fun createLoginSession(request: CreateLoginSessionRequest): CreateLoginSessionResponse {
         val endpointName = EndpointName.login
         return effect<PulpFictionRequestError, CreateLoginSessionResponse> {
-            databaseMessenger
-                .checkUserPasswordValid(request)
+            val user = databaseMessenger
+                .checkPasswordValidAndGetUser(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.checkUserPasswordValid)
                 .bind()
 
             val loginSession = databaseMessenger
-                .createLoginSession(request)
+                .createLoginSession(user, request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.login)
                 .bind()
 

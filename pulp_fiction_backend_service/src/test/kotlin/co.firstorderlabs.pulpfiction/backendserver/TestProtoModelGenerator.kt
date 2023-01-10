@@ -1,21 +1,23 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
+import co.firstorderlabs.protos.pulpfiction.CreateLoginSessionRequestKt.phoneNumberLogin
+import co.firstorderlabs.protos.pulpfiction.CreateLoginSessionResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createCommentRequest
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
+import co.firstorderlabs.protos.pulpfiction.CreateUserRequestKt.phoneNumberVerification
 import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getCommentFeedRequest
 import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getFollowingPostFeedRequest
 import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getGlobalPostFeedRequest
 import co.firstorderlabs.protos.pulpfiction.GetFeedRequestKt.getUserPostFeedRequest
-import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionResponse.LoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateUserPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateDateOfBirth
@@ -23,11 +25,11 @@ import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateDisplayNam
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateEmail
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePassword
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePhoneNumber
+import co.firstorderlabs.protos.pulpfiction.createLoginSessionRequest
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.createUserRequest
 import co.firstorderlabs.protos.pulpfiction.getFeedRequest
 import co.firstorderlabs.protos.pulpfiction.getPostRequest
-import co.firstorderlabs.protos.pulpfiction.loginRequest
 import co.firstorderlabs.protos.pulpfiction.updateUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.testutils.nextByteString
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
@@ -38,31 +40,30 @@ import java.util.Random
 import java.util.UUID
 
 object TestProtoModelGenerator {
-    private val faker = Faker()
+    val faker = Faker()
     private val random = Random()
 
-    fun generateRandomLoginSession(): LoginSession = loginSession {
+    fun generateRandomLoginSession(): PulpFictionProtos.CreateLoginSessionResponse.LoginSession = loginSession {
         this.sessionToken = UUID.randomUUID().toString()
         this.userId = UUID.randomUUID().toString()
         this.createdAt = nowTruncated().toTimestamp()
     }
 
     fun generateRandomCreateUserRequest(): CreateUserRequest = createUserRequest {
-        this.displayName = faker.name.firstName()
-        this.email = faker.internet.email()
-        this.phoneNumber = faker.phoneNumber.phoneNumber()
-        this.dateOfBirth = faker.person.birthDate(30).toInstant().toTimestamp()
         this.password = faker.unique.toString()
-        this.optInToEmails = random.nextBoolean()
-        this.avatarJpg = random.nextByteString(100)
-        this.bio = faker.lordOfTheRings.quotes()
+        this.phoneNumberVerification = phoneNumberVerification {
+            this.phoneNumber = faker.phoneNumber.phoneNumber()
+        }
     }
 
-    fun generateRandomLoginRequest(userId: String, password: String): PulpFictionProtos.LoginRequest = loginRequest {
-        this.userId = userId
-        this.deviceId = faker.unique.toString()
-        this.password = password
-    }
+    fun generateRandomLoginRequest(phoneNumber: String, password: String): PulpFictionProtos.CreateLoginSessionRequest =
+        createLoginSessionRequest {
+            this.deviceId = faker.unique.toString()
+            this.password = password
+            this.phoneNumberLogin = phoneNumberLogin {
+                this.phoneNumber = phoneNumber
+            }
+        }
 
     fun generateRandomCreateCommentRequest(parentPostId: String): CreateCommentRequest = createCommentRequest {
         this.body = faker.lovecraft.unique.toString()
@@ -74,25 +75,28 @@ object TestProtoModelGenerator {
         this.imageJpg = random.nextByteString(100)
     }
 
-    fun generateRandomCreateUserPostRequest(loginSession: LoginSession): CreateUserPostRequest = createUserPostRequest {
-        this.userId = loginSession.userId.toString()
-        this.displayName = faker.name.firstName()
-        this.avatarJpg = random.nextByteString(100)
-    }
-
-    fun generateRandomUpdateDisplayNameRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
-        this.loginSession = loginSession
-        this.updateDisplayName = updateDisplayName {
-            this.newDisplayName = faker.name.firstName()
+    fun generateRandomCreateUserPostRequest(loginSession: LoginSession): CreateUserPostRequest =
+        createUserPostRequest {
+            this.userId = loginSession.userId.toString()
+            this.displayName = faker.name.firstName()
+            this.avatarJpg = random.nextByteString(100)
         }
-    }
 
-    fun generateRandomUpdateDateOfBirthRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
-        this.loginSession = loginSession
-        this.updateDateOfBirth = updateDateOfBirth {
-            this.newDateOfBirth = faker.person.birthDate(31).toInstant().toTimestamp()
+    fun generateRandomUpdateDisplayNameRequest(loginSession: LoginSession): UpdateUserRequest =
+        updateUserRequest {
+            this.loginSession = loginSession
+            this.updateDisplayName = updateDisplayName {
+                this.newDisplayName = faker.name.firstName()
+            }
         }
-    }
+
+    fun generateRandomUpdateDateOfBirthRequest(loginSession: LoginSession): UpdateUserRequest =
+        updateUserRequest {
+            this.loginSession = loginSession
+            this.updateDateOfBirth = updateDateOfBirth {
+                this.newDateOfBirth = faker.person.birthDate(31).toInstant().toTimestamp()
+            }
+        }
 
     fun generateRandomUpdateEmailRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
         this.loginSession = loginSession
@@ -130,15 +134,17 @@ object TestProtoModelGenerator {
         }
     }
 
-    fun generateRandomGetUserPostFeedRequest(loginSession: LoginSession, userId: String): GetFeedRequest = getFeedRequest {
-        this.loginSession = loginSession
-        this.getUserPostFeedRequest = getUserPostFeedRequest { this.userId = userId }
-    }
+    fun generateRandomGetUserPostFeedRequest(loginSession: LoginSession, userId: String): GetFeedRequest =
+        getFeedRequest {
+            this.loginSession = loginSession
+            this.getUserPostFeedRequest = getUserPostFeedRequest { this.userId = userId }
+        }
 
-    fun generateRandomGetCommentFeedRequest(loginSession: LoginSession, postId: String): GetFeedRequest = getFeedRequest {
-        this.loginSession = loginSession
-        this.getCommentFeedRequest = getCommentFeedRequest { this.postId = postId }
-    }
+    fun generateRandomGetCommentFeedRequest(loginSession: LoginSession, postId: String): GetFeedRequest =
+        getFeedRequest {
+            this.loginSession = loginSession
+            this.getCommentFeedRequest = getCommentFeedRequest { this.postId = postId }
+        }
 
     fun LoginSession.generateRandomCreatePostRequest(): CreatePostRequest = createPostRequest {
         this.loginSession = this@generateRandomCreatePostRequest

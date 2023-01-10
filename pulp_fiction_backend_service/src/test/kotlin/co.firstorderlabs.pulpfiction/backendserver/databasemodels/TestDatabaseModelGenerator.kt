@@ -47,8 +47,6 @@ object TestDatabaseModelGenerator {
         this.userId = userId
         this.createdAt = nowTruncated()
         this.currentDisplayName = faker.funnyName.name()
-        this.email = faker.internet.email()
-        this.phoneNumber = faker.phoneNumber.phoneNumber()
         this.dateOfBirth = faker.person.birthDate(30)
         this.hashedPassword = faker.unique.toString()
     }
