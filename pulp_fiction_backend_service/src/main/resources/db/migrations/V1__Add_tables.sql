@@ -16,7 +16,7 @@ CREATE TABLE emails
     email                VARCHAR   NOT NULL
 );
 
-CREATE INDEX CONCURRENTLY emails ON emails USING HASH (email);
+CREATE INDEX CONCURRENTLY emails_index ON emails USING HASH (email);
 
 CREATE TABLE phone_numbers
 (
@@ -24,7 +24,7 @@ CREATE TABLE phone_numbers
     phone_number         VARCHAR   NOT NULL
 );
 
-CREATE INDEX CONCURRENTLY phone_numbers ON phone_numbers USING HASH (phone_number);
+CREATE INDEX CONCURRENTLY phone_numbers_index ON phone_numbers USING HASH (phone_number);
 
 CREATE TABLE login_sessions
 (

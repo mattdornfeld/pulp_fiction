@@ -323,19 +323,19 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .bind()
     }
 
-    private suspend fun PulpFictionProtos.CreateUserRequest.addContactVerificationToDatabase(): Effect<PulpFictionRequestError, Int> =
+    private suspend fun PulpFictionProtos.CreateUserRequest.addContactVerificationToDatabase(user: User): Effect<PulpFictionRequestError, Int> =
         effect {
             when (contactVerificationCase) {
                 PulpFictionProtos.CreateUserRequest.ContactVerificationCase.PHONE_NUMBER_VERIFICATION -> {
                     val phoneNumber = PhoneNumber {
-                        this.user = user
+                        this.userId = user.userId
                         this.phoneNumber = phoneNumberVerification.phoneNumber
                     }
                     effectWithDatabaseError { database.phoneNumbers.add(phoneNumber) }.bind()
                 }
                 PulpFictionProtos.CreateUserRequest.ContactVerificationCase.EMAIL_VERIFICATION -> {
                     val email = Email {
-                        this.user = user
+                        this.userId = user.userId
                         this.email = emailVerification.email
                     }
                     effectWithDatabaseError { database.emails.add(email) }.bind()
@@ -353,7 +353,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
         database.transactionToEffect {
             effectWithDatabaseError { database.users.add(user) }.bind()
-            request.addContactVerificationToDatabase().bind()
+            request.addContactVerificationToDatabase(user).bind()
         }.bind()
 
         user
@@ -454,14 +454,20 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                         set(it.userId, user.userId)
                         set(it.email, request.updateEmail.newEmail)
                     }
-                    user.email.email = request.updateEmail.newEmail
+                    user.email = Email {
+                        this.userId = user.userId
+                        this.email = request.updateEmail.newEmail
+                    }
                 }
                 UpdateUserRequest.UpdateUserRequestCase.UPDATE_PHONE_NUMBER -> {
                     database.insertOrUpdate(PhoneNumbers) {
                         set(it.userId, user.userId)
                         set(it.phoneNumber, request.updatePhoneNumber.newPhoneNumber)
                     }
-                    user.phoneNumber.phoneNumber = request.updatePhoneNumber.newPhoneNumber
+                    user.phoneNumber = PhoneNumber {
+                        this.userId = user.userId
+                        this.phoneNumber = request.updatePhoneNumber.newPhoneNumber
+                    }
                 }
                 UpdateUserRequest.UpdateUserRequestCase.UPDATE_PASSWORD -> {
                     val authenticated = Password.check(
@@ -632,14 +638,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, User> = effect {
         val userLoginCandidate = when (request.createLoginSessionRequestCase) {
             CreateLoginSessionRequest.CreateLoginSessionRequestCase.EMAIL_LOGIN -> {
-                val email = database.emails.find { it.email eq request.emailLogin.email }
+                database.users.find { it.emails.email eq request.emailLogin.email }
                     ?: shift(EmailNotFoundError())
-                email.user
             }
             CreateLoginSessionRequest.CreateLoginSessionRequestCase.PHONE_NUMBER_LOGIN -> {
-                val phoneNumber = database.phoneNumbers.find { it.phoneNumber eq request.phoneNumberLogin.phoneNumber }
+                database.users.find { it.phoneNumbers.phoneNumber eq request.phoneNumberLogin.phoneNumber }
                     ?: shift(PhoneNumberNotFoundError())
-                phoneNumber.user
             }
             else -> shift(UnrecognizedEnumValue(request.createLoginSessionRequestCase))
         }

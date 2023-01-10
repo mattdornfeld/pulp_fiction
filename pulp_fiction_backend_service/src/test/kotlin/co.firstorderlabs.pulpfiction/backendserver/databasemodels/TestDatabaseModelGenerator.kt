@@ -49,6 +49,14 @@ object TestDatabaseModelGenerator {
         this.currentDisplayName = faker.funnyName.name()
         this.dateOfBirth = faker.person.birthDate(30)
         this.hashedPassword = faker.unique.toString()
+        this.phoneNumber = PhoneNumber {
+            this.userId = userId
+            this.phoneNumber = faker.phoneNumber.phoneNumber()
+        }
+        this.email = Email {
+            this.userId = userId
+            this.email = faker.internet.email()
+        }
     }
 
     fun CommentDatum.Companion.generateRandom(postId: UUID, parentPostId: UUID): CommentDatum = CommentDatum {

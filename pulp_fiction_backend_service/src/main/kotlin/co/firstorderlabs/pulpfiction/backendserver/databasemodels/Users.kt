@@ -27,14 +27,18 @@ import java.time.LocalDate
 import java.util.UUID
 
 object Users : Table<User>("users") {
-    val userId = uuid("user_id").primaryKey().bindTo { it.userId }
+    val userId = uuid("user_id")
+        .primaryKey()
+        .bindTo { it.userId }
+        .references(Emails) { it.email }
+        .references(PhoneNumbers) { it.phoneNumber }
     val createdAt = timestamp("created_at").bindTo { it.createdAt }
     val currentDisplayName = varchar("current_display_name").bindTo { it.currentDisplayName }
     val dateOfBirth = date("date_of_birth").bindTo { it.dateOfBirth }
     val hashedPassword = varchar("hashed_password").bindTo { it.hashedPassword }
 
-    val phoneNumber = uuid("user_id").references(PhoneNumbers) { it.phoneNumber }
-    val email = uuid("user_id").references(Emails) { it.email }
+    val emails get() = userId.referenceTable as Emails
+    val phoneNumbers get() = userId.referenceTable as PhoneNumbers
 }
 
 interface User : Entity<User> {
@@ -67,17 +71,18 @@ interface User : Entity<User> {
         }
     }
 
-    fun toCreatePostRequest(request: PulpFictionProtos.CreatePostRequest.CreateUserPostRequest): PulpFictionProtos.CreatePostRequest = createPostRequest {
-        this.loginSession = loginSession {
-            this.userId = this@User.userId.toString()
+    fun toCreatePostRequest(request: PulpFictionProtos.CreatePostRequest.CreateUserPostRequest): PulpFictionProtos.CreatePostRequest =
+        createPostRequest {
+            this.loginSession = loginSession {
+                this.userId = this@User.userId.toString()
+            }
+            this.createUserPostRequest = createUserPostRequest {
+                this.userId = this@User.userId.toString()
+                this.displayName = this@User.currentDisplayName
+                this.avatarJpg = request.avatarJpg
+                this.bio = request.bio
+            }
         }
-        this.createUserPostRequest = createUserPostRequest {
-            this.userId = this@User.userId.toString()
-            this.displayName = this@User.currentDisplayName
-            this.avatarJpg = request.avatarJpg
-            this.bio = request.bio
-        }
-    }
 
     companion object : Entity.Factory<User>() {
         suspend fun fromRequest(
