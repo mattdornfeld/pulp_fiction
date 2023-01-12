@@ -1,6 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
+import arrow.core.Option
 import arrow.core.continuations.either
 import co.firstorderlabs.protos.pulpfiction.CreateLoginSessionResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
@@ -50,21 +51,23 @@ interface User : Entity<User> {
     var phoneNumber: PhoneNumber
     var email: Email
 
-    fun toNonSensitiveUserMetadataProto(userPostDatum: UserPostDatum): UserMetadata {
+    fun toNonSensitiveUserMetadataProto(userPostDatumMaybe: Option<UserPostDatum>): UserMetadata {
         val user = this
         return userMetadata {
             this.userId = user.userId.toString()
             this.createdAt = user.createdAt.toTimestamp()
             this.displayName = user.currentDisplayName
-            userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
-            this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
+            userPostDatumMaybe.map { userPostDatum ->
+                userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
+                this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
+            }
         }
     }
 
-    fun toSensitiveUserMetadataProto(userPostDatum: UserPostDatum): PulpFictionProtos.User.SensitiveUserMetadata {
+    fun toSensitiveUserMetadataProto(userPostDatumMaybe: Option<UserPostDatum>): PulpFictionProtos.User.SensitiveUserMetadata {
         val user = this
         return sensitiveUserMetadata {
-            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto(userPostDatum)
+            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto(userPostDatumMaybe)
             user.dateOfBirth?.let { this.dateOfBirth = it.toInstant().toTimestamp() }
             this.email = this@User.email.email
             this.phoneNumber = this@User.phoneNumber.phoneNumber
@@ -93,6 +96,8 @@ interface User : Entity<User> {
                     this.userId = UUID.randomUUID()
                     this.createdAt = nowTruncated()
                     this.hashedPassword = Password.hash(request.password).withBcrypt().result
+                    this.currentDisplayName = ""
+                    this.dateOfBirth = LocalDate.now()
                 }
             }
         }

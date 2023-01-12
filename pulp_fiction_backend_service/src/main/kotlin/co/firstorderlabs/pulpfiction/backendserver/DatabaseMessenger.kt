@@ -1,5 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
+import arrow.core.Option
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.getOrElse
@@ -42,6 +43,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
@@ -88,6 +90,7 @@ import org.ktorm.dsl.eq
 import org.ktorm.dsl.from
 import org.ktorm.dsl.greater
 import org.ktorm.dsl.joinReferencesAndSelect
+import org.ktorm.dsl.leftJoin
 import org.ktorm.dsl.limit
 import org.ktorm.dsl.map
 import org.ktorm.dsl.orderBy
@@ -98,7 +101,7 @@ import org.ktorm.entity.Entity
 import org.ktorm.entity.add
 import org.ktorm.entity.filter
 import org.ktorm.entity.find
-import org.ktorm.entity.first
+import org.ktorm.entity.firstOrNull
 import org.ktorm.entity.sortedBy
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import org.ktorm.support.postgresql.insertOrUpdate
@@ -210,7 +213,10 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .getOrElse { shift(LoginSessionInvalidError()) }
         }
 
-    suspend fun createLoginSession(user: User, request: PulpFictionProtos.CreateLoginSessionRequest): Effect<PulpFictionRequestError, PulpFictionProtos.CreateLoginSessionResponse.LoginSession> =
+    suspend fun createLoginSession(
+        user: User,
+        request: PulpFictionProtos.CreateLoginSessionRequest
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.CreateLoginSessionResponse.LoginSession> =
         effect {
             val loginSession = LoginSession.fromRequest(user, request)
             val userMetadata = database.transactionToEffectCatchErrors {
@@ -453,6 +459,9 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     database.insertOrUpdate(Emails) {
                         set(it.userId, user.userId)
                         set(it.email, request.updateEmail.newEmail)
+                        onConflict {
+                            set(it.email, request.updateEmail.newEmail)
+                        }
                     }
                     user.email = Email {
                         this.userId = user.userId
@@ -463,11 +472,15 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     database.insertOrUpdate(PhoneNumbers) {
                         set(it.userId, user.userId)
                         set(it.phoneNumber, request.updatePhoneNumber.newPhoneNumber)
+                        onConflict {
+                            set(it.phoneNumber, request.updatePhoneNumber.newPhoneNumber)
+                        }
                     }
                     user.phoneNumber = PhoneNumber {
                         this.userId = user.userId
                         this.phoneNumber = request.updatePhoneNumber.newPhoneNumber
                     }
+                    user.phoneNumber.phoneNumber = request.updatePhoneNumber.newPhoneNumber
                 }
                 UpdateUserRequest.UpdateUserRequestCase.UPDATE_PASSWORD -> {
                     val authenticated = Password.check(
@@ -505,15 +518,16 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, UserMetadata> =
         getPublicUserMetadata(request.userId)
 
-    private suspend fun getMostRecentUserPostDatum(userId: UUID): Effect<PulpFictionRequestError, UserPostDatum> =
+    private fun getMostRecentUserPostDatum(userId: UUID): Effect<PulpFictionRequestError, Option<UserPostDatum>> =
         effect {
             database.userPostData
                 .filter { it.userId eq userId }
                 .sortedBy { it.updatedAt.desc() }
-                .first()
+                .firstOrNull()
+                .toOption()
         }
 
-    suspend fun getPublicUserMetadata(
+    private suspend fun getPublicUserMetadata(
         userId: String
     ): Effect<PulpFictionRequestError, UserMetadata> = effect {
         val user = getUserFromUserId(userId).bind()
@@ -636,13 +650,25 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     fun checkPasswordValidAndGetUser(
         request: CreateLoginSessionRequest
     ): Effect<PulpFictionRequestError, User> = effect {
+        val queryForUser = database
+            .from(Users)
+            .leftJoin(Emails, on = Users.userId eq Emails.userId)
+            .leftJoin(PhoneNumbers, on = Users.userId eq PhoneNumbers.userId)
+            .select()
+
         val userLoginCandidate = when (request.createLoginSessionRequestCase) {
             CreateLoginSessionRequest.CreateLoginSessionRequestCase.EMAIL_LOGIN -> {
-                database.users.find { it.emails.email eq request.emailLogin.email }
+                queryForUser
+                    .where { Emails.email eq request.emailLogin.email }
+                    .map { Users.createEntity(it) }
+                    .firstOrNull()
                     ?: shift(EmailNotFoundError())
             }
             CreateLoginSessionRequest.CreateLoginSessionRequestCase.PHONE_NUMBER_LOGIN -> {
-                database.users.find { it.phoneNumbers.phoneNumber eq request.phoneNumberLogin.phoneNumber }
+                queryForUser
+                    .where { PhoneNumbers.phoneNumber eq request.phoneNumberLogin.phoneNumber }
+                    .map { Users.createEntity(it) }
+                    .firstOrNull()
                     ?: shift(PhoneNumberNotFoundError())
             }
             else -> shift(UnrecognizedEnumValue(request.createLoginSessionRequestCase))
