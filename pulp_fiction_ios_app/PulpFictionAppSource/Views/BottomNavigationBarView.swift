@@ -45,22 +45,21 @@ struct BottomNavigationBarReducer: ReducerProtocol {
 }
 
 /// View for a navigation bar at the bottom of the app. Used to navigate between the app's main pages.
-struct BottomNavigationBarView: View {
+struct BottomNavigationBarView: PulpFictionView {
     let loggedInUserPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
-    private let banner: NotificationBanner = .init()
+    let externalMessengers: ExternalMessengers
+    let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var viewStore: ViewStore<BottomNavigationBarReducer.State, BottomNavigationBarReducer.Action>
 
     init(
         loggedInUserPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
+        notificationBannerViewStore: NotificationnotificationBannerViewStore,
         currentMainView: BottomNavigationBarReducer.MainView = .postFeedScrollView
     ) {
         self.loggedInUserPostData = loggedInUserPostData
-        self.postFeedMessenger = postFeedMessenger
-        self.backendMessenger = backendMessenger
+        self.externalMessengers = externalMessengers
+        self.notificationBannerViewStore = notificationBannerViewStore
         viewStore = {
             let store = Store(
                 initialState: BottomNavigationBarReducer.State(currentMainView: currentMainView),
@@ -71,16 +70,11 @@ struct BottomNavigationBarView: View {
     }
 
     var body: some View {
-        NavigationView {
-            VStack {
-                buildMainView(viewStore.state.currentMainView)
-                buildBottomNavigationBar(viewStore)
-            }
+        VStack {
+            buildMainView(viewStore.state.currentMainView)
+            buildBottomNavigationBar(viewStore)
         }
         .accentColor(.black)
-        .overlay {
-            banner
-        }
     }
 
     @ViewBuilder private func buildMainView(_ currentMainView: BottomNavigationBarReducer.MainView) -> some View {
@@ -88,24 +82,21 @@ struct BottomNavigationBarView: View {
         case .postFeedScrollView:
             PostFeedScrollView(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
-                notificationBannerViewStore: banner.viewStore
+                externalMessengers: externalMessengers,
+                notificationBannerViewStore: notificationBannerViewStore
             )
         case .loggedInUserProfileView:
             UserProfileView(
                 userProfileOwnerPostData: loggedInUserPostData,
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
-                notificationBannerViewStore: banner.viewStore
+                externalMessengers: externalMessengers,
+                notificationBannerViewStore: notificationBannerViewStore
             )
         case .loggedInUserFollowedScrollView:
             UserConnectionsScrollView(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
-                notificationBannerViewStore: banner.viewStore
+                externalMessengers: externalMessengers,
+                notificationBannerViewStore: notificationBannerViewStore
             )
         }
     }

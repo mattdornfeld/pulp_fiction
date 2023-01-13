@@ -14,7 +14,7 @@ public class LoginSession {
         self.loggedInUserPostData = loggedInUserPostData
     }
 
-    func toProto() -> LoginResponse.LoginSession {
-        LoginResponse.LoginSession.with { _ in }
+    func toProto() -> CreateLoginSessionResponse.LoginSession {
+        CreateLoginSessionResponse.LoginSession.with { _ in }
     }
 }

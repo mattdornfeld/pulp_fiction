@@ -33,8 +33,7 @@ class DeletePostMenuTest: XCTestCase {
             yield: {
                 let postViewEitherSupplier = ImagePostView
                     .getPostViewEitherSupplier(
-                        postFeedMessenger: externalMessengersEither.get.postFeedMessenger,
-                        backendMessenger: externalMessengersEither.get.backendMessenger,
+                        externalMessengers: externalMessengersEither.get,
                         notificationBannerViewStore: NotificationBanner.buildViewStore()
                     )
                 let contentScrollViewStore = ContentScrollView<ImagePostView, EmptyView>

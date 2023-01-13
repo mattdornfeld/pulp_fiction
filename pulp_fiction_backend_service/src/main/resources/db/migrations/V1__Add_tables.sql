@@ -6,11 +6,25 @@ CREATE TABLE users
     user_id              UUID PRIMARY KEY,
     created_at           TIMESTAMP NOT NULL,
     current_display_name VARCHAR   NOT NULL UNIQUE,
-    email                VARCHAR   NOT NULL,
-    phone_number         VARCHAR   NOT NULL,
     date_of_birth        DATE      NOT NULL,
     hashed_password      VARCHAR   NOT NULL
 );
+
+CREATE TABLE emails
+(
+    user_id              UUID PRIMARY KEY REFERENCES users (user_id),
+    email                VARCHAR   NOT NULL
+);
+
+CREATE INDEX CONCURRENTLY emails_index ON emails USING HASH (email);
+
+CREATE TABLE phone_numbers
+(
+    user_id              UUID PRIMARY KEY REFERENCES users (user_id),
+    phone_number         VARCHAR   NOT NULL
+);
+
+CREATE INDEX CONCURRENTLY phone_numbers_index ON phone_numbers USING HASH (phone_number);
 
 CREATE TABLE login_sessions
 (

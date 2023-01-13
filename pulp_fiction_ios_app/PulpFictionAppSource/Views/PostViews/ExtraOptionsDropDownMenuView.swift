@@ -39,9 +39,9 @@ struct ExtraOptionsDropDownMenuReducer: ReducerProtocol {
 }
 
 /// View that shows the extra options for post actions
-struct ExtraOptionsDropDownMenuView<A: ScrollableContentView>: View {
+struct ExtraOptionsDropDownMenuView<A: ScrollableContentView>: PulpFictionView {
     let postMetadata: PostMetadata
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     let contentScrollViewStore: ContentScrollViewStore<A>
     @ObservedObject private var viewStore: PulpFictionViewStore<ExtraOptionsDropDownMenuReducer>
@@ -104,12 +104,12 @@ struct ExtraOptionsDropDownMenuView<A: ScrollableContentView>: View {
 
     init(
         postMetadata: PostMetadata,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore,
         contentScrollViewStore: ContentScrollViewStore<A>
     ) {
         self.postMetadata = postMetadata
-        self.backendMessenger = backendMessenger
+        self.externalMessengers = externalMessengers
         self.notificationBannerViewStore = notificationBannerViewStore
         self.contentScrollViewStore = contentScrollViewStore
         viewStore = ExtraOptionsDropDownMenuView.buildViewStore()

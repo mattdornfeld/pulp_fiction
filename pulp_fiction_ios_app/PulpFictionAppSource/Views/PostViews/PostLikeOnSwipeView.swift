@@ -16,8 +16,8 @@ import SwiftUI
 typealias PostLikeOnSwipeReducer = SwipablePostViewReducer<PostLikeArrowReducer>
 
 /// Reducer for updating the post like arrow
-struct PostLikeArrowReducer: ReducerProtocol {
-    let backendMessenger: BackendMessenger
+struct PostLikeArrowReducer: PulpFictionReducerProtocol {
+    let externalMessengers: ExternalMessengers
     let postMetadata: PostMetadata
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
@@ -215,7 +215,7 @@ extension PostLikeOnSwipeView {
     }
 
     static func buildStore(
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         postMetadata: PostMetadata,
         postInteractionAggregates: PostInteractionAggregates,
         loggedInUserPostInteractions: LoggedInUserPostInteractions,
@@ -230,14 +230,14 @@ extension PostLikeOnSwipeView {
             ),
             reducer: PostLikeOnSwipeReducer(
                 viewComponentsReducerSuplier: { PostLikeArrowReducer(
-                    backendMessenger: backendMessenger,
+                    externalMessengers: externalMessengers,
                     postMetadata: postMetadata,
                     notificationBannerViewStore: notificationBannerViewStore
                 ) },
                 updateViewComponentsActionSupplier: { _, dragOffset in
-                    if (dragOffset.width + 1e-6) < 0 {
+                    if (dragOffset.width + SwipablePostViewConfigs.dragOffsetThreshold) < 0 {
                         return .updatePostLikeStatus(.swipeLeft)
-                    } else if (dragOffset.width - 1e-6) > 0 {
+                    } else if (dragOffset.width - SwipablePostViewConfigs.dragOffsetThreshold) > 0 {
                         return .updatePostLikeStatus(.swipeRight)
                     } else {
                         return nil

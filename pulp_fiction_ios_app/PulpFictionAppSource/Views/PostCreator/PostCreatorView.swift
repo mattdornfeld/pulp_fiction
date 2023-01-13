@@ -9,15 +9,15 @@ import Foundation
 import SwiftUI
 
 /// Navigation bar for the PostCreatorView
-struct PostCreatorTopNavigationBar: ToolbarContent {
+struct PostCreatorTopNavigationBar: PulpFictionToolbarContent {
     /// The currently selected image source type for the drop down menu
     let currentImageSourceType: ImageSourceType
     /// Supplies the currently selected image
     let uiImageMaybeSupplier: () -> UIImage?
     /// UserPostData for the currently logged in user
     let loggedInUserPostData: UserPostData
-    /// The post feed messenger
-    let postFeedMessenger: PostFeedMessenger
+    /// Container for external interface code
+    let externalMessengers: ExternalMessengers
     /// Dropdown menu for selecting the image source type
     let imageSourceTypeDropDownMenuView: SymbolWithDropDownMenuView<ImageSourceType>
     let backendMessenger: BackendMessenger
@@ -35,8 +35,7 @@ struct PostCreatorTopNavigationBar: ToolbarContent {
                 Symbol(symbolName: "arrow.right", size: 20, color: .gray)
                     .navigateOnTap(destination: CaptionCreator(
                         loggedInUserPostData: loggedInUserPostData,
-                        postFeedMessenger: postFeedMessenger,
-                        backendMessenger: backendMessenger,
+                        externalMessengers: externalMessengers,
                         notificationBannerViewStore: notificationBannerViewStore,
                         uiImageMaybeSupplier: uiImageMaybeSupplier
                     ))
@@ -46,10 +45,9 @@ struct PostCreatorTopNavigationBar: ToolbarContent {
 }
 
 /// View for creating posts
-struct PostCreatorView: View {
+struct PostCreatorView: PulpFictionView {
     let loggedInUserPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var imageSourceTypeDropDownMenu: SymbolWithDropDownMenu<ImageSourceType> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
@@ -66,7 +64,7 @@ struct PostCreatorView: View {
                     currentImageSourceType: imageSourceTypeDropDownMenu.currentSelection,
                     uiImageMaybeSupplier: { viewStore.postUIImageMaybe },
                     loggedInUserPostData: loggedInUserPostData,
-                    postFeedMessenger: postFeedMessenger,
+                    externalMessengers: externalMessengers,
                     imageSourceTypeDropDownMenuView: imageSourceTypeDropDownMenu.view,
                     backendMessenger: backendMessenger,
                     notificationBannerViewStore: notificationBannerViewStore

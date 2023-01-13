@@ -53,3 +53,12 @@ fun <A> A.assertTrue(msg: String, conditionSupplier: (A) -> Boolean): A {
     Assertions.assertTrue(conditionSupplier(this), msg)
     return this
 }
+
+class EmptyOptionalError : java.lang.IllegalArgumentException()
+
+fun <A> A?.getOrThrow(): A {
+    when (this) {
+        null -> throw EmptyOptionalError()
+        else -> return this
+    }
+}

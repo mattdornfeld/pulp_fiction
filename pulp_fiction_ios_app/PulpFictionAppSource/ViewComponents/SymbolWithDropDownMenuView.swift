@@ -22,23 +22,30 @@ struct ViewWithDropDownMenuReducer<A: DropDownMenuOption>: ReducerProtocol {
         var currentSelection: A
     }
 
-    enum Action {
+    enum Action: Equatable {
         /// Called when a menu item is selected. Updates the current selection.
         case updateSelection(A)
         /// Runs dropDownMenuSelectionAction
-        case runDropDownMenuSelectionAction(() -> Void)
+        case runDropDownMenuSelectionAction(EquatableWrapper<() -> Void>)
     }
 
     func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
         switch action {
         case let .updateSelection(newSelection):
             state.currentSelection = newSelection
-            return .task { .runDropDownMenuSelectionAction { dropDownMenuSelectionAction(newSelection) } }
+            let wrappedDropDownMenuSelectionAction = EquatableWrapper { self.dropDownMenuSelectionAction(newSelection) }
+            return .task { .runDropDownMenuSelectionAction(wrappedDropDownMenuSelectionAction) }
 
-        case let .runDropDownMenuSelectionAction(action):
-            action()
+        case let .runDropDownMenuSelectionAction(wrappedAction):
+            wrappedAction.wrapped()
             return .none
         }
+    }
+}
+
+extension ViewWithDropDownMenuReducer {
+    init() {
+        dropDownMenuSelectionAction = { _ in }
     }
 }
 
@@ -74,10 +81,33 @@ struct SymbolWithDropDownMenuView<A: DropDownMenuOption>: ViewWithDropDownMenu {
     typealias Label = Symbol
     let label: Symbol
     let menuOptions: [A]
-    @ObservedObject var viewStore: ViewStore<ViewWithDropDownMenuReducer<A>.State, ViewWithDropDownMenuReducer<A>.Action>
+    private let store: PulpFictionStore<ViewWithDropDownMenuReducer<A>>
+    @ObservedObject var viewStore: PulpFictionViewStore<ViewWithDropDownMenuReducer<A>>
 }
 
 extension SymbolWithDropDownMenuView {
+    /// Constucts a SymbolWithDropDownMenu view
+    /// - Parameters:
+    ///   - symbolName: The SF symbol name
+    ///   - symbolSize: The SF symbol size
+    ///   - symbolColor: The SF symbol color
+    ///   - menuOptions: An array of instances of DropDownMenuOption. These will be the options in the drop down menu
+    ///   - store:An instance of PulpFictionStore
+    ///   - dropDownMenuSelectionAction: A function to be called when a menu item is selected
+    init(
+        symbolName: String,
+        symbolSize: CGFloat,
+        symbolColor: Color,
+        menuOptions: [A],
+        store: PulpFictionStore<ViewWithDropDownMenuReducer<A>>,
+        dropDownMenuSelectionAction _: @escaping (A) -> Void = { _ in }
+    ) {
+        self.menuOptions = menuOptions
+        self.store = store
+        label = Symbol(symbolName: symbolName, size: symbolSize, color: symbolColor)
+        viewStore = ViewStore(store)
+    }
+
     /// Constucts a SymbolWithDropDownMenu view
     /// - Parameters:
     ///   - symbolName: The SF symbol name
@@ -94,28 +124,29 @@ extension SymbolWithDropDownMenuView {
         initialMenuSelection: A,
         dropDownMenuSelectionAction: @escaping (A) -> Void = { _ in }
     ) {
-        label = Symbol(symbolName: symbolName, size: symbolSize, color: symbolColor)
-        self.menuOptions = menuOptions
-        viewStore = {
-            let store = Store(
+        self.init(
+            symbolName: symbolName,
+            symbolSize: symbolSize,
+            symbolColor: symbolColor,
+            menuOptions: menuOptions,
+            store: Store(
                 initialState: .init(currentSelection: initialMenuSelection),
                 reducer: ViewWithDropDownMenuReducer(dropDownMenuSelectionAction: dropDownMenuSelectionAction)
             )
-            return ViewStore(store)
-        }()
+        )
     }
 
-    init(
-        symbolName: String,
-        symbolSize: CGFloat,
-        symbolColor: Color,
-        menuOptions: [A],
-        viewStore: ViewStore<ViewWithDropDownMenuReducer<A>.State, ViewWithDropDownMenuReducer<A>.Action>
-    ) {
-        label = Symbol(symbolName: symbolName, size: symbolSize, color: symbolColor)
-        self.menuOptions = menuOptions
-        self.viewStore = viewStore
-    }
+//    init(
+//        symbolName: String,
+//        symbolSize: CGFloat,
+//        symbolColor: Color,
+//        menuOptions: [A],
+//        viewStore: ViewStore<ViewWithDropDownMenuReducer<A>.State, ViewWithDropDownMenuReducer<A>.Action>
+//    ) {
+//        label = Symbol(symbolName: symbolName, size: symbolSize, color: symbolColor)
+//        self.menuOptions = menuOptions
+//        self.viewStore = viewStore
+//    }
 }
 
 /// Associates a drop down menu with a text view

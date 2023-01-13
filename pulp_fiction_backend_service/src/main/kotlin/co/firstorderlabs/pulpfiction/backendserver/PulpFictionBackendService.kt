@@ -4,19 +4,19 @@ import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.protos.pulpfiction.PulpFictionGrpcKt
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserResponse
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserResponse
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
+import co.firstorderlabs.protos.pulpfiction.createLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.createPostResponse
 import co.firstorderlabs.protos.pulpfiction.createUserResponse
 import co.firstorderlabs.protos.pulpfiction.getFeedResponse
 import co.firstorderlabs.protos.pulpfiction.getPostResponse
 import co.firstorderlabs.protos.pulpfiction.getUserResponse
-import co.firstorderlabs.protos.pulpfiction.loginResponse
 import co.firstorderlabs.protos.pulpfiction.updateUserResponse
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.DatabaseOperation
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.logDatabaseMetrics
@@ -24,6 +24,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.logEndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
+import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.flow
@@ -35,7 +36,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     private val databaseMessenger = DatabaseMessenger(database, s3Client)
 
     private suspend fun checkLoginSessionValid(
-        loginSession: LoginResponse.LoginSession,
+        loginSession: PulpFictionProtos.CreateLoginSessionResponse.LoginSession,
         endpointName: EndpointName
     ): Effect<PulpFictionRequestError, Unit> =
         databaseMessenger
@@ -63,13 +64,14 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     override suspend fun createUser(request: PulpFictionProtos.CreateUserRequest): PulpFictionProtos.CreateUserResponse {
         val endpointName = EndpointName.createUser
         return effect<PulpFictionRequestError, CreateUserResponse> {
-            val userPost = databaseMessenger
+            val user = databaseMessenger
                 .createUser(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.createUser)
                 .bind()
 
             createUserResponse {
-                this.userPost = userPost
+                this.userId = user.userId.toString()
+                this.createdAt = user.createdAt.toTimestamp()
             }
         }
             .logEndpointMetrics(endpointName)
@@ -93,20 +95,20 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             .getResultAndThrowException()
     }
 
-    override suspend fun login(request: PulpFictionProtos.LoginRequest): PulpFictionProtos.LoginResponse {
+    override suspend fun createLoginSession(request: CreateLoginSessionRequest): CreateLoginSessionResponse {
         val endpointName = EndpointName.login
-        return effect<PulpFictionRequestError, LoginResponse> {
-            databaseMessenger
-                .checkUserPasswordValid(request)
+        return effect<PulpFictionRequestError, CreateLoginSessionResponse> {
+            val user = databaseMessenger
+                .checkPasswordValidAndGetUser(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.checkUserPasswordValid)
                 .bind()
 
             val loginSession = databaseMessenger
-                .createLoginSession(request)
+                .createLoginSession(user, request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.login)
                 .bind()
 
-            loginResponse {
+            createLoginSessionResponse {
                 this.loginSession = loginSession
             }
         }

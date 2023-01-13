@@ -9,10 +9,9 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
-struct LoggedInUserProfileTopNavigationBar: ToolbarContent {
+struct LoggedInUserProfileTopNavigationBar: PulpFictionToolbarContent {
     let loggedInUserPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     var body: some ToolbarContent {
@@ -30,8 +29,7 @@ struct LoggedInUserProfileTopNavigationBar: ToolbarContent {
                 )
                 .navigateOnTap(destination: PostCreatorView(
                     loggedInUserPostData: loggedInUserPostData,
-                    postFeedMessenger: postFeedMessenger,
-                    backendMessenger: backendMessenger,
+                    externalMessengers: externalMessengers,
                     notificationBannerViewStore: notificationBannerViewStore
                 ))
 
@@ -41,7 +39,7 @@ struct LoggedInUserProfileTopNavigationBar: ToolbarContent {
                     color: .gray
                 ).navigateOnTap(destination: EditProfile(
                     loggedInUserPostData: loggedInUserPostData,
-                    backendMessenger: backendMessenger,
+                    externalMessengers: externalMessengers,
                     notificationBannerViewStore: notificationBannerViewStore
                 ))
             }

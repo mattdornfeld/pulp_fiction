@@ -11,16 +11,14 @@ import SwiftUI
 /// View that scrolls through the logged in user's profile along with their posts
 struct LoggedInUserProfileScrollView<Content: View>: ScrollViewParent {
     let loggedInUserPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ViewBuilder let userProfileViewBuilder: () -> Content
 
     var body: some View {
         ContentScrollView(
             prependToBeginningOfScroll: userProfileViewBuilder(),
-            postFeedMessenger: postFeedMessenger,
-            backendMessenger: backendMessenger,
+            externalMessengers: externalMessengers,
             notificationBannerViewStore: notificationBannerViewStore
         ) { viewStore in
             postFeedMessenger
@@ -33,8 +31,7 @@ struct LoggedInUserProfileScrollView<Content: View>: ScrollViewParent {
         .toolbar {
             LoggedInUserProfileTopNavigationBar(
                 loggedInUserPostData: loggedInUserPostData,
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
+                externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore
             )
         }

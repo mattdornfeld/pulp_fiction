@@ -2,7 +2,7 @@ package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
 import arrow.core.continuations.either
-import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
+import co.firstorderlabs.protos.pulpfiction.CreateLoginSessionResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError

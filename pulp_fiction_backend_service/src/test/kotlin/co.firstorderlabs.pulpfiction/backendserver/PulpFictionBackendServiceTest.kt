@@ -2,11 +2,10 @@ package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.Either
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginResponse.LoginSession
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
-import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.protos.pulpfiction.getUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.buildGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
@@ -97,37 +96,43 @@ internal class PulpFictionBackendServiceTest {
         PulpFictionMetric.clearRegistry()
     }
 
-    private suspend fun createUser(): Tuple2<PulpFictionProtos.Post, CreateUserRequest> {
+    private suspend fun createUser(): Tuple2<CreateUserResponse, CreateUserRequest> {
         val createUserRequest = TestProtoModelGenerator.generateRandomCreateUserRequest()
-        return Tuple2(pulpFictionBackendService.createUser(createUserRequest).userPost, createUserRequest)
+        return Tuple2(pulpFictionBackendService.createUser(createUserRequest), createUserRequest)
     }
 
-    private suspend fun createUserAndLogin(): Tuple2<LoginSession, LoginRequest> {
-        val tuple2 = createUser()
-        val userMetadata = tuple2.first.userPost.userMetadata
-        val createUserRequest = tuple2.second
+    private suspend fun createUserAndLogin(): Tuple2<PulpFictionProtos.CreateLoginSessionResponse.LoginSession, CreateLoginSessionRequest> {
+        val (_, createUserRequest) = createUser()
         val loginRequest =
-            TestProtoModelGenerator.generateRandomLoginRequest(userMetadata.userId, createUserRequest.password)
-        return Tuple2(pulpFictionBackendService.login(loginRequest).loginSession, loginRequest)
+            TestProtoModelGenerator.generateRandomLoginRequest(
+                createUserRequest.phoneNumberVerification.phoneNumber,
+                createUserRequest.password
+            )
+        val loginSession = pulpFictionBackendService.createLoginSession(loginRequest).loginSession
+        val updateDisplayNameRequest = TestProtoModelGenerator.generateRandomUpdateDisplayNameRequest(loginSession)
+        pulpFictionBackendService.updateUser(updateDisplayNameRequest)
+
+        return Tuple2(loginSession, loginRequest)
     }
 
-    private suspend fun createFailingLoginRequests(): List<LoginRequest> {
-        val tuple2 = createUser()
-        val userMetadata = tuple2.first.userPost.userMetadata
-        val createUserRequest = tuple2.second
+    private suspend fun createFailingLoginRequests(): List<CreateLoginSessionRequest> {
+        val (_, createUserRequest) = createUser()
 
-        val incorrectUser = UUID.randomUUID().toString()
+        val incorrectPhoneNumber = TestProtoModelGenerator.faker.phoneNumber.phoneNumber()
         val incorrectPassword = "fail_${createUserRequest.password}"
 
-        val loginRequestWrongUser =
+        val loginRequestWrongPhoneNumber =
             TestProtoModelGenerator.generateRandomLoginRequest(
-                incorrectUser,
+                incorrectPhoneNumber,
                 createUserRequest.password
             )
         val loginRequestWrongPass =
-            TestProtoModelGenerator.generateRandomLoginRequest(userMetadata.userId, incorrectPassword)
+            TestProtoModelGenerator.generateRandomLoginRequest(
+                createUserRequest.phoneNumberVerification.phoneNumber,
+                incorrectPassword
+            )
 
-        return listOf(loginRequestWrongUser, loginRequestWrongPass)
+        return listOf(loginRequestWrongPhoneNumber, loginRequestWrongPass)
     }
 
     private fun assertMetricsCorrect(
@@ -213,88 +218,49 @@ internal class PulpFictionBackendServiceTest {
     @Test
     fun testCreateUser() {
         runBlocking {
-            val t2 = createUser()
-            val post = t2.first
-            val userMetadata = post.userPost.userMetadata
-            val createUserRequest = t2.second
+            val (createUserResponse, _) = createUser()
 
-            userMetadata
+            createUserResponse
                 .assertTrue { it.userId.toUUID().isRight() }
                 .assertTrue { it.createdAt.isWithinLast(100) }
-                .assertTrue { it.latestUserPostUpdateIdentifier.postId.isNotEmpty() }
-                .assertTrue { it.latestUserPostUpdateIdentifier.hasUpdatedAt() }
-                .assertEquals(post.metadata.postUpdateIdentifier) { it.latestUserPostUpdateIdentifier }
-                .assertEquals(createUserRequest.displayName) { it.displayName }
-                .assertEquals(createUserRequest.bio) { it.bio }
-
-            // Check the value of avatarImageUrl corresponds to the uploaed image
-            val loginRequest =
-                TestProtoModelGenerator.generateRandomLoginRequest(
-                    userMetadata.userId,
-                    createUserRequest.password
-                )
-            val loginSession = pulpFictionBackendService.login(loginRequest).loginSession
-
-            val userPost = pulpFictionBackendService.getPost(
-                getPostRequest {
-                    this.loginSession = loginSession
-                    this.postId = post.metadata.postUpdateIdentifier.postId
-                }
-            ).post.userPost
-
-            s3Messenger
-                .getObject(userPost.userMetadata.avatarImageUrl)
-                .getResultAndThrowException()
-                .assertEquals(
-                    "The user avatar stored in s3 should be the one passed in to the CreateUser endpoint",
-                    createUserRequest.avatarJpg
-                ) { it }
 
             EndpointName.createUser
                 .assertEndpointMetricsCorrect(1.0)
-
-            listOf(
-                tupleOf(EndpointName.createUser, DatabaseMetrics.DatabaseOperation.createUser, 1.0),
-                tupleOf(EndpointName.login, DatabaseMetrics.DatabaseOperation.login, 1.0),
-                tupleOf(EndpointName.getPost, DatabaseMetrics.DatabaseOperation.getPost, 1.0),
-            ).assertDatabaseMetricsCorrect()
-
-            tupleOf(
-                EndpointName.createPost, S3Metrics.S3Operation.uploadUserAvatar
-            ).assertS3MetricsCorrect(1.0)
-
-            PostType.USER
-                .assertCreatePostDataMetricsCorrect(1.0)
         }
     }
 
     @Test
     fun testGetUser() {
         runBlocking {
-            val t2 = createUser()
-            val post = t2.first
-            val createdUserMetadata = post.userPost.userMetadata
-            val createUserRequest = t2.second
+            val (createUserResponse, createUserRequest) = createUser()
 
             val loginRequest =
                 TestProtoModelGenerator.generateRandomLoginRequest(
-                    createdUserMetadata.userId,
+                    createUserRequest.phoneNumberVerification.phoneNumber,
                     createUserRequest.password
                 )
-            val loginSession = pulpFictionBackendService.login(loginRequest).loginSession
+            val loginSession = pulpFictionBackendService.createLoginSession(loginRequest).loginSession
+
+            val updateDisplayNameRequest = TestProtoModelGenerator.generateRandomUpdateDisplayNameRequest(loginSession)
+
+            val lastUpdateUserResponse = listOf(
+                updateDisplayNameRequest,
+            ).map { updateUserRequest ->
+                pulpFictionBackendService.updateUser(updateUserRequest)
+            }.last()
 
             val user = pulpFictionBackendService.getUser(
                 getUserRequest {
                     this.loginSession = loginSession
-                    this.userId = createdUserMetadata.userId
+                    this.userId = createUserResponse.userId
                 }
             )
 
+            // TODO (Matt): Add tests for other user properties
             user.userMetadata
-                .assertEquals(createdUserMetadata.userId) { it.userId }
-                .assertEquals(createdUserMetadata.displayName) { it.displayName }
-                .assertEquals(createdUserMetadata.avatarImageUrl) { it.avatarImageUrl }
-                .assertEquals(createdUserMetadata.latestUserPostUpdateIdentifier) { it.latestUserPostUpdateIdentifier }
+                .assertEquals(createUserResponse.userId) { it.userId }
+                .assertEquals(updateDisplayNameRequest.updateDisplayName.newDisplayName) { it.displayName }
+                .assertEquals(lastUpdateUserResponse.sensitiveUserMetadata.nonSensitiveUserMetadata.latestUserPostUpdateIdentifier) { it.latestUserPostUpdateIdentifier }
 
             tupleOf(EndpointName.getUser, DatabaseMetrics.DatabaseOperation.getUser)
                 .assertDatabaseMetricsCorrect(1.0)
@@ -355,7 +321,7 @@ internal class PulpFictionBackendServiceTest {
             val loginRequests = createFailingLoginRequests()
             val expectedExceptions = listOf(Status.NOT_FOUND.code, Status.UNAUTHENTICATED.code)
             loginRequests.zip(expectedExceptions) { loginRequest, expectedException ->
-                Either.catch { pulpFictionBackendService.login(loginRequest) }
+                Either.catch { pulpFictionBackendService.createLoginSession(loginRequest) }
                     .assertTrue { it.isLeft() }
                     .mapLeft { error ->
                         error
@@ -541,43 +507,40 @@ internal class PulpFictionBackendServiceTest {
             )
         }
 
-        EndpointName.updateUser.assertEndpointMetricsCorrect(requests.size.toDouble())
+        EndpointName.updateUser.assertEndpointMetricsCorrect(requests.size.toDouble() + 1)
 
         Tuple2(
             EndpointName.updateUser,
             DatabaseMetrics.DatabaseOperation.updateUser
         )
-            .assertDatabaseMetricsCorrect(requests.size.toDouble())
+            .assertDatabaseMetricsCorrect(requests.size.toDouble() + 1)
     }
 
     @Test
     fun testSuccessfulUpdatePassword(): Unit = runBlocking {
-        val tuple2 = createUserAndLogin()
-        val loginSession = tuple2.first
-        val loginRequest = tuple2.second
-
-        val correctPassword = loginRequest.password
+        val (loginSession, createLoginSessionRequest) = createUserAndLogin()
+        val correctPassword = createLoginSessionRequest.password
 
         val updatePasswordProto = generateRandomUpdatePasswordRequest(loginSession, correctPassword)
         pulpFictionBackendService.updateUser(updatePasswordProto)
 
         val updatedLoginRequest = TestProtoModelGenerator.generateRandomLoginRequest(
-            loginRequest.userId,
+            createLoginSessionRequest.phoneNumberLogin.phoneNumber,
             updatePasswordProto.updatePassword.newPassword
         )
 
-        val updatedLoginSession = pulpFictionBackendService.login(updatedLoginRequest).loginSession
+        val updatedLoginSession = pulpFictionBackendService.createLoginSession(updatedLoginRequest).loginSession
         updatedLoginSession
             .assertTrue { it.sessionToken.toUUID().isRight() }
             .assertTrue { it.createdAt.isWithinLast(100) }
 
-        EndpointName.updateUser.assertEndpointMetricsCorrect(1.0)
+        EndpointName.updateUser.assertEndpointMetricsCorrect(2.0)
 
         Tuple2(
             EndpointName.updateUser,
             DatabaseMetrics.DatabaseOperation.updateUser
         )
-            .assertDatabaseMetricsCorrect(1.0)
+            .assertDatabaseMetricsCorrect(2.0)
     }
 
     @Test
@@ -596,16 +559,16 @@ internal class PulpFictionBackendServiceTest {
                 .assertEquals(Status.UNAUTHENTICATED.code) { (it as StatusException).status.code }
         }
 
-        EndpointName.updateUser.assertEndpointMetricsCorrect(1.0)
+        EndpointName.updateUser.assertEndpointMetricsCorrect(2.0)
 
         Tuple2(
             EndpointName.updateUser,
             DatabaseMetrics.DatabaseOperation.updateUser
         )
-            .assertDatabaseMetricsCorrect(1.0)
+            .assertDatabaseMetricsCorrect(2.0)
     }
 
-    private suspend fun setupTestFeed(numUsers: Int): Tuple2<LoginSession,
+    private suspend fun setupTestFeed(numUsers: Int): Tuple2<PulpFictionProtos.CreateLoginSessionResponse.LoginSession,
         List<PulpFictionProtos.CreatePostResponse>> {
         val userTuples = (1..numUsers).map { createUserAndLogin() }
         val createdPosts = userTuples.map { tuple2 ->
@@ -634,15 +597,13 @@ internal class PulpFictionBackendServiceTest {
         val feedList = globalFeed.take(clientFeedRequests.size).toList()
         feedList
             .map { resp ->
-                resp.postsList.map {
-                    post ->
+                resp.postsList.map { post ->
                     post.metadata.postUpdateIdentifier.postId
                 }
             }
             .assertEquals(
                 listOf(
-                    createdPosts.map {
-                        request ->
+                    createdPosts.map { request ->
                         request.postMetadata.postUpdateIdentifier.postId
                     }.reversed(),
                     emptyList()
@@ -734,15 +695,13 @@ internal class PulpFictionBackendServiceTest {
         val feedList = commentFeed.take(clientFeedRequests.size).toList()
         feedList
             .map { resp ->
-                resp.postsList.map {
-                    post ->
+                resp.postsList.map { post ->
                     post.metadata.postUpdateIdentifier.postId
                 }
             }
             .assertEquals(
                 listOf(
-                    createdComments.map {
-                        postMetadata ->
+                    createdComments.map { postMetadata ->
                         postMetadata.postUpdateIdentifier.postId
                     }.reversed(),
                     emptyList()

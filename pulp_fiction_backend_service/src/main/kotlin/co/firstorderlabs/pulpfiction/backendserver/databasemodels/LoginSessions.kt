@@ -1,15 +1,11 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
-import arrow.core.Either
-import arrow.core.continuations.either
-import co.firstorderlabs.protos.pulpfiction.LoginResponseKt.loginSession
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
+import co.firstorderlabs.protos.pulpfiction.CreateLoginSessionResponseKt.loginSession
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
-import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
-import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
 import org.ktorm.entity.sequenceOf
@@ -36,7 +32,7 @@ interface LoginSession : Entity<LoginSession> {
     var deviceId: String
     var sessionToken: UUID
 
-    fun toProto(userMetadata: UserMetadata): PulpFictionProtos.LoginResponse.LoginSession {
+    fun toProto(userMetadata: UserMetadata): CreateLoginSessionResponse.LoginSession {
         val loginSession = this
         return loginSession {
             this.userId = loginSession.userId.toString()
@@ -48,14 +44,13 @@ interface LoginSession : Entity<LoginSession> {
     }
 
     companion object : Entity.Factory<LoginSession>() {
-        suspend fun fromRequest(request: LoginRequest): Either<RequestParsingError, LoginSession> = either {
+        fun fromRequest(user: User, request: CreateLoginSessionRequest): LoginSession =
             LoginSession {
-                userId = request.userId.toUUID().bind()
+                userId = user.userId
                 createdAt = nowTruncated()
                 deviceId = request.deviceId
                 sessionToken = UUID.randomUUID()
             }
-        }
     }
 }
 

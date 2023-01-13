@@ -8,6 +8,7 @@
 import Bow
 import Foundation
 import Logging
+import PhoneNumberKit
 import SwiftUI
 
 public extension Data {
@@ -22,6 +23,9 @@ public extension Data {
     }
 }
 
+private let phoneNumberKit = PhoneNumberKit()
+class InvalidPhoneNumber: PulpFictionRequestError {}
+
 extension String {
     public class ErrorParsingUUID: PulpFictionRequestError {}
 
@@ -32,16 +36,45 @@ extension String {
         return Either.right(uuid)
     }
 
+    private func isValid(_ regularExpression: String) -> Bool {
+        NSPredicate(format: "SELF MATCHES %@", regularExpression).evaluate(with: self)
+    }
+
     func isValidEmail() -> Bool {
-        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
-        let emailTest = NSPredicate(format: "SELF MATCHES %@", emailRegEx)
-        return emailTest.evaluate(with: self)
+        isValid("[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}")
+    }
+
+    func toPhoneNumber() -> PulpFictionRequestEither<PhoneNumber> {
+        Either.catchError {
+            try phoneNumberKit.parse(self)
+        }^.mapLeft { InvalidPhoneNumber($0) }
     }
 
     func isValidPhoneNumber() -> Bool {
-        let phoneRegex = "^[0-9+]{0,1}+[0-9]{5,16}$"
-        let phoneTest = NSPredicate(format: "SELF MATCHES %@", phoneRegex)
-        return phoneTest.evaluate(with: self)
+        toPhoneNumber().isRight
+    }
+
+    func hasAtLeastOneUpperCaseCharacter() -> Bool {
+        isValid("(.*[A-Z].*)")
+    }
+
+    func hasAtLeastOneLowerCaseCharacter() -> Bool {
+        isValid("(.*[a-z].*)")
+    }
+
+    func hasAtLeastOneSpecialCharacter() -> Bool {
+        isValid("(.*[!@#$%^&*].*)")
+    }
+
+    func hasAtLeastNCharacters(_ n: Int) -> Bool {
+        count >= n
+    }
+
+    func isValidPassword() -> Bool {
+        hasAtLeastOneUpperCaseCharacter() &&
+            hasAtLeastOneLowerCaseCharacter() &&
+            hasAtLeastOneSpecialCharacter() &&
+            hasAtLeastNCharacters(8)
     }
 }
 

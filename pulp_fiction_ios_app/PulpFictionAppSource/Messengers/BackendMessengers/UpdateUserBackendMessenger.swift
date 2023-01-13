@@ -23,6 +23,7 @@ public struct UpdateUserBackendMessenger {
         case updateEmail
         case updatePhoneNumber
         case updateDateOfBirth
+        case verifyContactInformation
     }
 
     private func buildUpdateUserResponse(updateUserRequest: UpdateUserRequest) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
@@ -118,6 +119,18 @@ public struct UpdateUserBackendMessenger {
             $0.loginSession = loginSession.toProto()
             $0.updateDateOfBirth = UpdateUserRequest.UpdateDateOfBirth.with {
                 $0.newDateOfBirth = .init(date: newDateOfBirth)
+            }
+        }
+
+        return await buildUpdateUserResponse(updateUserRequest: updateUserRequest)
+    }
+
+    func verifyContactInformation(verificationCode: Int32, contactVerificationProto: ContactVerificationProto) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
+        let updateUserRequest = UpdateUserRequest.with {
+            $0.loginSession = loginSession.toProto()
+            $0.verifyContactInformation = UpdateUserRequest.VerifyContactInformation.with {
+                $0.verificationCode = verificationCode
+                $0.contactVerification = contactVerificationProto
             }
         }
 

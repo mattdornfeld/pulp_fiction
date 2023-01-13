@@ -1,5 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver.types
 
+import com.google.protobuf.Internal
 import io.grpc.Status
 import io.grpc.StatusException
 import java.util.UUID
@@ -37,7 +38,7 @@ class DatabaseError(cause: Throwable) : PulpFictionRequestError(cause) {
         StatusException(Status.INTERNAL.withCause(this))
 }
 
-class RequestParsingError(msgMaybe: String?, causeMaybe: Throwable?) : PulpFictionRequestError(msgMaybe, causeMaybe) {
+open class RequestParsingError(msgMaybe: String?, causeMaybe: Throwable?) : PulpFictionRequestError(msgMaybe, causeMaybe) {
     constructor(msg: String) : this(msg, null)
     constructor(cause: Throwable) : this(null, cause)
     constructor() : this(null, null)
@@ -45,6 +46,8 @@ class RequestParsingError(msgMaybe: String?, causeMaybe: Throwable?) : PulpFicti
     override fun toStatusException(): StatusException =
         StatusException(Status.INVALID_ARGUMENT.withCause(this))
 }
+
+class UnrecognizedEnumValue(enumValue: Internal.EnumLite) : RequestParsingError("$enumValue is an supported enum value")
 
 class LoginSessionInvalidError() : PulpFictionRequestError() {
     override fun toStatusException(): StatusException =
@@ -64,6 +67,16 @@ class S3DownloadError(cause: Throwable) : PulpFictionRequestError(cause) {
 class UserNotFoundError(userId: String) : PulpFictionRequestError("User $userId not found.") {
     constructor(userId: UUID) : this(userId.toString())
 
+    override fun toStatusException(): StatusException =
+        StatusException(Status.NOT_FOUND.withCause(this))
+}
+
+class EmailNotFoundError() : PulpFictionRequestError() {
+    override fun toStatusException(): StatusException =
+        StatusException(Status.NOT_FOUND.withCause(this))
+}
+
+class PhoneNumberNotFoundError() : PulpFictionRequestError() {
     override fun toStatusException(): StatusException =
         StatusException(Status.NOT_FOUND.withCause(this))
 }

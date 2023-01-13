@@ -18,16 +18,15 @@ enum PostFeedFilter: String, DropDownMenuOption {
     case Following
 }
 
-struct PostFeedTopNavigationBar: ToolbarContent {
+struct PostFeedTopNavigationBar: PulpFictionToolbarContent {
     let postFeedFilter: PostFeedFilter
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let loggedInUserPostData: UserPostData
     let postFeedFilterDropDownMenuView: SymbolWithDropDownMenuView<PostFeedFilter>
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
+        ToolbarItem(placement: .navigationBarLeading) {
             Title("Pulp Fiction")
                 .foregroundColor(.gray)
         }
@@ -41,8 +40,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
                 ).navigateOnTap(
                     destination: PostCreatorView(
                         loggedInUserPostData: loggedInUserPostData,
-                        postFeedMessenger: postFeedMessenger,
-                        backendMessenger: backendMessenger,
+                        externalMessengers: externalMessengers,
                         notificationBannerViewStore: notificationBannerViewStore
                     )
                 )
@@ -56,8 +54,7 @@ struct PostFeedTopNavigationBar: ToolbarContent {
 /// View that scrolls through a feed of posts
 struct PostFeedScrollView: ScrollViewParent {
     let loggedInUserPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ObservedObject private var postFeedFilterDropDownMenu: SymbolWithDropDownMenu<PostFeedFilter> = .init(
         symbolName: "line.3.horizontal.decrease.circle",
@@ -68,8 +65,7 @@ struct PostFeedScrollView: ScrollViewParent {
     )
     var contentScrollView: ContentScrollView<ImagePostView, EmptyView> {
         ContentScrollView(
-            postFeedMessenger: postFeedMessenger,
-            backendMessenger: backendMessenger,
+            externalMessengers: externalMessengers,
             notificationBannerViewStore: notificationBannerViewStore
         ) { viewStore in
             getPostFeed(
@@ -84,8 +80,7 @@ struct PostFeedScrollView: ScrollViewParent {
             .toolbar {
                 PostFeedTopNavigationBar(
                     postFeedFilter: postFeedFilterDropDownMenu.currentSelection,
-                    postFeedMessenger: postFeedMessenger,
-                    backendMessenger: backendMessenger,
+                    externalMessengers: externalMessengers,
                     loggedInUserPostData: loggedInUserPostData,
                     postFeedFilterDropDownMenuView: postFeedFilterDropDownMenu.view,
                     notificationBannerViewStore: notificationBannerViewStore

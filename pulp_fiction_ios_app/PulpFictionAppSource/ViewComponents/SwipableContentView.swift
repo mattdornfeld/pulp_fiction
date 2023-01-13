@@ -11,6 +11,10 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
+struct SwipablePostViewConfigs {
+    static let dragOffsetThreshold: CGFloat = 4.0
+}
+
 /// Reducer that manages updating a view while it's being swiped
 struct SwipablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: ReducerProtocol where ViewComponentsReducer.State: Equatable, ViewComponentsReducer.Action: Equatable {
     /// Function that supplies a reducer that's used to update the components when a swipe action occurs
@@ -76,9 +80,9 @@ struct SwipablePostViewReducer<ViewComponentsReducer: ReducerProtocol>: ReducerP
             case let .translate(dragOffset):
                 state.dragOffset = dragOffset
 
-                if (dragOffset.width + 1e-6) < 0 {
+                if (dragOffset.width + SwipablePostViewConfigs.dragOffsetThreshold) < 0 {
                     return .task { .swipeLeft }
-                } else if (dragOffset.width - 1e-6) > 0 {
+                } else if (dragOffset.width - SwipablePostViewConfigs.dragOffsetThreshold) > 0 {
                     return .task { .swipeRight }
                 } else {
                     return .task { .neutral }
@@ -137,16 +141,6 @@ struct SwipableContentView<Content: View, SwipableSwipeViewReducer: ReducerProto
             ZStack {
                 Color.orange.opacity(viewStore.state.swipeLeftOpacity)
                 Color.blue.opacity(viewStore.state.swipeRightOpacity)
-                postView
-                    .background(Color.white)
-                    .offset(x: viewStore.state.dragOffset.width, y: 0)
-                    .gesture(DragGesture()
-                        .onChanged { value in
-                            viewStore.send(.translate(value.translation))
-                        }
-                        .onEnded { value in
-                            viewStore.send(.endSwipeGesture(value.translation))
-                        })
                     .overlay(alignment: .trailing) {
                         Image(systemName: swipeLeftSymbolName)
                             .foregroundStyle(Color.white)
@@ -157,6 +151,16 @@ struct SwipableContentView<Content: View, SwipableSwipeViewReducer: ReducerProto
                             .foregroundStyle(Color.white)
                             .opacity(viewStore.state.swipeRightOpacity)
                     }
+                postView
+                    .background(Color.white)
+                    .offset(x: viewStore.state.dragOffset.width, y: 0)
+                    .gesture(DragGesture()
+                        .onChanged { value in
+                            viewStore.send(.translate(value.translation))
+                        }
+                        .onEnded { value in
+                            viewStore.send(.endSwipeGesture(value.translation))
+                        })
             }
         }
     }

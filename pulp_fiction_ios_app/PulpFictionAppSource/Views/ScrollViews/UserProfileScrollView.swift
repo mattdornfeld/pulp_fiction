@@ -12,16 +12,14 @@ import SwiftUI
 /// View that scrolls through a user's profile along with their posts
 struct UserProfileScrollView<Content: View>: ScrollViewParent {
     let userProfileOwnerPostData: UserPostData
-    let postFeedMessenger: PostFeedMessenger
-    let backendMessenger: BackendMessenger
+    let externalMessengers: ExternalMessengers
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     @ViewBuilder let userProfileViewBuilder: () -> Content
 
     var body: some View {
         ContentScrollView(
             prependToBeginningOfScroll: userProfileViewBuilder(),
-            postFeedMessenger: postFeedMessenger,
-            backendMessenger: backendMessenger,
+            externalMessengers: externalMessengers,
             notificationBannerViewStore: notificationBannerViewStore
         ) { viewStore in
             postFeedMessenger

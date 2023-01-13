@@ -41,18 +41,16 @@ struct ImagePostViewReducer: ReducerProtocol {
 
 extension ImagePostView {
     init(
-        postFeedMessenger: PostFeedMessenger,
+        externalMessengers: ExternalMessengers,
         postUIImage: UIImage,
         creatorUserPostData: UserPostData,
         id: Int,
         imagePostData: ImagePostData,
         loggedInUserPostData: UserPostData,
-        backendMessenger: BackendMessenger,
         notificationBannerViewStore: NotificationnotificationBannerViewStore,
         contentScrollViewStore: ContentScrollViewStore<ImagePostView>
     ) {
-        self.postFeedMessenger = postFeedMessenger
-        self.backendMessenger = backendMessenger
+        self.externalMessengers = externalMessengers
         self.postUIImage = postUIImage
         self.creatorUserPostData = creatorUserPostData
         self.id = id
@@ -65,7 +63,7 @@ extension ImagePostView {
             reducer: ImagePostViewReducer()
         )
         swipablePostStore = ImagePostView.buildStore(
-            backendMessenger: backendMessenger,
+            externalMessengers: externalMessengers,
             postMetadata: imagePostData.postMetadata,
             postInteractionAggregates: imagePostData.postInteractionAggregates,
             loggedInUserPostInteractions: imagePostData.loggedInUserPostInteractions,
@@ -79,10 +77,9 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
     let creatorUserPostData: UserPostData
     let id: Int
     let imagePostData: ImagePostData
-    let postFeedMessenger: PostFeedMessenger
+    let externalMessengers: ExternalMessengers
     let postUIImage: UIImage
     let loggedInUserPostData: UserPostData
-    let backendMessenger: BackendMessenger
     let notificationBannerViewStore: NotificationnotificationBannerViewStore
     let contentScrollViewStore: ContentScrollViewStore<ImagePostView>
     var postMetadata: PostMetadata { imagePostData.postMetadata }
@@ -120,8 +117,7 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                 imagePostView: ImagePostView
                     .setter(for: \.isForCommentsScrollView)
                     .set(self, true),
-                postFeedMessenger: postFeedMessenger,
-                backendMessenger: backendMessenger,
+                externalMessengers: externalMessengers,
                 notificationBannerViewStore: notificationBannerViewStore
             )
         ) { viewStore.send(.loadCommentScrollView) }
@@ -133,15 +129,14 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                 HStack(alignment: .bottom) {
                     UserPostView(
                         userPostData: creatorUserPostData,
-                        postFeedMessenger: postFeedMessenger,
+                        externalMessengers: externalMessengers,
                         loggedInUserPostData: loggedInUserPostData,
-                        backendMessenger: backendMessenger,
                         notificationBannerViewStore: notificationBannerViewStore
                     )
                     Spacer()
                     ExtraOptionsDropDownMenuView(
                         postMetadata: imagePostData.postMetadata,
-                        backendMessenger: backendMessenger,
+                        externalMessengers: externalMessengers,
                         notificationBannerViewStore: notificationBannerViewStore,
                         contentScrollViewStore: contentScrollViewStore
                     )
@@ -178,9 +173,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
         postViewIndex: Int,
         imagePostData: ImagePostData,
         userPostData: UserPostData,
-        postFeedMessenger: PostFeedMessenger,
+        externalMessengers: ExternalMessengers,
         loggedInUserPostData: UserPostData,
-        backendMessenger: BackendMessenger,
         notificationBannerViewStore: NotificationnotificationBannerViewStore,
         contentScrollViewStore: ContentScrollViewStore<ImagePostView>
     ) -> Either<PulpFictionRequestError, ImagePostView> {
@@ -189,13 +183,12 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
         return binding(
             createPostUIImageEither <- imagePostData.imagePostContentData.toUIImage(),
             yield: ImagePostView(
-                postFeedMessenger: postFeedMessenger,
+                externalMessengers: externalMessengers,
                 postUIImage: createPostUIImageEither.get,
                 creatorUserPostData: userPostData,
                 id: postViewIndex,
                 imagePostData: imagePostData,
                 loggedInUserPostData: loggedInUserPostData,
-                backendMessenger: backendMessenger,
                 notificationBannerViewStore: notificationBannerViewStore,
                 contentScrollViewStore: contentScrollViewStore
             )
@@ -210,8 +203,7 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
     }
 
     static func getPostViewEitherSupplier(
-        postFeedMessenger: PostFeedMessenger,
-        backendMessenger: BackendMessenger,
+        externalMessengers: ExternalMessengers,
         notificationBannerViewStore: NotificationnotificationBannerViewStore
     ) -> PostViewEitherSupplier<ImagePostView> {
         { postViewIndex, postProto, contentScrollViewStore in
@@ -220,11 +212,11 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
             let imagePostViewEither = Either<PulpFictionRequestError, ImagePostView>.var()
 
             return binding(
-                imagePostDataEither <- postFeedMessenger.postDataMessenger
+                imagePostDataEither <- externalMessengers.postDataMessenger
                     .getPostData(postProto)
                     .unsafeRunSyncEither(on: .global(qos: .userInteractive))
                     .flatMap { postDataOneOf in postDataOneOf.toImagePostData() }^,
-                userPostDataEither <- postFeedMessenger.postDataMessenger
+                userPostDataEither <- externalMessengers.postDataMessenger
                     .getPostData(postProto.imagePost.postCreatorLatestUserPost)
                     .unsafeRunSyncEither(on: .global(qos: .userInteractive))
                     .flatMap { postDataOneOf in postDataOneOf.toUserPostData() }^,
@@ -232,9 +224,8 @@ struct ImagePostView: PostLikeOnSwipeView, AutoSetter {
                     postViewIndex: postViewIndex,
                     imagePostData: imagePostDataEither.get,
                     userPostData: userPostDataEither.get,
-                    postFeedMessenger: postFeedMessenger,
-                    loggedInUserPostData: postFeedMessenger.loginSession.loggedInUserPostData,
-                    backendMessenger: backendMessenger,
+                    externalMessengers: externalMessengers,
+                    loggedInUserPostData: externalMessengers.loginSession.loggedInUserPostData,
                     notificationBannerViewStore: notificationBannerViewStore,
                     contentScrollViewStore: contentScrollViewStore
                 ),

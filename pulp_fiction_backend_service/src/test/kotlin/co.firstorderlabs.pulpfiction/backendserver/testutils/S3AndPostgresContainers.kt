@@ -9,9 +9,11 @@ import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.LOCAL_STACK_IMAGE
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.POSTGRES_IMAGE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PhoneNumbers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
@@ -98,6 +100,8 @@ abstract class S3AndPostgresContainers {
         LoginSessions,
         PostInteractionAggregates,
         Posts,
+        Emails,
+        PhoneNumbers,
         Users
     )
 

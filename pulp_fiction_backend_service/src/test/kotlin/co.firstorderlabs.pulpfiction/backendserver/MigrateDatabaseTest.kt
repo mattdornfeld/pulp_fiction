@@ -16,28 +16,33 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.TestDatabaseMo
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.phoneNumbers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
 import co.firstorderlabs.pulpfiction.backendserver.testutils.S3AndPostgresContainers
+import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
+import co.firstorderlabs.pulpfiction.backendserver.testutils.getOrThrow
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.ktorm.dsl.deleteAll
+import org.ktorm.dsl.eq
 import org.ktorm.dsl.from
 import org.ktorm.dsl.joinReferencesAndSelect
 import org.ktorm.dsl.map
 import org.ktorm.dsl.select
 import org.ktorm.entity.add
+import org.ktorm.entity.find
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.localstack.LocalStackContainer
 import org.testcontainers.junit.jupiter.Container
@@ -81,12 +86,13 @@ internal class MigrateDatabaseTest {
 
     @Test
     fun testWriteToUsersTable() {
-        val user = User.generateRandom()
-        database.users.add(user)
+        val expectedUser = User.generateRandom()
+        database.users.add(expectedUser)
+        database.emails.add(expectedUser.email)
+        database.phoneNumbers.add(expectedUser.phoneNumber)
 
-        val users = database.from(Users).select().map { Users.createEntity(it) }
-        Assertions.assertEquals(1, users.size)
-        Assertions.assertEquals(user, users[0])
+        val user = database.users.find { it.userId eq expectedUser.userId }.getOrThrow()
+        expectedUser.assertEquals(user)
     }
 
     @Test

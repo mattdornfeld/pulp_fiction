@@ -15,9 +15,12 @@ import SwiftProtobuf
 public struct BackendMessenger {
     public let pulpFictionClientProtocol: PulpFictionClientProtocol
     public let loginSession: LoginSession
+    public let createLoginSessionBackendMessenger: CreateLogginSessionBackendMessenger
+    public let createPostBackendMessenger: CreatePostBackendMessenger
+    public let createUserBackendMessenger: CreateUserBackendMessenger
+    public let updateLoginSessionBackendMessenger: UpdateLogginSessionBackendMessenger
     public let updatePostBackendMessenger: UpdatePostBackendMessenger
     public let updateUserBackendMessenger: UpdateUserBackendMessenger
-    public let createPostBackendMessenger: CreatePostBackendMessenger
 
     public init(pulpFictionClientProtocol: PulpFictionClientProtocol, loginSession: LoginSession) {
         self.pulpFictionClientProtocol = pulpFictionClientProtocol
@@ -31,6 +34,18 @@ public struct BackendMessenger {
             loginSession: loginSession
         )
         createPostBackendMessenger = .init(
+            pulpFictionClientProtocol: pulpFictionClientProtocol,
+            loginSession: loginSession
+        )
+        createLoginSessionBackendMessenger = .init(
+            pulpFictionClientProtocol: pulpFictionClientProtocol,
+            loginSession: loginSession
+        )
+        updateLoginSessionBackendMessenger = .init(
+            pulpFictionClientProtocol: pulpFictionClientProtocol,
+            loginSession: loginSession
+        )
+        createUserBackendMessenger = .init(
             pulpFictionClientProtocol: pulpFictionClientProtocol,
             loginSession: loginSession
         )

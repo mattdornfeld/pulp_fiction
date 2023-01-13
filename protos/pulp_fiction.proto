@@ -125,7 +125,7 @@ message CreatePostRequest {
     string bio = 4;
   }
 
-  LoginResponse.LoginSession loginSession = 1;
+  CreateLoginSessionResponse.LoginSession loginSession = 1;
   oneof create_post_request {
     CreateCommentRequest createCommentRequest = 2;
     CreateImagePostRequest create_image_post_request = 3;
@@ -138,14 +138,25 @@ message CreatePostResponse {
 }
 
 message CreateUserRequest {
-  string display_name = 1;
-  string email = 2;
-  string phone_number = 3;
-  google.protobuf.Timestamp date_of_birth = 4;
-  string password = 5;
-  bool opt_in_to_emails = 6;
-  bytes avatar_jpg = 7;
-  string bio = 8;
+  message PhoneNumberVerification {
+    string phone_number = 1;
+  }
+
+  message EmailVerification {
+    string email = 1;
+  }
+
+  string password = 1;
+  string password_confirmation = 2;
+  oneof contact_verification {
+    PhoneNumberVerification phone_number_verification = 3;
+    EmailVerification email_verification = 4;
+  }
+}
+
+message CreateUserResponse {
+  string user_id = 1;
+  google.protobuf.Timestamp created_at = 2;
 }
 
 message GetUserResponse {
@@ -176,7 +187,7 @@ message GetFeedRequest {
     string post_id = 1;
   }
 
-  LoginResponse.LoginSession loginSession = 1;
+  CreateLoginSessionResponse.LoginSession loginSession = 1;
   oneof get_feed_request {
     GetUserPostFeedRequest get_user_post_feed_request = 2;
     GetGlobalPostFeedRequest get_global_post_feed_request = 3;
@@ -192,7 +203,7 @@ message GetFeedResponse {
 }
 
 message GetPostRequest {
-  LoginResponse.LoginSession loginSession = 1;
+  CreateLoginSessionResponse.LoginSession loginSession = 1;
   string post_id = 2;
 }
 
@@ -200,22 +211,29 @@ message GetPostResponse {
   Post post = 1;
 }
 
-message CreateUserResponse {
-  Post userPost = 1;
-}
-
 message GetUserRequest {
-  LoginResponse.LoginSession loginSession = 1;
+  CreateLoginSessionResponse.LoginSession loginSession = 1;
   string user_id = 2;
 }
 
-message LoginRequest {
-  string user_id = 1;
-  string password = 2;
-  string device_id = 3;
+message CreateLoginSessionRequest {
+  message EmailLogin {
+    string email = 1;
+  }
+
+  message PhoneNumberLogin {
+    string phone_number = 1;
+  }
+
+  string password = 1;
+  string device_id = 2;
+  oneof create_login_session_request {
+    EmailLogin email_login = 3;
+    PhoneNumberLogin phone_number_login = 4;
+  }
 }
 
-message LoginResponse {
+message CreateLoginSessionResponse {
   message LoginSession {
     string session_token = 1;
     string user_id = 2;
@@ -223,7 +241,63 @@ message LoginResponse {
     string device_id = 4;
     User.UserMetadata userMetadata = 5;
   }
-  LoginSession loginSession = 1;
+
+  message InvalidEmail {}
+  message InvalidPhoneNumber {}
+  message InvalidPassword {}
+
+  oneof create_login_session_response {
+    LoginSession login_session = 1;
+    InvalidEmail invalid_email = 2;
+    InvalidPhoneNumber invalid_phone_number = 3;
+    InvalidPassword invalid_password = 4;
+  }
+}
+
+message UpdateLoginSessionRequest {
+  message Logout {}
+
+  CreateLoginSessionResponse.LoginSession loginSession = 1;
+  oneof update_login_session_request {
+    Logout logout = 2;
+  }
+}
+
+message UpdateLoginSessionResponse {}
+
+message UpdatePostRequest {
+  message UpdatePostLikeStatus {
+    Post.PostLike newPostLikeStatus = 1;
+  }
+
+  message DeletePost {
+  }
+
+  message UpdateImagePost {
+    string new_caption = 1;
+  }
+
+  message UpdateComment {
+    string new_body = 1;
+  }
+
+  message ReportPost {
+    string reportReason = 1;
+  }
+
+  CreateLoginSessionResponse.LoginSession loginSession = 1;
+  string post_id = 2;
+  oneof update_post_request {
+    UpdatePostLikeStatus updatePostLikeStatus = 3;
+    DeletePost deletePost = 4;
+    UpdateImagePost updateImagePost = 5;
+    UpdateComment updateComment = 6;
+    ReportPost reportPost = 7;
+  }
+}
+
+message UpdatePostResponse {
+  Post post = 1;
 }
 
 message UpdateUserRequest {
@@ -268,7 +342,19 @@ message UpdateUserRequest {
     UserFollowingStatus user_following_status = 2;
   }
 
-  LoginResponse.LoginSession loginSession = 1;
+  message VerifyContactInformation {
+    message ContactVerification {
+      oneof contact_verification {
+        string phone_number = 1;
+        string email = 2;
+      }
+    }
+
+    int32 verification_code = 1;
+    ContactVerification contact_verification = 2;
+  }
+
+  CreateLoginSessionResponse.LoginSession loginSession = 1;
   oneof update_user_request {
     UpdateUserAvatar update_user_avatar = 2;
     UpdateDisplayName update_display_name = 3;
@@ -279,6 +365,7 @@ message UpdateUserRequest {
     UpdatePassword update_password = 8;
     ResetPassword reset_password = 9;
     UpdateUserFollowingStatus update_user_following_status = 10;
+    VerifyContactInformation verify_contact_information = 11;
   }
 }
 
@@ -286,48 +373,14 @@ message UpdateUserResponse {
   User.SensitiveUserMetadata sensitiveUserMetadata = 1;
 }
 
-message UpdatePostRequest {
-  message UpdatePostLikeStatus {
-    Post.PostLike newPostLikeStatus = 1;
-  }
-
-  message DeletePost {
-  }
-
-  message UpdateImagePost {
-    string new_caption = 1;
-  }
-
-  message UpdateComment {
-    string new_body = 1;
-  }
-
-  message ReportPost {
-    string reportReason = 1;
-  }
-
-  LoginResponse.LoginSession loginSession = 1;
-  string post_id = 2;
-  oneof update_post_request {
-    UpdatePostLikeStatus updatePostLikeStatus = 3;
-    DeletePost deletePost = 4;
-    UpdateImagePost updateImagePost = 5;
-    UpdateComment updateComment = 6;
-    ReportPost reportPost = 7;
-  }
-}
-
-message UpdatePostResponse {
-  Post post = 1;
-}
-
 service PulpFiction {
+  rpc CreateLoginSession (CreateLoginSessionRequest) returns (CreateLoginSessionResponse) {}
   rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {}
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
   rpc GetFeed (stream GetFeedRequest) returns (stream GetFeedResponse) {}
   rpc GetPost (GetPostRequest) returns (GetPostResponse) {}
   rpc GetUser (GetUserRequest) returns (GetUserResponse) {}
-  rpc Login (LoginRequest) returns (LoginResponse) {}
-  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+  rpc UpdateLoginSession (UpdateLoginSessionRequest) returns (UpdateLoginSessionResponse) {}
   rpc UpdatePost(UpdatePostRequest) returns (UpdatePostResponse) {}
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
 }

@@ -1,5 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
+import arrow.core.Option
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.getOrElse
@@ -7,6 +8,7 @@ import arrow.core.toOption
 import co.firstorderlabs.protos.pulpfiction.PostKt.interactionAggregates
 import co.firstorderlabs.protos.pulpfiction.PostKt.loggedInUserPostInteractions
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateCommentRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
@@ -14,7 +16,6 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.LoginRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.SensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
@@ -24,11 +25,15 @@ import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AG
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_PAGE_SIZE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Email
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PhoneNumber
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PhoneNumbers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
@@ -38,9 +43,12 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.phoneNumbers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postInteractionAggregates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
@@ -55,14 +63,17 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseConnectionError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseError
 import co.firstorderlabs.pulpfiction.backendserver.types.DatabaseUrl
+import co.firstorderlabs.pulpfiction.backendserver.types.EmailNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.types.FeedNotImplementedError
 import co.firstorderlabs.pulpfiction.backendserver.types.FunctionalityNotImplementedError
 import co.firstorderlabs.pulpfiction.backendserver.types.InvalidUserPasswordError
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
+import co.firstorderlabs.pulpfiction.backendserver.types.PhoneNumberNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.types.PostNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
+import co.firstorderlabs.pulpfiction.backendserver.types.UnrecognizedEnumValue
 import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
@@ -79,6 +90,7 @@ import org.ktorm.dsl.eq
 import org.ktorm.dsl.from
 import org.ktorm.dsl.greater
 import org.ktorm.dsl.joinReferencesAndSelect
+import org.ktorm.dsl.leftJoin
 import org.ktorm.dsl.limit
 import org.ktorm.dsl.map
 import org.ktorm.dsl.orderBy
@@ -89,9 +101,10 @@ import org.ktorm.entity.Entity
 import org.ktorm.entity.add
 import org.ktorm.entity.filter
 import org.ktorm.entity.find
-import org.ktorm.entity.first
+import org.ktorm.entity.firstOrNull
 import org.ktorm.entity.sortedBy
 import org.ktorm.support.postgresql.PostgreSqlDialect
+import org.ktorm.support.postgresql.insertOrUpdate
 import software.amazon.awssdk.services.s3.S3Client
 import java.nio.file.Path
 import java.util.UUID
@@ -104,7 +117,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         private val logger: StructuredLogger = StructuredLogger()
         const val DATABASE_CREDENTIALS_USERNAME_KEY = "username"
         const val DATABASE_CREDENTIALS_PASSWORD_KEY = "password"
-        private suspend fun <A> effectWithDatabaseError(
+
+        suspend fun <A> effectWithDatabaseError(
             block: suspend arrow.core.continuations.EffectScope<PulpFictionRequestError>.() -> A
         ): Effect<PulpFictionRequestError, A> = effectWithError({ DatabaseError(it) }) { block(this) }
 
@@ -169,7 +183,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             createDatabaseConnection(DatabaseConfigs.databaseUrl, DatabaseConfigs.ENCRYPTED_CREDENTIALS_FILE)
     }
 
-    fun checkLoginSessionValid(loginSessionProto: PulpFictionProtos.LoginResponse.LoginSession): Effect<PulpFictionRequestError, Unit> =
+    fun checkLoginSessionValid(loginSessionProto: PulpFictionProtos.CreateLoginSessionResponse.LoginSession): Effect<PulpFictionRequestError, Unit> =
         effect {
             val userId = loginSessionProto.userId.toUUID().bind()
             // TODO (matt): Implement hashing for sessionToken
@@ -199,9 +213,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .getOrElse { shift(LoginSessionInvalidError()) }
         }
 
-    suspend fun createLoginSession(request: LoginRequest): Effect<PulpFictionRequestError, PulpFictionProtos.LoginResponse.LoginSession> =
+    suspend fun createLoginSession(
+        user: User,
+        request: PulpFictionProtos.CreateLoginSessionRequest
+    ): Effect<PulpFictionRequestError, PulpFictionProtos.CreateLoginSessionResponse.LoginSession> =
         effect {
-            val loginSession = LoginSession.fromRequest(request).bind()
+            val loginSession = LoginSession.fromRequest(user, request)
             val userMetadata = database.transactionToEffectCatchErrors {
                 database.loginSessions.add(loginSession)
                 getPublicUserMetadata(loginSession.userId.toString()).bind()
@@ -312,15 +329,40 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .bind()
     }
 
+    private suspend fun PulpFictionProtos.CreateUserRequest.addContactVerificationToDatabase(user: User): Effect<PulpFictionRequestError, Int> =
+        effect {
+            when (contactVerificationCase) {
+                PulpFictionProtos.CreateUserRequest.ContactVerificationCase.PHONE_NUMBER_VERIFICATION -> {
+                    val phoneNumber = PhoneNumber {
+                        this.userId = user.userId
+                        this.phoneNumber = phoneNumberVerification.phoneNumber
+                    }
+                    effectWithDatabaseError { database.phoneNumbers.add(phoneNumber) }.bind()
+                }
+                PulpFictionProtos.CreateUserRequest.ContactVerificationCase.EMAIL_VERIFICATION -> {
+                    val email = Email {
+                        this.userId = user.userId
+                        this.email = emailVerification.email
+                    }
+                    effectWithDatabaseError { database.emails.add(email) }.bind()
+                }
+                else -> {
+                    shift(UnrecognizedEnumValue(contactVerificationCase))
+                }
+            }
+        }
+
     fun createUser(
         request: PulpFictionProtos.CreateUserRequest
-    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
+    ): Effect<PulpFictionRequestError, User> = effect {
         val user = User.fromRequest(request).bind()
 
         database.transactionToEffect {
             effectWithDatabaseError { database.users.add(user) }.bind()
-            createPost(user.toCreatePostRequest(request)).bind()
+            request.addContactVerificationToDatabase(user).bind()
         }.bind()
+
+        user
     }
 
     private suspend fun <A> getPostData(
@@ -406,17 +448,41 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val userId = request.loginSession.userId
             val user = getUserFromUserId(userId).bind()
 
-            when {
-                request.hasUpdateDisplayName() -> {
+            when (request.updateUserRequestCase) {
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_DISPLAY_NAME -> {
                     user.currentDisplayName = request.updateDisplayName.newDisplayName
                 }
-                request.hasUpdateDateOfBirth() -> {
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_DATE_OF_BIRTH -> {
                     user.dateOfBirth = request.updateDateOfBirth.newDateOfBirth.toLocalDate()
                 }
-                request.hasUpdateEmail() -> {
-                    user.email = request.updateEmail.newEmail
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_EMAIL -> {
+                    database.insertOrUpdate(Emails) {
+                        set(it.userId, user.userId)
+                        set(it.email, request.updateEmail.newEmail)
+                        onConflict {
+                            set(it.email, request.updateEmail.newEmail)
+                        }
+                    }
+                    user.email = Email {
+                        this.userId = user.userId
+                        this.email = request.updateEmail.newEmail
+                    }
                 }
-                request.hasUpdatePassword() -> {
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_PHONE_NUMBER -> {
+                    database.insertOrUpdate(PhoneNumbers) {
+                        set(it.userId, user.userId)
+                        set(it.phoneNumber, request.updatePhoneNumber.newPhoneNumber)
+                        onConflict {
+                            set(it.phoneNumber, request.updatePhoneNumber.newPhoneNumber)
+                        }
+                    }
+                    user.phoneNumber = PhoneNumber {
+                        this.userId = user.userId
+                        this.phoneNumber = request.updatePhoneNumber.newPhoneNumber
+                    }
+                    user.phoneNumber.phoneNumber = request.updatePhoneNumber.newPhoneNumber
+                }
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_PASSWORD -> {
                     val authenticated = Password.check(
                         request.updatePassword.oldPassword,
                         user.hashedPassword
@@ -427,10 +493,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                         user.hashedPassword = Password.hash(request.updatePassword.newPassword).withBcrypt().result
                     }
                 }
-                request.hasUpdatePhoneNumber() -> {
-                    user.phoneNumber = request.updatePhoneNumber.newPhoneNumber
-                }
-                request.hasResetPassword() -> {
+                UpdateUserRequest.UpdateUserRequestCase.RESET_PASSWORD -> {
                     shift(FunctionalityNotImplementedError())
                 }
                 else -> {
@@ -455,15 +518,16 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, UserMetadata> =
         getPublicUserMetadata(request.userId)
 
-    private suspend fun getMostRecentUserPostDatum(userId: UUID): Effect<PulpFictionRequestError, UserPostDatum> =
+    private fun getMostRecentUserPostDatum(userId: UUID): Effect<PulpFictionRequestError, Option<UserPostDatum>> =
         effect {
             database.userPostData
                 .filter { it.userId eq userId }
                 .sortedBy { it.updatedAt.desc() }
-                .first()
+                .firstOrNull()
+                .toOption()
         }
 
-    suspend fun getPublicUserMetadata(
+    private suspend fun getPublicUserMetadata(
         userId: String
     ): Effect<PulpFictionRequestError, UserMetadata> = effect {
         val user = getUserFromUserId(userId).bind()
@@ -509,7 +573,9 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                         postUpdate = postUpdate
                     ).bind()
                 }
-                else -> { shift(FeedNotImplementedError(row[Posts.postType].toString())) }
+                else -> {
+                    shift(FeedNotImplementedError(row[Posts.postType].toString()))
+                }
             }
         }
     }
@@ -575,20 +641,45 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                             (Posts.postType eq PulpFictionProtos.Post.PostType.USER)
                     }
             }
-            else -> { shift(RequestParsingError("Feed request received without valid instruction.")) }
+            else -> {
+                shift(RequestParsingError("Feed request received without valid instruction."))
+            }
         }
     }
 
-    fun checkUserPasswordValid(
-        request: LoginRequest
-    ): Effect<PulpFictionRequestError, Boolean> = effect {
-        val userLoginCandidate = getUserFromUserId(request.userId).bind()
+    fun checkPasswordValidAndGetUser(
+        request: CreateLoginSessionRequest
+    ): Effect<PulpFictionRequestError, User> = effect {
+        val queryForUser = database
+            .from(Users)
+            .leftJoin(Emails, on = Users.userId eq Emails.userId)
+            .leftJoin(PhoneNumbers, on = Users.userId eq PhoneNumbers.userId)
+            .select()
+
+        val userLoginCandidate = when (request.createLoginSessionRequestCase) {
+            CreateLoginSessionRequest.CreateLoginSessionRequestCase.EMAIL_LOGIN -> {
+                queryForUser
+                    .where { Emails.email eq request.emailLogin.email }
+                    .map { Users.createEntity(it) }
+                    .firstOrNull()
+                    ?: shift(EmailNotFoundError())
+            }
+            CreateLoginSessionRequest.CreateLoginSessionRequestCase.PHONE_NUMBER_LOGIN -> {
+                queryForUser
+                    .where { PhoneNumbers.phoneNumber eq request.phoneNumberLogin.phoneNumber }
+                    .map { Users.createEntity(it) }
+                    .firstOrNull()
+                    ?: shift(PhoneNumberNotFoundError())
+            }
+            else -> shift(UnrecognizedEnumValue(request.createLoginSessionRequestCase))
+        }
+
         val hashedPass = userLoginCandidate.hashedPassword
         val authenticated = Password.check(request.password, hashedPass).withBcrypt()
         if (!authenticated) {
             shift(InvalidUserPasswordError())
         } else {
-            true
+            userLoginCandidate
         }
     }
 
