@@ -155,6 +155,8 @@ message CreateUserRequest {
 }
 
 message CreateUserResponse {
+  string user_id = 1;
+  google.protobuf.Timestamp created_at = 2;
 }
 
 message GetUserResponse {
@@ -340,6 +342,18 @@ message UpdateUserRequest {
     UserFollowingStatus user_following_status = 2;
   }
 
+  message VerifyContactInformation {
+    message ContactVerification {
+      oneof contact_verification {
+        string phone_number = 1;
+        string email = 2;
+      }
+    }
+
+    int32 verification_code = 1;
+    ContactVerification contact_verification = 2;
+  }
+
   CreateLoginSessionResponse.LoginSession loginSession = 1;
   oneof update_user_request {
     UpdateUserAvatar update_user_avatar = 2;
@@ -351,6 +365,7 @@ message UpdateUserRequest {
     UpdatePassword update_password = 8;
     ResetPassword reset_password = 9;
     UpdateUserFollowingStatus update_user_following_status = 10;
+    VerifyContactInformation verify_contact_information = 11;
   }
 }
 
