@@ -46,9 +46,6 @@ object TestDatabaseModelGenerator {
     fun User.Companion.generateRandom(userId: UUID): User = User {
         this.userId = userId
         this.createdAt = nowTruncated()
-        this.currentDisplayName = faker.funnyName.name()
-        this.dateOfBirth = faker.person.birthDate(30)
-        this.hashedPassword = faker.unique.toString()
         this.phoneNumber = PhoneNumber {
             this.userId = userId
             this.phoneNumber = faker.phoneNumber.phoneNumber()
@@ -56,6 +53,12 @@ object TestDatabaseModelGenerator {
         this.email = Email {
             this.userId = userId
             this.email = faker.internet.email()
+        }
+        this.displayName = DisplayName {
+            this.currentDisplayName = faker.funnyName.name()
+        }
+        this.dateOfBirth = DateOfBirth {
+            this.dateOfBirth = faker.person.birthDate(30)
         }
     }
 

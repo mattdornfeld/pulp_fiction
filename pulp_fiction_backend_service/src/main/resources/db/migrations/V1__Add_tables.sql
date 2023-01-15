@@ -3,25 +3,35 @@ CREATE TYPE POST_TYPE AS ENUM ('IMAGE', 'COMMENT', 'USER');
 
 CREATE TABLE users
 (
-    user_id              UUID PRIMARY KEY,
-    created_at           TIMESTAMP NOT NULL,
-    current_display_name VARCHAR   NOT NULL UNIQUE,
-    date_of_birth        DATE      NOT NULL,
-    hashed_password      VARCHAR   NOT NULL
+    user_id         UUID PRIMARY KEY,
+    created_at      TIMESTAMP NOT NULL,
+    hashed_password VARCHAR   NOT NULL
+);
+
+CREATE TABLE display_names
+(
+    user_id              UUID PRIMARY KEY REFERENCES users (user_id),
+    current_display_name VARCHAR NOT NULL UNIQUE
+);
+
+CREATE TABLE dates_of_birth
+(
+    user_id       UUID PRIMARY KEY REFERENCES users (user_id),
+    date_of_birth DATE NOT NULL
 );
 
 CREATE TABLE emails
 (
-    user_id              UUID PRIMARY KEY REFERENCES users (user_id),
-    email                VARCHAR   NOT NULL
+    user_id UUID PRIMARY KEY REFERENCES users (user_id),
+    email   VARCHAR NOT NULL
 );
 
 CREATE INDEX CONCURRENTLY emails_index ON emails USING HASH (email);
 
 CREATE TABLE phone_numbers
 (
-    user_id              UUID PRIMARY KEY REFERENCES users (user_id),
-    phone_number         VARCHAR   NOT NULL
+    user_id      UUID PRIMARY KEY REFERENCES users (user_id),
+    phone_number VARCHAR NOT NULL
 );
 
 CREATE INDEX CONCURRENTLY phone_numbers_index ON phone_numbers USING HASH (phone_number);
@@ -57,9 +67,9 @@ CREATE TABLE posts
 
 CREATE TABLE post_updates
 (
-    post_id         UUID       NOT NULL,
-    updated_at      TIMESTAMP  NOT NULL,
-    post_state      POST_STATE NOT NULL,
+    post_id    UUID       NOT NULL,
+    updated_at TIMESTAMP  NOT NULL,
+    post_state POST_STATE NOT NULL,
     PRIMARY KEY (post_id, updated_at),
     FOREIGN KEY (post_id) REFERENCES posts (post_id)
 );

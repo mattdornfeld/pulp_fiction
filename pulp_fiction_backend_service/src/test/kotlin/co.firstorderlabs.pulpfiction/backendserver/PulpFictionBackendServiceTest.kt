@@ -232,14 +232,14 @@ internal class PulpFictionBackendServiceTest {
     @Test
     fun testGetUser() {
         runBlocking {
-            val (createUserResponse, createUserRequest) = createUser()
+            val (loginSession, createUserRequest) = createUserAndLogin()
 
-            val loginRequest =
-                TestProtoModelGenerator.generateRandomLoginRequest(
-                    createUserRequest.phoneNumberVerification.phoneNumber,
-                    createUserRequest.password
-                )
-            val loginSession = pulpFictionBackendService.createLoginSession(loginRequest).loginSession
+//            val loginRequest =
+//                TestProtoModelGenerator.generateRandomLoginRequest(
+//                    createUserRequest.phoneNumberVerification.phoneNumber,
+//                    createUserRequest.password
+//                )
+//            val loginSession = pulpFictionBackendService.createLoginSession(loginRequest).loginSession
 
             val updateDisplayNameRequest = TestProtoModelGenerator.generateRandomUpdateDisplayNameRequest(loginSession)
 
@@ -252,15 +252,15 @@ internal class PulpFictionBackendServiceTest {
             val user = pulpFictionBackendService.getUser(
                 getUserRequest {
                     this.loginSession = loginSession
-                    this.userId = createUserResponse.userId
+                    this.userId = loginSession.userId
                 }
             )
 
             // TODO (Matt): Add tests for other user properties
             user.userMetadata
-                .assertEquals(createUserResponse.userId) { it.userId }
-                .assertEquals(updateDisplayNameRequest.updateDisplayName.newDisplayName) { it.displayName }
-                .assertEquals(lastUpdateUserResponse.sensitiveUserMetadata.nonSensitiveUserMetadata.latestUserPostUpdateIdentifier) { it.latestUserPostUpdateIdentifier }
+                .assertEquals(loginSession.userId) { it.userId }
+                .assertEquals(updateDisplayNameRequest.updateUserMetadata.updateDisplayName.newDisplayName) { it.displayName }
+                .assertEquals(lastUpdateUserResponse.updateUserMetadata.userMetadata.latestUserPostUpdateIdentifier) { it.latestUserPostUpdateIdentifier }
 
             tupleOf(EndpointName.getUser, DatabaseMetrics.DatabaseOperation.getUser)
                 .assertDatabaseMetricsCorrect(1.0)
@@ -493,17 +493,17 @@ internal class PulpFictionBackendServiceTest {
 
         finalResponse.assertEquals(
             tupleOf(
-                updateDisplayNameRequest.updateDisplayName.newDisplayName,
-                updateDateOfBirthRequest.updateDateOfBirth.newDateOfBirth,
-                updatePhoneNumberRequest.updatePhoneNumber.newPhoneNumber,
-                updateEmailRequest.updateEmail.newEmail,
+                updateDisplayNameRequest.updateUserMetadata.updateDisplayName.newDisplayName,
+                updateDateOfBirthRequest.updateSensitiveUserMetadata.updateDateOfBirth.newDateOfBirth,
+                updatePhoneNumberRequest.updateSensitiveUserMetadata.updatePhoneNumber.newPhoneNumber,
+                updateEmailRequest.updateSensitiveUserMetadata.updateEmail.newEmail,
             )
         ) {
             tupleOf(
-                it.sensitiveUserMetadata.nonSensitiveUserMetadata.displayName,
-                it.sensitiveUserMetadata.dateOfBirth,
-                it.sensitiveUserMetadata.phoneNumber,
-                it.sensitiveUserMetadata.email,
+                it.updateSensitiveUserMetadata.sensitiveUserMetadata.nonSensitiveUserMetadata.displayName,
+                it.updateSensitiveUserMetadata.sensitiveUserMetadata.dateOfBirth,
+                it.updateSensitiveUserMetadata.sensitiveUserMetadata.phoneNumber,
+                it.updateSensitiveUserMetadata.sensitiveUserMetadata.email,
             )
         }
 

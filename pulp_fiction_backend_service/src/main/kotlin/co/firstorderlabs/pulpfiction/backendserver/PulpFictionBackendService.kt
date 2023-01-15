@@ -17,7 +17,6 @@ import co.firstorderlabs.protos.pulpfiction.createUserResponse
 import co.firstorderlabs.protos.pulpfiction.getFeedResponse
 import co.firstorderlabs.protos.pulpfiction.getPostResponse
 import co.firstorderlabs.protos.pulpfiction.getUserResponse
-import co.firstorderlabs.protos.pulpfiction.updateUserResponse
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.DatabaseOperation
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.DatabaseMetrics.logDatabaseMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics.EndpointName
@@ -82,14 +81,10 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
         val endpointName = EndpointName.updateUser
         return effect<PulpFictionRequestError, UpdateUserResponse> {
             checkLoginSessionValid(request.loginSession, endpointName).bind()
-            val sensitiveUserMetadata = databaseMessenger
+            databaseMessenger
                 .updateUser(request)
                 .logDatabaseMetrics(endpointName, DatabaseOperation.updateUser)
                 .bind()
-
-            updateUserResponse {
-                this.sensitiveUserMetadata = sensitiveUserMetadata
-            }
         }
             .logEndpointMetrics(endpointName)
             .getResultAndThrowException()

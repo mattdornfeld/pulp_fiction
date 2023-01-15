@@ -17,14 +17,19 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.SensitiveUserMetadata
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
+import co.firstorderlabs.protos.pulpfiction.UpdateUserResponseKt
+import co.firstorderlabs.protos.pulpfiction.UpdateUserResponseKt.updatePassword
 import co.firstorderlabs.protos.pulpfiction.post
+import co.firstorderlabs.protos.pulpfiction.updateUserResponse
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_PAGE_SIZE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.DatesOfBirth
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.DisplayNames
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Email
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
@@ -90,7 +95,6 @@ import org.ktorm.dsl.eq
 import org.ktorm.dsl.from
 import org.ktorm.dsl.greater
 import org.ktorm.dsl.joinReferencesAndSelect
-import org.ktorm.dsl.leftJoin
 import org.ktorm.dsl.limit
 import org.ktorm.dsl.map
 import org.ktorm.dsl.orderBy
@@ -443,45 +447,96 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         }
     }
 
-    suspend fun updateUser(request: UpdateUserRequest): Effect<PulpFictionRequestError, SensitiveUserMetadata> =
+    private suspend fun updateUserMetadata(
+        user: User,
+        updateUserMetadata: UpdateUserRequest.UpdateUserMetadata
+    ): Effect<PulpFictionRequestError, UpdateUserResponse> =
+        effect {
+            val userPostDatum = getMostRecentUserPostDatum(user.userId).bind()
+            when (updateUserMetadata.updateUserMetadataCase) {
+                UpdateUserRequest.UpdateUserMetadata.UpdateUserMetadataCase.UPDATE_USER_AVATAR ->
+                    shift(FunctionalityNotImplementedError())
+                UpdateUserRequest.UpdateUserMetadata.UpdateUserMetadataCase.UPDATE_DISPLAY_NAME -> {
+                    user.displayName.currentDisplayName = updateUserMetadata.updateDisplayName.newDisplayName
+                    database.insertOrUpdate(DisplayNames) {
+                        set(DisplayNames.userId, user.userId)
+                        set(DisplayNames.currentDisplayName, user.displayName.currentDisplayName)
+                        onConflict {
+                            set(DisplayNames.currentDisplayName, user.displayName.currentDisplayName)
+                        }
+                    }
+                }
+                UpdateUserRequest.UpdateUserMetadata.UpdateUserMetadataCase.UPDATE_BIO ->
+                    shift(FunctionalityNotImplementedError())
+                else ->
+                    shift(UnrecognizedEnumValue(updateUserMetadata.updateUserMetadataCase))
+            }
+            updateUserResponse {
+                this.updateUserMetadata = UpdateUserResponseKt.updateUserMetadata {
+                    this.userMetadata = user.toNonSensitiveUserMetadataProto(userPostDatum)
+                }
+            }
+        }
+
+    private suspend fun updateSensitiveUserMetadata(
+        user: User,
+        updateSensitiveUserMetadata: UpdateUserRequest.UpdateSensitiveUserMetadata
+    ): Effect<PulpFictionRequestError, UpdateUserResponse> =
+        effect {
+            val userPostDatum = getMostRecentUserPostDatum(user.userId).bind()
+            when (updateSensitiveUserMetadata.updateSensitiveUserMetadataCase) {
+                UpdateUserRequest.UpdateSensitiveUserMetadata.UpdateSensitiveUserMetadataCase.UPDATE_EMAIL -> {
+                    user.email.email = updateSensitiveUserMetadata.updateEmail.newEmail
+                    database.insertOrUpdate(Emails) {
+                        set(Emails.userId, user.userId)
+                        set(Emails.email, user.email.email)
+                        onConflict {
+                            set(Emails.email, user.email.email)
+                        }
+                    }
+                }
+                UpdateUserRequest.UpdateSensitiveUserMetadata.UpdateSensitiveUserMetadataCase.UPDATE_PHONE_NUMBER -> {
+                    user.phoneNumber.phoneNumber = updateSensitiveUserMetadata.updatePhoneNumber.newPhoneNumber
+                    database.insertOrUpdate(PhoneNumbers) {
+                        set(PhoneNumbers.userId, user.userId)
+                        set(PhoneNumbers.phoneNumber, user.phoneNumber.phoneNumber)
+                        onConflict {
+                            set(PhoneNumbers.phoneNumber, user.phoneNumber.phoneNumber)
+                        }
+                    }
+                }
+                UpdateUserRequest.UpdateSensitiveUserMetadata.UpdateSensitiveUserMetadataCase.UPDATE_DATE_OF_BIRTH -> {
+                    user.dateOfBirth.dateOfBirth =
+                        updateSensitiveUserMetadata.updateDateOfBirth.newDateOfBirth.toLocalDate()
+                    database.insertOrUpdate(DatesOfBirth) {
+                        set(DatesOfBirth.userId, user.userId)
+                        set(DatesOfBirth.dateOfBirth, user.dateOfBirth.dateOfBirth)
+                        onConflict {
+                            set(DatesOfBirth.dateOfBirth, user.dateOfBirth.dateOfBirth)
+                        }
+                    }
+                }
+                UpdateUserRequest.UpdateSensitiveUserMetadata.UpdateSensitiveUserMetadataCase.VERIFY_CONTACT_INFORMATION ->
+                    shift(FunctionalityNotImplementedError())
+                else -> shift(UnrecognizedEnumValue(updateSensitiveUserMetadata.updateSensitiveUserMetadataCase))
+            }
+            updateUserResponse {
+                this.updateSensitiveUserMetadata = UpdateUserResponseKt.updateSensitiveUserMetadata {
+                    this.sensitiveUserMetadata = user.toSensitiveUserMetadataProto(userPostDatum)
+                }
+            }
+        }
+
+    suspend fun updateUser(request: UpdateUserRequest): Effect<PulpFictionRequestError, UpdateUserResponse> =
         effect {
             val userId = request.loginSession.userId
             val user = getUserFromUserId(userId).bind()
 
             when (request.updateUserRequestCase) {
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_DISPLAY_NAME -> {
-                    user.currentDisplayName = request.updateDisplayName.newDisplayName
-                }
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_DATE_OF_BIRTH -> {
-                    user.dateOfBirth = request.updateDateOfBirth.newDateOfBirth.toLocalDate()
-                }
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_EMAIL -> {
-                    database.insertOrUpdate(Emails) {
-                        set(it.userId, user.userId)
-                        set(it.email, request.updateEmail.newEmail)
-                        onConflict {
-                            set(it.email, request.updateEmail.newEmail)
-                        }
-                    }
-                    user.email = Email {
-                        this.userId = user.userId
-                        this.email = request.updateEmail.newEmail
-                    }
-                }
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_PHONE_NUMBER -> {
-                    database.insertOrUpdate(PhoneNumbers) {
-                        set(it.userId, user.userId)
-                        set(it.phoneNumber, request.updatePhoneNumber.newPhoneNumber)
-                        onConflict {
-                            set(it.phoneNumber, request.updatePhoneNumber.newPhoneNumber)
-                        }
-                    }
-                    user.phoneNumber = PhoneNumber {
-                        this.userId = user.userId
-                        this.phoneNumber = request.updatePhoneNumber.newPhoneNumber
-                    }
-                    user.phoneNumber.phoneNumber = request.updatePhoneNumber.newPhoneNumber
-                }
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_METADATA ->
+                    updateUserMetadata(user, request.updateUserMetadata).bind()
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_SENSITIVE_USER_METADATA ->
+                    updateSensitiveUserMetadata(user, request.updateSensitiveUserMetadata).bind()
                 UpdateUserRequest.UpdateUserRequestCase.UPDATE_PASSWORD -> {
                     val authenticated = Password.check(
                         request.updatePassword.oldPassword,
@@ -491,25 +546,28 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                         shift(InvalidUserPasswordError())
                     } else {
                         user.hashedPassword = Password.hash(request.updatePassword.newPassword).withBcrypt().result
+                        user.flushChanges()
+                    }
+                    updateUserResponse {
+                        this.updatePassword = updatePassword {}
                     }
                 }
                 UpdateUserRequest.UpdateUserRequestCase.RESET_PASSWORD -> {
                     shift(FunctionalityNotImplementedError())
                 }
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_FOLLOWING_STATUS ->
+                    shift(FunctionalityNotImplementedError())
                 else -> {
-                    shift(RequestParsingError("UpdateUserRequest received without instructions."))
+                    shift(UnrecognizedEnumValue(request.updateUserRequestCase))
                 }
             }
-            user.flushChanges()
-            val userPostDatum = getMostRecentUserPostDatum(user.userId).bind()
-            user.toSensitiveUserMetadataProto(userPostDatum)
         }
 
     private suspend fun getUserFromUserId(
         userId: String
     ): Effect<PulpFictionRequestError, User> = effect {
-        val uuid = userId.toUUID().bind()
-        database.users.find { it.userId eq uuid }
+        val userUUID = userId.toUUID().bind()
+        Users.select(database) { Users.userId eq userUUID }
             ?: shift(UserNotFoundError(userId))
     }
 
@@ -650,25 +708,13 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     fun checkPasswordValidAndGetUser(
         request: CreateLoginSessionRequest
     ): Effect<PulpFictionRequestError, User> = effect {
-        val queryForUser = database
-            .from(Users)
-            .leftJoin(Emails, on = Users.userId eq Emails.userId)
-            .leftJoin(PhoneNumbers, on = Users.userId eq PhoneNumbers.userId)
-            .select()
-
         val userLoginCandidate = when (request.createLoginSessionRequestCase) {
             CreateLoginSessionRequest.CreateLoginSessionRequestCase.EMAIL_LOGIN -> {
-                queryForUser
-                    .where { Emails.email eq request.emailLogin.email }
-                    .map { Users.createEntity(it) }
-                    .firstOrNull()
+                Users.select(database) { Emails.email eq request.emailLogin.email }
                     ?: shift(EmailNotFoundError())
             }
             CreateLoginSessionRequest.CreateLoginSessionRequestCase.PHONE_NUMBER_LOGIN -> {
-                queryForUser
-                    .where { PhoneNumbers.phoneNumber eq request.phoneNumberLogin.phoneNumber }
-                    .map { Users.createEntity(it) }
-                    .firstOrNull()
+                Users.select(database) { PhoneNumbers.phoneNumber eq request.phoneNumberLogin.phoneNumber }
                     ?: shift(PhoneNumberNotFoundError())
             }
             else -> shift(UnrecognizedEnumValue(request.createLoginSessionRequestCase))

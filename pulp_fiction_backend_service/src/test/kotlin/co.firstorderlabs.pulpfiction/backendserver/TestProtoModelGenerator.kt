@@ -20,11 +20,13 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
-import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateDateOfBirth
-import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateDisplayName
-import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateEmail
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updateDateOfBirth
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updateEmail
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updatePhoneNumber
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateUserMetadataKt.updateDisplayName
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePassword
-import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePhoneNumber
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateSensitiveUserMetadata
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateUserMetadata
 import co.firstorderlabs.protos.pulpfiction.createLoginSessionRequest
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.createUserRequest
@@ -85,30 +87,38 @@ object TestProtoModelGenerator {
     fun generateRandomUpdateDisplayNameRequest(loginSession: LoginSession): UpdateUserRequest =
         updateUserRequest {
             this.loginSession = loginSession
-            this.updateDisplayName = updateDisplayName {
-                this.newDisplayName = faker.name.firstName()
+            this.updateUserMetadata = updateUserMetadata {
+                this.updateDisplayName = updateDisplayName {
+                    this.newDisplayName = faker.name.firstName()
+                }
             }
         }
 
     fun generateRandomUpdateDateOfBirthRequest(loginSession: LoginSession): UpdateUserRequest =
         updateUserRequest {
             this.loginSession = loginSession
-            this.updateDateOfBirth = updateDateOfBirth {
-                this.newDateOfBirth = faker.person.birthDate(31).toInstant().toTimestamp()
+            this.updateSensitiveUserMetadata = updateSensitiveUserMetadata {
+                this.updateDateOfBirth = updateDateOfBirth {
+                    this.newDateOfBirth = faker.person.birthDate(31).toInstant().toTimestamp()
+                }
             }
         }
 
     fun generateRandomUpdateEmailRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
         this.loginSession = loginSession
-        this.updateEmail = updateEmail {
-            this.newEmail = faker.internet.email()
+        this.updateSensitiveUserMetadata = updateSensitiveUserMetadata {
+            this.updateEmail = updateEmail {
+                this.newEmail = faker.internet.email()
+            }
         }
     }
 
     fun generateRandomUpdatePhoneNumberRequest(loginSession: LoginSession): UpdateUserRequest = updateUserRequest {
         this.loginSession = loginSession
-        this.updatePhoneNumber = updatePhoneNumber {
-            this.newPhoneNumber = faker.phoneNumber.cellPhone()
+        this.updateSensitiveUserMetadata = updateSensitiveUserMetadata {
+            this.updatePhoneNumber = updatePhoneNumber {
+                this.newPhoneNumber = faker.phoneNumber.cellPhone()
+            }
         }
     }
 
