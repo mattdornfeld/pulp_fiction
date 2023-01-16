@@ -20,7 +20,7 @@ import java.time.Instant
 import java.util.UUID
 
 object UserPostData : PostData<UserPostDatum>("user_post_data") {
-    override val postId = uuid("post_id").primaryKey().bindTo { it.postId }
+    override val postId = uuid("post_id").primaryKey().references(Posts) { it.post }
     override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val userId = uuid("user_id").bindTo { it.userId }
     val displayName = varchar("display_name").bindTo { it.displayName }
@@ -41,7 +41,7 @@ interface UserPostDatum : Entity<UserPostDatum>, PostDatum, ReferencesS3Key {
         }
 
         fun fromRequest(postUpdate: PostUpdate, request: CreateUserPostRequest) = UserPostDatum {
-            this.postId = postUpdate.post.postId
+            this.post = postUpdate.post
             this.updatedAt = postUpdate.updatedAt
             this.userId = postUpdate.post.postCreatorId
             this.displayName = request.displayName
@@ -50,17 +50,17 @@ interface UserPostDatum : Entity<UserPostDatum>, PostDatum, ReferencesS3Key {
         }
     }
 
-    override var postId: UUID
+    override var post: Post
     override var updatedAt: Instant
     var userId: UUID
     var displayName: String
     var avatarImageS3Key: String?
     var bio: String
 
-    override fun toS3Key(): String = "$USER_AVATARS_KEY_BASE/${postId}_$updatedAt.$JPG"
+    override fun toS3Key(): String = "$USER_AVATARS_KEY_BASE/${post.postId}_$updatedAt.$JPG"
 
     override fun toTagging(): Tagging = listOf(
-        tag(TagKey.postId.name, this.postId.toString()),
+        tag(TagKey.postId.name, this.post.postId.toString()),
         tag(TagKey.createdAt.name, this.updatedAt.toString()),
         tag(TagKey.postType.name, PulpFictionProtos.Post.PostType.USER.name),
         tag(TagKey.userId.name, this.userId.toString()),

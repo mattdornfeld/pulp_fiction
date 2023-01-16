@@ -6,6 +6,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
+import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.getUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.buildGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
@@ -109,8 +110,12 @@ internal class PulpFictionBackendServiceTest {
                 createUserRequest.password
             )
         val loginSession = pulpFictionBackendService.createLoginSession(loginRequest).loginSession
-        val updateDisplayNameRequest = TestProtoModelGenerator.generateRandomUpdateDisplayNameRequest(loginSession)
-        pulpFictionBackendService.updateUser(updateDisplayNameRequest)
+        pulpFictionBackendService.createPost(
+            createPostRequest {
+                this.loginSession = loginSession
+                this.createUserPostRequest = TestProtoModelGenerator.generateRandomCreateUserPostRequest(loginSession)
+            }
+        )
 
         return Tuple2(loginSession, loginRequest)
     }
@@ -407,13 +412,13 @@ internal class PulpFictionBackendServiceTest {
             ) { it }
 
         listOf(
-            tupleOf(EndpointName.createPost, 1.0),
+            tupleOf(EndpointName.createPost, 2.0),
             tupleOf(EndpointName.getPost, 1.0)
         )
             .assertEndpointMetricsCorrect()
 
         listOf(
-            tupleOf(EndpointName.createPost, DatabaseMetrics.DatabaseOperation.createPost, 1.0),
+            tupleOf(EndpointName.createPost, DatabaseMetrics.DatabaseOperation.createPost, 2.0),
             tupleOf(EndpointName.getPost, DatabaseMetrics.DatabaseOperation.getPost, 1.0),
         ).assertDatabaseMetricsCorrect()
 
@@ -454,13 +459,13 @@ internal class PulpFictionBackendServiceTest {
             .assertTrue { it.comment.hasLoggedInUserPostInteractions() }
 
         listOf(
-            tupleOf(EndpointName.createPost, 2.0),
+            tupleOf(EndpointName.createPost, 3.0),
             tupleOf(EndpointName.getPost, 1.0)
         )
             .assertEndpointMetricsCorrect()
 
         listOf(
-            tupleOf(EndpointName.createPost, DatabaseMetrics.DatabaseOperation.createPost, 2.0),
+            tupleOf(EndpointName.createPost, DatabaseMetrics.DatabaseOperation.createPost, 3.0),
             tupleOf(EndpointName.getPost, DatabaseMetrics.DatabaseOperation.getPost, 1.0),
         ).assertDatabaseMetricsCorrect()
 
@@ -507,13 +512,13 @@ internal class PulpFictionBackendServiceTest {
             )
         }
 
-        EndpointName.updateUser.assertEndpointMetricsCorrect(requests.size.toDouble() + 1)
+        EndpointName.updateUser.assertEndpointMetricsCorrect(requests.size.toDouble())
 
         Tuple2(
             EndpointName.updateUser,
             DatabaseMetrics.DatabaseOperation.updateUser
         )
-            .assertDatabaseMetricsCorrect(requests.size.toDouble() + 1)
+            .assertDatabaseMetricsCorrect(requests.size.toDouble())
     }
 
     @Test
@@ -534,13 +539,13 @@ internal class PulpFictionBackendServiceTest {
             .assertTrue { it.sessionToken.toUUID().isRight() }
             .assertTrue { it.createdAt.isWithinLast(100) }
 
-        EndpointName.updateUser.assertEndpointMetricsCorrect(2.0)
+        EndpointName.updateUser.assertEndpointMetricsCorrect(1.0)
 
         Tuple2(
             EndpointName.updateUser,
             DatabaseMetrics.DatabaseOperation.updateUser
         )
-            .assertDatabaseMetricsCorrect(2.0)
+            .assertDatabaseMetricsCorrect(1.0)
     }
 
     @Test
@@ -559,13 +564,13 @@ internal class PulpFictionBackendServiceTest {
                 .assertEquals(Status.UNAUTHENTICATED.code) { (it as StatusException).status.code }
         }
 
-        EndpointName.updateUser.assertEndpointMetricsCorrect(2.0)
+        EndpointName.updateUser.assertEndpointMetricsCorrect(1.0)
 
         Tuple2(
             EndpointName.updateUser,
             DatabaseMetrics.DatabaseOperation.updateUser
         )
-            .assertDatabaseMetricsCorrect(2.0)
+            .assertDatabaseMetricsCorrect(1.0)
     }
 
     private suspend fun setupTestFeed(numUsers: Int): Tuple2<PulpFictionProtos.CreateLoginSessionResponse.LoginSession,

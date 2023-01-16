@@ -1,5 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import io.github.serpro69.kfaker.Faker
 import java.time.Instant
@@ -63,21 +64,33 @@ object TestDatabaseModelGenerator {
     }
 
     fun CommentDatum.Companion.generateRandom(postId: UUID, parentPostId: UUID): CommentDatum = CommentDatum {
-        this.postId = postId
+        this.post = Post {
+            this.postId = postId
+            this.createdAt = generateRandomInstant()
+            this.postType = PulpFictionProtos.Post.PostType.COMMENT
+        }
         this.updatedAt = Instant.EPOCH
         this.body = faker.worldOfWarcraft.quotes()
         this.parentPostId = parentPostId
     }
 
     fun ImagePostDatum.Companion.generateRandom(postId: UUID): ImagePostDatum = ImagePostDatum {
-        this.postId = postId
+        this.post = Post {
+            this.postId = postId
+            this.createdAt = generateRandomInstant()
+            this.postType = PulpFictionProtos.Post.PostType.IMAGE
+        }
         this.updatedAt = Instant.EPOCH
         this.imageS3Key = faker.internet.domain()
         this.caption = faker.worldOfWarcraft.quotes()
     }
 
     fun UserPostDatum.Companion.generateRandom(postId: UUID, userId: UUID): UserPostDatum = UserPostDatum {
-        this.postId = postId
+        this.post = Post {
+            this.postId = postId
+            this.createdAt = generateRandomInstant()
+            this.postType = PulpFictionProtos.Post.PostType.USER
+        }
         this.updatedAt = Instant.EPOCH
         this.userId = userId
         this.displayName = displayName

@@ -1,7 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
-import arrow.core.Option
 import arrow.core.continuations.either
 import co.firstorderlabs.protos.pulpfiction.CreateLoginSessionResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
@@ -66,25 +65,29 @@ interface User : Entity<User> {
     var displayName: DisplayName
     var dateOfBirth: DateOfBirth
 
-    fun toNonSensitiveUserMetadataProto(userPostDatumMaybe: Option<UserPostDatum>): UserMetadata {
+    fun toNonSensitiveUserMetadataProto(userPostDatum: UserPostDatum): UserMetadata {
         val user = this
         return userMetadata {
-            this.userId = user.userId.toString()
-            this.createdAt = user.createdAt.toTimestamp()
-            this.displayName = user.displayName.currentDisplayName
-            userPostDatumMaybe.map { userPostDatum ->
-                userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
-                this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
-            }
+            this.userId = this@User.userId.toString()
+            this.createdAt = this@User.createdAt.toTimestamp()
+            this.displayName = userPostDatum.displayName
+            userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
+            this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
         }
     }
 
-    fun toSensitiveUserMetadataProto(userPostDatumMaybe: Option<UserPostDatum>): PulpFictionProtos.User.SensitiveUserMetadata {
+    fun toNonSensitiveUserMetadataProto(): UserMetadata {
+        return userMetadata {
+            this.userId = this@User.userId.toString()
+            this.createdAt = this@User.createdAt.toTimestamp()
+        }
+    }
+
+    fun toSensitiveUserMetadataProto(userPostDatum: UserPostDatum): PulpFictionProtos.User.SensitiveUserMetadata {
         val user = this
         return sensitiveUserMetadata {
-            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto(userPostDatumMaybe)
+            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto(userPostDatum)
             this.dateOfBirth = user.dateOfBirth.dateOfBirth.toInstant().toTimestamp()
-//            user.dateOfBirth?.let { this.dateOfBirth = it.dateOfBirth.toInstant().toTimestamp() }
             this.email = this@User.email.email
             this.phoneNumber = this@User.phoneNumber.phoneNumber
         }

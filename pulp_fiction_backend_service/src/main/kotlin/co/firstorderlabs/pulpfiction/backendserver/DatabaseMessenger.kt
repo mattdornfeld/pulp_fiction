@@ -1,10 +1,11 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
-import arrow.core.Option
+import arrow.core.Either
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.getOrElse
 import arrow.core.toOption
+import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt
 import co.firstorderlabs.protos.pulpfiction.PostKt.interactionAggregates
 import co.firstorderlabs.protos.pulpfiction.PostKt.loggedInUserPostInteractions
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
@@ -233,25 +234,18 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     private suspend fun createComment(
         postUpdate: PostUpdate,
         request: CreateCommentRequest,
-        postCreatorMetadata: UserMetadata
-    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> =
+    ): Effect<PulpFictionRequestError, CommentDatum> =
         effect {
             val commentDatum = CommentDatum.fromRequest(postUpdate, request).bind()
+            database.postUpdates.add(postUpdate)
             database.commentData.add(commentDatum)
-            post {
-                this.metadata = postUpdate.toProto(postCreatorMetadata)
-                this.comment = commentDatum.toProto(
-                    loggedInUserPostInteractions {},
-                    interactionAggregates {}
-                )
-            }
+            commentDatum
         }
 
     private suspend fun createImagePost(
         postUpdate: PostUpdate,
         request: CreateImagePostRequest,
-        postCreatorMetadata: UserMetadata
-    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> =
+    ): Effect<PulpFictionRequestError, ImagePostDatum> =
         effect {
             val imagePostDatum = ImagePostDatum.fromRequest(postUpdate, request)
 
@@ -260,21 +254,15 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .logS3Metrics(EndpointMetrics.EndpointName.createPost, S3Metrics.S3Operation.uploadImagePost)
                 .bind()
 
+            database.postUpdates.add(postUpdate)
             database.imagePostData.add(imagePostDatum)
-            post {
-                this.metadata = postUpdate.toProto(postCreatorMetadata)
-                this.imagePost = imagePostDatum.toProto(
-                    loggedInUserPostInteractions {},
-                    interactionAggregates {}
-                )
-            }
+            imagePostDatum
         }
 
-    private suspend fun createUserPost(
+    private suspend fun createUserPostAndUploadAvatarJpg(
         postUpdate: PostUpdate,
         request: CreateUserPostRequest,
-        postCreatorMetadata: UserMetadata
-    ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> =
+    ): Effect<PulpFictionRequestError, UserPostDatum> =
         effect {
             val userPostDatum = UserPostDatum.fromRequest(postUpdate, request)
 
@@ -283,11 +271,17 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .logS3Metrics(EndpointMetrics.EndpointName.createPost, S3Metrics.S3Operation.uploadUserAvatar)
                 .bind()
 
+            createUserPost(postUpdate, userPostDatum).bind()
+        }
+
+    private fun createUserPost(
+        postUpdate: PostUpdate,
+        userPostDatum: UserPostDatum,
+    ): Effect<PulpFictionRequestError, UserPostDatum> =
+        effect {
+            database.postUpdates.add(postUpdate)
             database.userPostData.add(userPostDatum)
-            post {
-                this.metadata = postUpdate.toProto(postCreatorMetadata)
-                this.userPost = userPostDatum.toProto()
-            }
+            userPostDatum
         }
 
     private suspend fun createPostData(
@@ -295,21 +289,46 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         request: CreatePostRequest
     ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         when (postUpdate.post.postType) {
-            PulpFictionProtos.Post.PostType.COMMENT -> createComment(
-                postUpdate,
-                request.createCommentRequest,
-                request.loginSession.userMetadata
-            ).bind()
-            PulpFictionProtos.Post.PostType.IMAGE -> createImagePost(
-                postUpdate,
-                request.createImagePostRequest,
-                request.loginSession.userMetadata
-            ).bind()
-            PulpFictionProtos.Post.PostType.USER -> createUserPost(
-                postUpdate,
-                request.createUserPostRequest,
-                request.loginSession.userMetadata
-            ).bind()
+            PulpFictionProtos.Post.PostType.COMMENT -> {
+                val commentDatum = createComment(
+                    postUpdate,
+                    request.createCommentRequest
+                ).bind()
+
+                post {
+                    this.metadata = postUpdate.toProto()
+                    this.comment = commentDatum.toProto(
+                        loggedInUserPostInteractions {},
+                        interactionAggregates {}
+                    )
+                }
+            }
+
+            PulpFictionProtos.Post.PostType.IMAGE -> {
+                val imagePostDatum = createImagePost(
+                    postUpdate,
+                    request.createImagePostRequest
+                ).bind()
+
+                post {
+                    this.metadata = postUpdate.toProto()
+                    this.imagePost = imagePostDatum.toProto(
+                        loggedInUserPostInteractions {},
+                        interactionAggregates {}
+                    )
+                }
+            }
+            PulpFictionProtos.Post.PostType.USER -> {
+                val userPostDatum = createUserPostAndUploadAvatarJpg(
+                    postUpdate,
+                    request.createUserPostRequest
+                ).bind()
+
+                post {
+                    this.metadata = postUpdate.toProto()
+                    this.userPost = userPostDatum.toProto()
+                }
+            }
             else -> shift(RequestParsingError("CreatePost is not implemented for ${postUpdate.post.postType}"))
         }
     }
@@ -322,7 +341,6 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         database.transactionToEffect {
             effectWithDatabaseError {
                 database.posts.add(postUpdate.post)
-                database.postUpdates.add(postUpdate)
                 database.postInteractionAggregates.add(PostInteractionAggregate.create(postUpdate.post.postId))
             }.bind()
 
@@ -414,11 +432,10 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         val postId = request.postId.toUUID().bind()
         val postUpdate = getPostUpdate(postId).bind()
-        val userMetadata = getPublicUserMetadata(postUpdate.post.postCreatorId.toString()).bind()
 
         val userId = request.loginSession.userId.toUUID().bind()
         post {
-            this.metadata = postUpdate.toProto(userMetadata)
+            this.metadata = postUpdate.toProto()
 
             when (postUpdate.post.postType) {
                 PulpFictionProtos.Post.PostType.COMMENT -> {
@@ -453,11 +470,24 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, UpdateUserResponse> =
         effect {
             val userPostDatum = getMostRecentUserPostDatum(user.userId).bind()
-            when (updateUserMetadata.updateUserMetadataCase) {
-                UpdateUserRequest.UpdateUserMetadata.UpdateUserMetadataCase.UPDATE_USER_AVATAR ->
-                    shift(FunctionalityNotImplementedError())
+            val newUserPostDatum = when (updateUserMetadata.updateUserMetadataCase) {
+                UpdateUserRequest.UpdateUserMetadata.UpdateUserMetadataCase.UPDATE_USER_AVATAR -> {
+                    val createUserPostRequest = CreatePostRequestKt.createUserPostRequest {
+                        this.userId = user.userId.toString()
+                        this.bio = userPostDatum.bio
+                        this.displayName = userPostDatum.displayName
+                        this.avatarJpg = updateUserMetadata.updateUserAvatar.avatarJpg
+                    }
+
+                    createUserPostAndUploadAvatarJpg(
+                        PostUpdate.fromPost(userPostDatum.post),
+                        createUserPostRequest
+                    ).bind()
+                }
+
                 UpdateUserRequest.UpdateUserMetadata.UpdateUserMetadataCase.UPDATE_DISPLAY_NAME -> {
                     user.displayName.currentDisplayName = updateUserMetadata.updateDisplayName.newDisplayName
+
                     database.insertOrUpdate(DisplayNames) {
                         set(DisplayNames.userId, user.userId)
                         set(DisplayNames.currentDisplayName, user.displayName.currentDisplayName)
@@ -465,15 +495,37 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                             set(DisplayNames.currentDisplayName, user.displayName.currentDisplayName)
                         }
                     }
+
+                    val postUpdate = PostUpdate.fromPost(userPostDatum.post)
+                    val newUserPostDatum = UserPostDatum {
+                        this.post = postUpdate.post
+                        this.updatedAt = postUpdate.updatedAt
+                        this.userId = user.userId
+                        this.displayName = updateUserMetadata.updateDisplayName.newDisplayName
+                        this.avatarImageS3Key = toS3Key()
+                        this.bio = userPostDatum.bio
+                    }
+
+                    createUserPost(postUpdate, newUserPostDatum).bind()
                 }
-                UpdateUserRequest.UpdateUserMetadata.UpdateUserMetadataCase.UPDATE_BIO ->
-                    shift(FunctionalityNotImplementedError())
+                UpdateUserRequest.UpdateUserMetadata.UpdateUserMetadataCase.UPDATE_BIO -> {
+                    val newUserPostDatum = UserPostDatum {
+                        this.post = userPostDatum.post
+                        this.updatedAt = PostUpdate.fromPost(userPostDatum.post).updatedAt
+                        this.userId = user.userId
+                        this.displayName = userPostDatum.displayName
+                        this.avatarImageS3Key = toS3Key()
+                        this.bio = updateUserMetadata.updateBio.newBio
+                    }
+
+                    createUserPost(PostUpdate.fromPost(userPostDatum.post), newUserPostDatum).bind()
+                }
                 else ->
                     shift(UnrecognizedEnumValue(updateUserMetadata.updateUserMetadataCase))
             }
             updateUserResponse {
                 this.updateUserMetadata = UpdateUserResponseKt.updateUserMetadata {
-                    this.userMetadata = user.toNonSensitiveUserMetadataProto(userPostDatum)
+                    this.userMetadata = user.toNonSensitiveUserMetadataProto(newUserPostDatum)
                 }
             }
         }
@@ -576,21 +628,23 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, UserMetadata> =
         getPublicUserMetadata(request.userId)
 
-    private fun getMostRecentUserPostDatum(userId: UUID): Effect<PulpFictionRequestError, Option<UserPostDatum>> =
+    private fun getMostRecentUserPostDatum(userId: UUID): Effect<PulpFictionRequestError, UserPostDatum> =
         effect {
             database.userPostData
                 .filter { it.userId eq userId }
                 .sortedBy { it.updatedAt.desc() }
                 .firstOrNull()
-                .toOption()
+                ?: shift(PostNotFoundError())
         }
 
     private suspend fun getPublicUserMetadata(
         userId: String
     ): Effect<PulpFictionRequestError, UserMetadata> = effect {
         val user = getUserFromUserId(userId).bind()
-        val userPostDatum = getMostRecentUserPostDatum(user.userId).bind()
-        user.toNonSensitiveUserMetadataProto(userPostDatum)
+        when (val userPostDatumEither = getMostRecentUserPostDatum(user.userId).toEither()) {
+            is Either.Left -> user.toNonSensitiveUserMetadataProto()
+            is Either.Right -> user.toNonSensitiveUserMetadataProto(userPostDatumEither.value)
+        }
     }
 
     suspend fun getFeed(
@@ -605,14 +659,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         paginatedPosts.map { row ->
             val postId = row[Posts.postId] ?: shift(PostNotFoundError())
             val postUpdate = getPostUpdate(postId).bind()
-            val postCreatorId = row[Posts.postCreatorId] ?: shift(UserNotFoundError("Null"))
             val loggedInUser = request.loginSession.userId.toUUID().bind()
 
             when (row[Posts.postType]) {
                 PulpFictionProtos.Post.PostType.IMAGE -> {
                     buildImagePostFeed(
                         postId = postId,
-                        postCreatorId = postCreatorId,
                         loggedInUserId = loggedInUser,
                         postUpdate = postUpdate
                     ).bind()
@@ -620,13 +672,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 PulpFictionProtos.Post.PostType.USER -> {
                     buildUserPostFeed(
                         postId = postId,
-                        postCreatorId = postCreatorId, postUpdate = postUpdate
+                        postUpdate = postUpdate
                     ).bind()
                 }
                 PulpFictionProtos.Post.PostType.COMMENT -> {
                     buildCommentPostFeed(
                         postId = postId,
-                        postCreatorId = postCreatorId,
                         loggedInUserId = loggedInUser,
                         postUpdate = postUpdate
                     ).bind()
@@ -742,7 +793,6 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     private suspend fun buildImagePostFeed(
         postId: UUID,
-        postCreatorId: UUID,
         loggedInUserId: UUID,
         postUpdate: PostUpdate
     ):
@@ -750,7 +800,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, loggedInUserId).bind()
             val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
             post {
-                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.metadata = postUpdate.toProto()
                 this.imagePost = getPostData(postId, ImagePostData).bind()
                     .toProto(
                         loggedInUserPostInteractions,
@@ -761,7 +811,6 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     private suspend fun buildCommentPostFeed(
         postId: UUID,
-        postCreatorId: UUID,
         loggedInUserId: UUID,
         postUpdate: PostUpdate
     ):
@@ -769,7 +818,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, loggedInUserId).bind()
             val postInteractionAggregates = getPostInteractionAggregates(postId).bind()
             post {
-                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.metadata = postUpdate.toProto()
                 this.comment = getPostData(postId, CommentData).bind()
                     .toProto(
                         loggedInUserPostInteractions,
@@ -780,13 +829,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
 
     private suspend fun buildUserPostFeed(
         postId: UUID,
-        postCreatorId: UUID,
         postUpdate: PostUpdate
     ):
         Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
 
             post {
-                this.metadata = postUpdate.toProto(getPublicUserMetadata(postCreatorId.toString()).bind())
+                this.metadata = postUpdate.toProto()
                 this.userPost = getPostData(postId, UserPostData).bind().toProto()
             }
         }
