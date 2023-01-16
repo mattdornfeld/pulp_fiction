@@ -23,7 +23,9 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updateDateOfBirth
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updateEmail
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updatePhoneNumber
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateUserMetadataKt.updateBio
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateUserMetadataKt.updateDisplayName
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateUserMetadataKt.updateUserAvatar
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePassword
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateSensitiveUserMetadata
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateUserMetadata
@@ -90,6 +92,26 @@ object TestProtoModelGenerator {
             this.updateUserMetadata = updateUserMetadata {
                 this.updateDisplayName = updateDisplayName {
                     this.newDisplayName = faker.name.firstName()
+                }
+            }
+        }
+
+    fun generateRandomUpdateBioRequest(loginSession: LoginSession): UpdateUserRequest =
+        updateUserRequest {
+            this.loginSession = loginSession
+            this.updateUserMetadata = updateUserMetadata {
+                this.updateBio = updateBio {
+                    this.newBio = faker.lovecraft.unique.toString()
+                }
+            }
+        }
+
+    fun generateRandomUpdateUserAvatarRequest(loginSession: LoginSession): UpdateUserRequest =
+        updateUserRequest {
+            this.loginSession = loginSession
+            this.updateUserMetadata = updateUserMetadata {
+                this.updateUserAvatar = updateUserAvatar {
+                    this.avatarJpg = random.nextByteString(100)
                 }
             }
         }

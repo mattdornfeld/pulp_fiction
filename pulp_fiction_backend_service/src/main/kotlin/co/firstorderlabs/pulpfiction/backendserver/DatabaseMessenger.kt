@@ -509,16 +509,17 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     createUserPost(postUpdate, newUserPostDatum).bind()
                 }
                 UpdateUserRequest.UpdateUserMetadata.UpdateUserMetadataCase.UPDATE_BIO -> {
+                    val postUpdate = PostUpdate.fromPost(userPostDatum.post)
                     val newUserPostDatum = UserPostDatum {
                         this.post = userPostDatum.post
-                        this.updatedAt = PostUpdate.fromPost(userPostDatum.post).updatedAt
+                        this.updatedAt = postUpdate.updatedAt
                         this.userId = user.userId
                         this.displayName = userPostDatum.displayName
                         this.avatarImageS3Key = toS3Key()
                         this.bio = updateUserMetadata.updateBio.newBio
                     }
 
-                    createUserPost(PostUpdate.fromPost(userPostDatum.post), newUserPostDatum).bind()
+                    createUserPost(postUpdate, newUserPostDatum).bind()
                 }
                 else ->
                     shift(UnrecognizedEnumValue(updateUserMetadata.updateUserMetadataCase))

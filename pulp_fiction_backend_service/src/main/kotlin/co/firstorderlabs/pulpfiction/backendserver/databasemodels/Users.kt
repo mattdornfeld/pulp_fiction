@@ -66,12 +66,12 @@ interface User : Entity<User> {
     var dateOfBirth: DateOfBirth
 
     fun toNonSensitiveUserMetadataProto(userPostDatum: UserPostDatum): UserMetadata {
-        val user = this
         return userMetadata {
             this.userId = this@User.userId.toString()
             this.createdAt = this@User.createdAt.toTimestamp()
             this.displayName = userPostDatum.displayName
             userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
+            this.bio = userPostDatum.bio
             this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
         }
     }
