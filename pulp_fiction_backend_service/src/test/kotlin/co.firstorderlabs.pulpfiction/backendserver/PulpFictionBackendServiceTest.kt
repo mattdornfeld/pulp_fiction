@@ -25,6 +25,7 @@ import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.gener
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdatePasswordRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdatePhoneNumberRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserAvatarRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserFollowingStatusRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
@@ -635,6 +636,35 @@ internal class PulpFictionBackendServiceTest {
             DatabaseMetrics.DatabaseOperation.updateUser
         )
             .assertDatabaseMetricsCorrect(1.0)
+    }
+
+    @Test
+    fun testUpdateUserFollowingStatus(): Unit = runBlocking {
+        val (user1, user2) = (1..2).map { createUserAndLogin() }
+        val loginSession = user1.first
+        val followProto = generateRandomUpdateUserFollowingStatusRequest(
+            loginSession,
+            user2.first.userId,
+            false
+        )
+        pulpFictionBackendService.updateUser(followProto)
+
+        /* assert results */
+
+        val unfollowProto = generateRandomUpdateUserFollowingStatusRequest(
+            loginSession,
+            user2.first.userId,
+            true
+        )
+        pulpFictionBackendService.updateUser(unfollowProto)
+        /* assert results */
+
+        EndpointName.updateUser.assertEndpointMetricsCorrect(2.0)
+        Tuple2(
+            EndpointName.updateUser,
+            DatabaseMetrics.DatabaseOperation.updateUser
+        )
+            .assertDatabaseMetricsCorrect(2.0)
     }
 
     private suspend fun setupTestFeed(numUsers: Int): Tuple2<PulpFictionProtos.CreateLoginSessionResponse.LoginSession,

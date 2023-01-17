@@ -28,6 +28,7 @@ import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateUserMetada
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateUserMetadataKt.updateUserAvatar
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updatePassword
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateSensitiveUserMetadata
+import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateUserFollowingStatus
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.updateUserMetadata
 import co.firstorderlabs.protos.pulpfiction.createLoginSessionRequest
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
@@ -143,6 +144,23 @@ object TestProtoModelGenerator {
             }
         }
     }
+
+    fun generateRandomUpdateUserFollowingStatusRequest(
+        loginSession: LoginSession,
+        targetUserId: String,
+        following: Boolean
+    ): UpdateUserRequest =
+        updateUserRequest {
+            val userFollowingStatus = if (!following)
+                UpdateUserRequest.UpdateUserFollowingStatus.UserFollowingStatus.NOT_FOLLOWING
+            else UpdateUserRequest.UpdateUserFollowingStatus.UserFollowingStatus.FOLLOWING
+
+            this.loginSession = loginSession
+            this.updateUserFollowingStatus = updateUserFollowingStatus {
+                this.userFollowingStatus = userFollowingStatus
+                this.targetUserId = targetUserId
+            }
+        }
 
     fun generateRandomUpdatePasswordRequest(loginSession: LoginSession, currentPassword: String): UpdateUserRequest =
         updateUserRequest {
