@@ -34,6 +34,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.DatesOfBirth
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.DisplayNames
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Email
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Emails
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Follower
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
@@ -46,7 +47,6 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractio
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Follower
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
@@ -54,6 +54,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.phoneNumbers
@@ -64,7 +65,6 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.CreatePostDataMetrics.logCreatePostDataMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.EndpointMetrics
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics
