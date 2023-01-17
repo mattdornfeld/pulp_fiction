@@ -18,6 +18,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest.UpdateUserFollowingStatus
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.UpdateUserResponseKt
@@ -104,6 +105,7 @@ import org.ktorm.dsl.select
 import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
 import org.ktorm.entity.add
+import org.ktorm.entity.clear
 import org.ktorm.entity.filter
 import org.ktorm.entity.find
 import org.ktorm.entity.firstOrNull
@@ -580,6 +582,45 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             }
         }
 
+    private suspend fun updateFollowingStatus(
+        userId: UUID,
+        updateUserFollowingStatus: UpdateUserFollowingStatus
+    ):
+        Effect<PulpFictionRequestError, UpdateUserResponse> =
+            effect {
+                val targetUserId = updateUserFollowingStatus.targetUserId.toUUID().bind()
+                when (updateUserFollowingStatus.userFollowingStatus) {
+                    UpdateUserFollowingStatus.UserFollowingStatus.NOT_FOLLOWING -> {
+                        val follower = Follower {
+                            this.userId = userId
+                            this.followerId = targetUserId
+                            this.createdAt = nowTruncated()
+                        }
+                        database.transactionToEffect {
+                            effectWithDatabaseError { database.followers.add(follower) }.bind()
+                        }.bind()
+                    }
+                    UpdateUserFollowingStatus.UserFollowingStatus.FOLLOWING -> {
+                        database.transactionToEffect {
+                            effectWithDatabaseError {
+                                database.followers
+                                    .filter { it.userId eq userId }
+                                    .filter { it.followerId eq targetUserId }
+                                    .clear()
+                            }
+                        }
+                    }
+                    else -> {
+                        shift(
+                            UnrecognizedEnumValue(
+                                updateUserFollowingStatus.userFollowingStatus
+                            )
+                        )
+                    }
+                }
+                updateUserResponse { }
+            }
+
     suspend fun updateUser(request: UpdateUserRequest): Effect<PulpFictionRequestError, UpdateUserResponse> =
         effect {
             val userId = request.loginSession.userId
@@ -605,11 +646,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                         this.updatePassword = updatePassword {}
                     }
                 }
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_FOLLOWING_STATUS -> {
+                    updateFollowingStatus(user.userId, request.updateUserFollowingStatus).bind()
+                }
                 UpdateUserRequest.UpdateUserRequestCase.RESET_PASSWORD -> {
                     shift(FunctionalityNotImplementedError())
                 }
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_FOLLOWING_STATUS ->
-                    shift(FunctionalityNotImplementedError())
                 else -> {
                     shift(UnrecognizedEnumValue(request.updateUserRequestCase))
                 }
