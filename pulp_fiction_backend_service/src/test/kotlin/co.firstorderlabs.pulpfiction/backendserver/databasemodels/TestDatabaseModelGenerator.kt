@@ -1,6 +1,5 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import io.github.serpro69.kfaker.Faker
 import java.time.Instant
@@ -47,6 +46,7 @@ object TestDatabaseModelGenerator {
     fun User.Companion.generateRandom(userId: UUID): User = User {
         this.userId = userId
         this.createdAt = nowTruncated()
+        this.hashedPassword = faker.unique.toString()
         this.phoneNumber = PhoneNumber {
             this.userId = userId
             this.phoneNumber = faker.phoneNumber.phoneNumber()
@@ -56,43 +56,33 @@ object TestDatabaseModelGenerator {
             this.email = faker.internet.email()
         }
         this.displayName = DisplayName {
+            this.userId = userId
             this.currentDisplayName = faker.funnyName.name()
         }
         this.dateOfBirth = DateOfBirth {
+            this.userId = userId
             this.dateOfBirth = faker.person.birthDate(30)
         }
     }
 
-    fun CommentDatum.Companion.generateRandom(postId: UUID, parentPostId: UUID): CommentDatum = CommentDatum {
-        this.post = Post {
-            this.postId = postId
-            this.createdAt = generateRandomInstant()
-            this.postType = PulpFictionProtos.Post.PostType.COMMENT
-        }
+    fun CommentDatum.Companion.generateRandom(post: Post, parentPostId: UUID): CommentDatum = CommentDatum {
+        this.post = post
         this.updatedAt = Instant.EPOCH
         this.body = faker.worldOfWarcraft.quotes()
         this.parentPostId = parentPostId
     }
 
-    fun ImagePostDatum.Companion.generateRandom(postId: UUID): ImagePostDatum = ImagePostDatum {
-        this.post = Post {
-            this.postId = postId
-            this.createdAt = generateRandomInstant()
-            this.postType = PulpFictionProtos.Post.PostType.IMAGE
-        }
+    fun ImagePostDatum.Companion.generateRandom(post: Post): ImagePostDatum = ImagePostDatum {
+        this.post = post
         this.updatedAt = Instant.EPOCH
         this.imageS3Key = faker.internet.domain()
         this.caption = faker.worldOfWarcraft.quotes()
     }
 
-    fun UserPostDatum.Companion.generateRandom(postId: UUID, userId: UUID): UserPostDatum = UserPostDatum {
-        this.post = Post {
-            this.postId = postId
-            this.createdAt = generateRandomInstant()
-            this.postType = PulpFictionProtos.Post.PostType.USER
-        }
+    fun UserPostDatum.Companion.generateRandom(post: Post): UserPostDatum = UserPostDatum {
+        this.post = post
         this.updatedAt = Instant.EPOCH
-        this.userId = userId
+        this.userId = post.postCreatorId
         this.displayName = displayName
         this.avatarImageS3Key = faker.internet.domain()
         this.bio = faker.lordOfTheRings.quotes()
