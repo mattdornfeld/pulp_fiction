@@ -8,7 +8,6 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostUpdateIdentifier
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
@@ -36,7 +35,7 @@ interface PostUpdate : Entity<PostUpdate> {
     fun getPostUpdateIdentifier(): PostUpdateIdentifier =
         Companion.getPostUpdateIdentifier(this@PostUpdate.post.postId, this@PostUpdate.updatedAt)
 
-    fun toProto(postCreatorMetadata: UserMetadata): PostMetadata = postMetadata {
+    fun toProto(): PostMetadata = postMetadata {
         this.postUpdateIdentifier = getPostUpdateIdentifier()
         this.createdAt = this@PostUpdate.post.createdAt.toTimestamp()
         this.postState = this@PostUpdate.postState
@@ -45,15 +44,18 @@ interface PostUpdate : Entity<PostUpdate> {
     }
 
     companion object : Entity.Factory<PostUpdate>() {
+        fun fromPost(post: Post): PostUpdate =
+            PostUpdate {
+                this.post = post
+                this.updatedAt = nowTruncated()
+                this.postState = PostState.CREATED
+            }
+
         suspend fun fromRequest(
             postId: UUID,
             request: CreatePostRequest
         ): Either<PulpFictionRequestError, PostUpdate> = either {
-            PostUpdate {
-                this.post = Post.fromRequest(postId, request).bind()
-                this.updatedAt = nowTruncated()
-                this.postState = PostState.CREATED
-            }
+            fromPost(Post.fromRequest(postId, request).bind())
         }
 
         fun getPostUpdateIdentifier(postId: UUID, updatedAt: Instant): PostUpdateIdentifier = postUpdateIdentifier {

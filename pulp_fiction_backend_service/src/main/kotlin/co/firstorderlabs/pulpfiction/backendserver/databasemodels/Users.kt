@@ -1,7 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
-import arrow.core.Option
 import arrow.core.continuations.either
 import co.firstorderlabs.protos.pulpfiction.CreateLoginSessionResponseKt.loginSession
 import co.firstorderlabs.protos.pulpfiction.CreatePostRequestKt.createUserPostRequest
@@ -16,10 +15,16 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.toInstant
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import com.password4j.Password
 import org.ktorm.database.Database
+import org.ktorm.dsl.eq
+import org.ktorm.dsl.from
+import org.ktorm.dsl.leftJoin
+import org.ktorm.dsl.map
+import org.ktorm.dsl.select
+import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
 import org.ktorm.entity.sequenceOf
+import org.ktorm.schema.ColumnDeclaring
 import org.ktorm.schema.Table
-import org.ktorm.schema.date
 import org.ktorm.schema.timestamp
 import org.ktorm.schema.uuid
 import org.ktorm.schema.varchar
@@ -33,42 +38,56 @@ object Users : Table<User>("users") {
         .bindTo { it.userId }
         .references(Emails) { it.email }
         .references(PhoneNumbers) { it.phoneNumber }
+        .references(DisplayNames) { it.displayName }
+        .references(DatesOfBirth) { it.dateOfBirth }
     val createdAt = timestamp("created_at").bindTo { it.createdAt }
-    val currentDisplayName = varchar("current_display_name").bindTo { it.currentDisplayName }
-    val dateOfBirth = date("date_of_birth").bindTo { it.dateOfBirth }
     val hashedPassword = varchar("hashed_password").bindTo { it.hashedPassword }
 
-    val emails get() = userId.referenceTable as Emails
-    val phoneNumbers get() = userId.referenceTable as PhoneNumbers
+    fun select(database: Database, condition: () -> ColumnDeclaring<Boolean>): User? =
+        database
+            .from(this)
+            .leftJoin(Emails, on = userId eq Emails.userId)
+            .leftJoin(PhoneNumbers, on = userId eq PhoneNumbers.userId)
+            .leftJoin(DisplayNames, on = userId eq DisplayNames.userId)
+            .leftJoin(DatesOfBirth, on = userId eq DatesOfBirth.userId)
+            .select()
+            .where(condition)
+            .map { Users.createEntity(it) }
+            .firstOrNull()
 }
 
 interface User : Entity<User> {
     var userId: UUID
     var createdAt: Instant
-    var currentDisplayName: String
     var hashedPassword: String
-    var dateOfBirth: LocalDate?
     var phoneNumber: PhoneNumber
     var email: Email
+    var displayName: DisplayName
+    var dateOfBirth: DateOfBirth
 
-    fun toNonSensitiveUserMetadataProto(userPostDatumMaybe: Option<UserPostDatum>): UserMetadata {
-        val user = this
+    fun toNonSensitiveUserMetadataProto(userPostDatum: UserPostDatum): UserMetadata {
         return userMetadata {
-            this.userId = user.userId.toString()
-            this.createdAt = user.createdAt.toTimestamp()
-            this.displayName = user.currentDisplayName
-            userPostDatumMaybe.map { userPostDatum ->
-                userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
-                this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
-            }
+            this.userId = this@User.userId.toString()
+            this.createdAt = this@User.createdAt.toTimestamp()
+            this.displayName = userPostDatum.displayName
+            userPostDatum.avatarImageS3Key?.let { avatarImageUrl = it }
+            this.bio = userPostDatum.bio
+            this.latestUserPostUpdateIdentifier = userPostDatum.getPostUpdateIdentifier()
         }
     }
 
-    fun toSensitiveUserMetadataProto(userPostDatumMaybe: Option<UserPostDatum>): PulpFictionProtos.User.SensitiveUserMetadata {
+    fun toNonSensitiveUserMetadataProto(): UserMetadata {
+        return userMetadata {
+            this.userId = this@User.userId.toString()
+            this.createdAt = this@User.createdAt.toTimestamp()
+        }
+    }
+
+    fun toSensitiveUserMetadataProto(userPostDatum: UserPostDatum): PulpFictionProtos.User.SensitiveUserMetadata {
         val user = this
         return sensitiveUserMetadata {
-            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto(userPostDatumMaybe)
-            user.dateOfBirth?.let { this.dateOfBirth = it.toInstant().toTimestamp() }
+            this.nonSensitiveUserMetadata = toNonSensitiveUserMetadataProto(userPostDatum)
+            this.dateOfBirth = user.dateOfBirth.dateOfBirth.toInstant().toTimestamp()
             this.email = this@User.email.email
             this.phoneNumber = this@User.phoneNumber.phoneNumber
         }
@@ -81,7 +100,7 @@ interface User : Entity<User> {
             }
             this.createUserPostRequest = createUserPostRequest {
                 this.userId = this@User.userId.toString()
-                this.displayName = this@User.currentDisplayName
+                this.displayName = this@User.displayName.currentDisplayName
                 this.avatarJpg = request.avatarJpg
                 this.bio = request.bio
             }
@@ -96,8 +115,8 @@ interface User : Entity<User> {
                     this.userId = UUID.randomUUID()
                     this.createdAt = nowTruncated()
                     this.hashedPassword = Password.hash(request.password).withBcrypt().result
-                    this.currentDisplayName = ""
-                    this.dateOfBirth = LocalDate.now()
+                    this.displayName.currentDisplayName = ""
+                    this.dateOfBirth.dateOfBirth = LocalDate.now()
                 }
             }
         }

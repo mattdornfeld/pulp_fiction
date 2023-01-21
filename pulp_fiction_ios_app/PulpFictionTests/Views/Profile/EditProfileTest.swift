@@ -71,7 +71,7 @@ class EditProfileTest: XCTestCase {
 
         let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
         let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
-        XCTAssertEqual(try expectedUIImage.serializeImage().getOrThrow(), updateUserRequest.updateUserAvatar.avatarJpg)
+        XCTAssertEqual(try expectedUIImage.serializeImage().getOrThrow(), updateUserRequest.updateUserMetadata.updateUserAvatar.avatarJpg)
     }
 
     func testUpdateDisplayName() async throws {
@@ -95,7 +95,7 @@ class EditProfileTest: XCTestCase {
 
         let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
         let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
-        XCTAssertEqual(expectedDisplayName, updateUserRequest.updateDisplayName.newDisplayName)
+        XCTAssertEqual(expectedDisplayName, updateUserRequest.updateUserMetadata.updateDisplayName.newDisplayName)
     }
 
     func testUpdateBio() async throws {
@@ -119,7 +119,7 @@ class EditProfileTest: XCTestCase {
 
         let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
         let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
-        XCTAssertEqual(expectedBio, updateUserRequest.updateBio.newBio)
+        XCTAssertEqual(expectedBio, updateUserRequest.updateUserMetadata.updateBio.newBio)
     }
 
     func testUpdateEmail() async throws {
@@ -146,7 +146,7 @@ class EditProfileTest: XCTestCase {
 
         let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
         let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
-        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.email, updateUserRequest.updateEmail.newEmail)
+        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.email, updateUserRequest.updateSensitiveUserMetadata.updateEmail.newEmail)
     }
 
     func testUpdatePhoneNumber() async throws {
@@ -173,7 +173,7 @@ class EditProfileTest: XCTestCase {
 
         let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
         let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
-        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.phoneNumber, updateUserRequest.updatePhoneNumber.newPhoneNumber)
+        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.phoneNumber, updateUserRequest.updateSensitiveUserMetadata.updatePhoneNumber.newPhoneNumber)
     }
 
     func testUpdateDateOfBirth() async throws {
@@ -200,6 +200,6 @@ class EditProfileTest: XCTestCase {
 
         let pulpFictionTestClientWithFakeData = reducer.backendMessenger.getPulpFictionTestClientWithFakeData()
         let updateUserRequest = pulpFictionTestClientWithFakeData.requestBuffers.updateUser[0]
-        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.dateOfBirth, updateUserRequest.updateDateOfBirth.newDateOfBirth.date)
+        XCTAssertEqual(expectedLoggedInUserSensitiveMetadata.dateOfBirth, updateUserRequest.updateSensitiveUserMetadata.updateDateOfBirth.newDateOfBirth.date)
     }
 }

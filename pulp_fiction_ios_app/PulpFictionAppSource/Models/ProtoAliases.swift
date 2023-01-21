@@ -34,4 +34,4 @@ public typealias UpdateUserResponse = PulpFiction_Protos_UpdateUserResponse
 public typealias UserMetadataProto = PulpFiction_Protos_User.UserMetadata
 
 public typealias UserFollowingStatus = UpdateUserRequest.UpdateUserFollowingStatus.UserFollowingStatus
-public typealias ContactVerificationProto = UpdateUserRequest.VerifyContactInformation.ContactVerification
+public typealias ContactVerificationProto = UpdateUserRequest.UpdateSensitiveUserMetadata.VerifyContactInformation.ContactVerification

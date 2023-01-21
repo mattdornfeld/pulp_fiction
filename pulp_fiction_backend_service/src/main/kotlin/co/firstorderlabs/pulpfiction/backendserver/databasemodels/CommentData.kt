@@ -18,7 +18,7 @@ import java.time.Instant
 import java.util.UUID
 
 object CommentData : PostData<CommentDatum>("comment_data") {
-    override val postId = uuid("post_id").primaryKey().bindTo { it.postId }
+    override val postId = uuid("post_id").primaryKey().references(Posts) { it.post }
     override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val body = varchar("body").bindTo { it.body }
     val parentPostId = uuid("parent_post_id").bindTo { it.parentPostId }
@@ -32,7 +32,7 @@ interface CommentDatum : Entity<CommentDatum>, PostDatum {
         ): Either<RequestParsingError, CommentDatum> =
             either {
                 CommentDatum {
-                    this.postId = postUpdate.post.postId
+                    this.post = postUpdate.post
                     this.updatedAt = postUpdate.updatedAt
                     this.body = request.body
                     this.parentPostId = request.parentPostId.toUUID().bind()
@@ -50,7 +50,7 @@ interface CommentDatum : Entity<CommentDatum>, PostDatum {
         this.loggedInUserPostInteractions = loggedInUserPostInteractions
     }
 
-    override var postId: UUID
+    override var post: Post
     override var updatedAt: Instant
     var body: String
     var parentPostId: UUID

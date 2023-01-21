@@ -2,12 +2,14 @@ package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateUserPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs.CONTENT_DATA_S3_BUCKET_NAME
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum.Companion.IMAGE_POSTS_KEY_BASE
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
@@ -75,7 +77,11 @@ class S3MessengerTest {
     fun testToS3Key() {
         val zeroUUID = UUID(0, 0)
         val post = ImagePostDatum {
-            this.postId = zeroUUID
+            this.post = Post {
+                this.postId = zeroUUID
+                this.createdAt = Instant.EPOCH
+                this.postType = PulpFictionProtos.Post.PostType.IMAGE
+            }
             this.updatedAt = Instant.EPOCH
             this.imageS3Key = toS3Key()
         }

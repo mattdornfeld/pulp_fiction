@@ -61,8 +61,10 @@ public struct UpdateUserBackendMessenger {
             avatarJpgEither <- avatarUIImage.serializeImage(),
             yield: UpdateUserRequest.with {
                 $0.loginSession = loginSession.toProto()
-                $0.updateUserAvatar = UpdateUserRequest.UpdateUserAvatar.with {
-                    $0.avatarJpg = avatarJpgEither.get
+                $0.updateUserMetadata = UpdateUserRequest.UpdateUserMetadata.with {
+                    $0.updateUserAvatar = UpdateUserRequest.UpdateUserMetadata.UpdateUserAvatar.with {
+                        $0.avatarJpg = avatarJpgEither.get
+                    }
                 }
             }
         )^
@@ -73,8 +75,10 @@ public struct UpdateUserBackendMessenger {
     func updateDisplayName(newDisplayName: String) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
         let updateUserRequest = UpdateUserRequest.with {
             $0.loginSession = loginSession.toProto()
-            $0.updateDisplayName = UpdateUserRequest.UpdateDisplayName.with {
-                $0.newDisplayName = newDisplayName
+            $0.updateUserMetadata = UpdateUserRequest.UpdateUserMetadata.with {
+                $0.updateDisplayName = UpdateUserRequest.UpdateUserMetadata.UpdateDisplayName.with {
+                    $0.newDisplayName = newDisplayName
+                }
             }
         }
 
@@ -84,8 +88,10 @@ public struct UpdateUserBackendMessenger {
     func updateBio(newBio: String) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
         let updateUserRequest = UpdateUserRequest.with {
             $0.loginSession = loginSession.toProto()
-            $0.updateBio = UpdateUserRequest.UpdateBio.with {
-                $0.newBio = newBio
+            $0.updateUserMetadata = UpdateUserRequest.UpdateUserMetadata.with {
+                $0.updateBio = UpdateUserRequest.UpdateUserMetadata.UpdateBio.with {
+                    $0.newBio = newBio
+                }
             }
         }
 
@@ -95,8 +101,10 @@ public struct UpdateUserBackendMessenger {
     func updateEmail(newEmail: String) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
         let updateUserRequest = UpdateUserRequest.with {
             $0.loginSession = loginSession.toProto()
-            $0.updateEmail = UpdateUserRequest.UpdateEmail.with {
-                $0.newEmail = newEmail
+            $0.updateSensitiveUserMetadata = UpdateUserRequest.UpdateSensitiveUserMetadata.with {
+                $0.updateEmail = UpdateUserRequest.UpdateSensitiveUserMetadata.UpdateEmail.with {
+                    $0.newEmail = newEmail
+                }
             }
         }
 
@@ -106,8 +114,10 @@ public struct UpdateUserBackendMessenger {
     func updatePhoneNumber(newPhoneNumber: String) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
         let updateUserRequest = UpdateUserRequest.with {
             $0.loginSession = loginSession.toProto()
-            $0.updatePhoneNumber = UpdateUserRequest.UpdatePhoneNumber.with {
-                $0.newPhoneNumber = newPhoneNumber
+            $0.updateSensitiveUserMetadata = UpdateUserRequest.UpdateSensitiveUserMetadata.with {
+                $0.updatePhoneNumber = UpdateUserRequest.UpdateSensitiveUserMetadata.UpdatePhoneNumber.with {
+                    $0.newPhoneNumber = newPhoneNumber
+                }
             }
         }
 
@@ -117,8 +127,10 @@ public struct UpdateUserBackendMessenger {
     func updateDateOfBirth(newDateOfBirth: Date) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
         let updateUserRequest = UpdateUserRequest.with {
             $0.loginSession = loginSession.toProto()
-            $0.updateDateOfBirth = UpdateUserRequest.UpdateDateOfBirth.with {
-                $0.newDateOfBirth = .init(date: newDateOfBirth)
+            $0.updateSensitiveUserMetadata = UpdateUserRequest.UpdateSensitiveUserMetadata.with {
+                $0.updateDateOfBirth = UpdateUserRequest.UpdateSensitiveUserMetadata.UpdateDateOfBirth.with {
+                    $0.newDateOfBirth = .init(date: newDateOfBirth)
+                }
             }
         }
 
@@ -128,9 +140,11 @@ public struct UpdateUserBackendMessenger {
     func verifyContactInformation(verificationCode: Int32, contactVerificationProto: ContactVerificationProto) async -> Either<PulpFictionRequestError, UpdateUserResponse> {
         let updateUserRequest = UpdateUserRequest.with {
             $0.loginSession = loginSession.toProto()
-            $0.verifyContactInformation = UpdateUserRequest.VerifyContactInformation.with {
-                $0.verificationCode = verificationCode
-                $0.contactVerification = contactVerificationProto
+            $0.updateSensitiveUserMetadata = UpdateUserRequest.UpdateSensitiveUserMetadata.with {
+                $0.verifyContactInformation = UpdateUserRequest.UpdateSensitiveUserMetadata.VerifyContactInformation.with {
+                    $0.verificationCode = verificationCode
+                    $0.contactVerification = contactVerificationProto
+                }
             }
         }
 

@@ -9,6 +9,8 @@ import co.firstorderlabs.pulpfiction.backendserver.configs.AwsConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.LOCAL_STACK_IMAGE
 import co.firstorderlabs.pulpfiction.backendserver.configs.TestConfigs.POSTGRES_IMAGE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.DatesOfBirth
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.DisplayNames
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
@@ -102,6 +104,8 @@ abstract class S3AndPostgresContainers {
         Posts,
         Emails,
         PhoneNumbers,
+        DatesOfBirth,
+        DisplayNames,
         Users
     )
 
