@@ -29,7 +29,6 @@ import org.ktorm.schema.timestamp
 import org.ktorm.schema.uuid
 import org.ktorm.schema.varchar
 import java.time.Instant
-import java.time.LocalDate
 import java.util.UUID
 
 object Users : Table<User>("users") {
@@ -115,8 +114,6 @@ interface User : Entity<User> {
                     this.userId = UUID.randomUUID()
                     this.createdAt = nowTruncated()
                     this.hashedPassword = Password.hash(request.password).withBcrypt().result
-                    this.displayName.currentDisplayName = ""
-                    this.dateOfBirth.dateOfBirth = LocalDate.now()
                 }
             }
         }

@@ -4,13 +4,10 @@ import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.protos.pulpfiction.PulpFictionGrpcKt
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionRequest
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserResponse
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
 import co.firstorderlabs.protos.pulpfiction.createLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.createPostResponse
 import co.firstorderlabs.protos.pulpfiction.createUserResponse
@@ -41,6 +38,27 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
         databaseMessenger
             .checkLoginSessionValid(loginSession)
             .logDatabaseMetrics(endpointName, DatabaseOperation.checkLoginSessionValid)
+
+    override suspend fun createLoginSession(request: PulpFictionProtos.CreateLoginSessionRequest): PulpFictionProtos.CreateLoginSessionResponse {
+        val endpointName = EndpointName.login
+        return effect<PulpFictionRequestError, PulpFictionProtos.CreateLoginSessionResponse> {
+            val user = databaseMessenger
+                .checkPasswordValidAndGetUser(request)
+                .logDatabaseMetrics(endpointName, DatabaseOperation.checkUserPasswordValid)
+                .bind()
+
+            val loginSession = databaseMessenger
+                .createLoginSession(user, request)
+                .logDatabaseMetrics(endpointName, DatabaseOperation.login)
+                .bind()
+
+            createLoginSessionResponse {
+                this.loginSession = loginSession
+            }
+        }
+            .logEndpointMetrics(endpointName)
+            .getResultAndThrowException()
+    }
 
     override suspend fun createPost(request: PulpFictionProtos.CreatePostRequest): PulpFictionProtos.CreatePostResponse {
         val endpointName = EndpointName.createPost
@@ -77,38 +95,24 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             .getResultAndThrowException()
     }
 
-    override suspend fun updateUser(request: PulpFictionProtos.UpdateUserRequest): PulpFictionProtos.UpdateUserResponse {
-        val endpointName = EndpointName.updateUser
-        return effect<PulpFictionRequestError, UpdateUserResponse> {
-            checkLoginSessionValid(request.loginSession, endpointName).bind()
-            databaseMessenger
-                .updateUser(request)
-                .logDatabaseMetrics(endpointName, DatabaseOperation.updateUser)
-                .bind()
-        }
-            .logEndpointMetrics(endpointName)
-            .getResultAndThrowException()
-    }
+    override fun getFeed(requests: Flow<PulpFictionProtos.GetFeedRequest>): Flow<PulpFictionProtos.GetFeedResponse> {
+        val endpointName = EndpointName.getFeed
+        return flow {
+            requests.collectIndexed { idx, request ->
+                checkLoginSessionValid(request.loginSession, endpointName).getResultAndThrowException()
 
-    override suspend fun createLoginSession(request: CreateLoginSessionRequest): CreateLoginSessionResponse {
-        val endpointName = EndpointName.login
-        return effect<PulpFictionRequestError, CreateLoginSessionResponse> {
-            val user = databaseMessenger
-                .checkPasswordValidAndGetUser(request)
-                .logDatabaseMetrics(endpointName, DatabaseOperation.checkUserPasswordValid)
-                .bind()
-
-            val loginSession = databaseMessenger
-                .createLoginSession(user, request)
-                .logDatabaseMetrics(endpointName, DatabaseOperation.login)
-                .bind()
-
-            createLoginSessionResponse {
-                this.loginSession = loginSession
+                val postsFeed = databaseMessenger
+                    .getFeed(request, idx)
+                    .logDatabaseMetrics(endpointName, DatabaseOperation.getFeed)
+                    .getResultAndThrowException()
+                emit(
+                    getFeedResponse {
+                        this.posts += postsFeed
+                    }
+                )
             }
         }
             .logEndpointMetrics(endpointName)
-            .getResultAndThrowException()
     }
 
     override suspend fun getPost(request: PulpFictionProtos.GetPostRequest): PulpFictionProtos.GetPostResponse {
@@ -146,23 +150,16 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
             .getResultAndThrowException()
     }
 
-    override fun getFeed(requests: Flow<PulpFictionProtos.GetFeedRequest>): Flow<PulpFictionProtos.GetFeedResponse> {
-        val endpointName = EndpointName.getFeed
-        return flow {
-            requests.collectIndexed { idx, request ->
-                checkLoginSessionValid(request.loginSession, endpointName).getResultAndThrowException()
-
-                val postsFeed = databaseMessenger
-                    .getFeed(request, idx)
-                    .logDatabaseMetrics(endpointName, DatabaseOperation.getFeed)
-                    .getResultAndThrowException()
-                emit(
-                    getFeedResponse {
-                        this.posts += postsFeed
-                    }
-                )
-            }
+    override suspend fun updateUser(request: PulpFictionProtos.UpdateUserRequest): PulpFictionProtos.UpdateUserResponse {
+        val endpointName = EndpointName.updateUser
+        return effect<PulpFictionRequestError, PulpFictionProtos.UpdateUserResponse> {
+            checkLoginSessionValid(request.loginSession, endpointName).bind()
+            databaseMessenger
+                .updateUser(request)
+                .logDatabaseMetrics(endpointName, DatabaseOperation.updateUser)
+                .bind()
         }
             .logEndpointMetrics(endpointName)
+            .getResultAndThrowException()
     }
 }
