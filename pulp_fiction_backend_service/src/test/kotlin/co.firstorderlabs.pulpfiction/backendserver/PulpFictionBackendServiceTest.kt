@@ -9,9 +9,11 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
+import co.firstorderlabs.protos.pulpfiction.UpdateLoginSessionRequestKt.logout
 import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.getPostRequest
 import co.firstorderlabs.protos.pulpfiction.getUserRequest
+import co.firstorderlabs.protos.pulpfiction.updateLoginSessionRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.buildGetPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomCreatePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomGetCommentFeedRequest
@@ -52,6 +54,7 @@ import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
+import co.firstorderlabs.pulpfiction.backendserver.utils.toInstant
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import io.grpc.Status
 import io.grpc.StatusException
@@ -381,6 +384,18 @@ internal class PulpFictionBackendServiceTest {
             }
         }
     }
+
+    @Test
+    fun testLogout(): Unit =
+        runBlocking {
+            val (loginSession, _) = createUserAndLogin()
+            val updateLoginSessionRequest = updateLoginSessionRequest {
+                this.loginSession = loginSession
+                this.logout = logout {}
+            }
+            val updateLoginSessionResponse = pulpFictionBackendService.updateLoginSession(updateLoginSessionRequest)
+            updateLoginSessionResponse.logout.loggedOutAt.assertTrue { it.toInstant().isWithinLast(100) }
+        }
 
     @Test
     fun testCreateImagePost(): Unit = runBlocking {

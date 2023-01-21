@@ -235,11 +235,12 @@ message CreateLoginSessionRequest {
 
 message CreateLoginSessionResponse {
   message LoginSession {
-    string session_token = 1;
-    string user_id = 2;
-    google.protobuf.Timestamp created_at = 3;
-    string device_id = 4;
-    User.UserMetadata userMetadata = 5;
+    int64 session_id = 1;
+    string session_token = 2;
+    string user_id = 3;
+    google.protobuf.Timestamp created_at = 4;
+    string device_id = 5;
+    User.UserMetadata userMetadata = 6;
   }
 
   message InvalidEmail {}
@@ -263,7 +264,15 @@ message UpdateLoginSessionRequest {
   }
 }
 
-message UpdateLoginSessionResponse {}
+message UpdateLoginSessionResponse {
+  message Logout {
+    google.protobuf.Timestamp logged_out_at = 1;
+  }
+
+  oneof update_login_session_response {
+    Logout logout = 1;
+  }
+}
 
 message UpdatePostRequest {
   message UpdatePostLikeStatus {

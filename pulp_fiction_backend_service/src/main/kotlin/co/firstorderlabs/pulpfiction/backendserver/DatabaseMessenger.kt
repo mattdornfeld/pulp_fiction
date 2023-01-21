@@ -117,6 +117,7 @@ import org.ktorm.entity.find
 import org.ktorm.entity.firstOrNull
 import org.ktorm.entity.removeIf
 import org.ktorm.entity.sortedBy
+import org.ktorm.entity.update
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import org.ktorm.support.postgresql.insertOrUpdate
 import software.amazon.awssdk.services.s3.S3Client
@@ -246,7 +247,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val loginSession = loginSessionProto.toDatabaseModel().bind()
             val loggedOutAt = Instant.now()
             loginSession.loggedOutAt = loggedOutAt
-            loginSession.flushChanges()
+            database.loginSessions.update(loginSession)
 
             updateLoginSessionResponse {
                 this.logout = UpdateLoginSessionResponseKt.logout {

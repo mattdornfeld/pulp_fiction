@@ -151,7 +151,7 @@ data class PulpFictionBackendService(val database: Database, val s3Client: S3Cli
     }
 
     override suspend fun updateLoginSession(request: PulpFictionProtos.UpdateLoginSessionRequest): PulpFictionProtos.UpdateLoginSessionResponse =
-        effect {
+        effect<PulpFictionRequestError, PulpFictionProtos.UpdateLoginSessionResponse> {
             checkLoginSessionValid(request.loginSession, EndpointName.updateLoginSession).bind()
             databaseMessenger
                 .logout(request.loginSession)
