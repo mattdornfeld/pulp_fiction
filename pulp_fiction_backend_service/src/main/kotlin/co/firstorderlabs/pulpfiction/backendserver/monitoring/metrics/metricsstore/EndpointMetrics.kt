@@ -35,10 +35,11 @@ object EndpointMetrics {
     enum class EndpointName : LabelValue {
         createPost,
         createUser,
+        getFeed,
         getPost,
         getUser,
-        getFeed,
         login,
+        updateLoginSession,
         updateUser;
 
         override fun getValue(): String = name

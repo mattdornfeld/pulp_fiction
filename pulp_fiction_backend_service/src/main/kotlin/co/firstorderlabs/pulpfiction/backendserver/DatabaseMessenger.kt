@@ -17,13 +17,16 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest.UpdateUserFollowingStatus
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
+import co.firstorderlabs.protos.pulpfiction.UpdateLoginSessionResponseKt
 import co.firstorderlabs.protos.pulpfiction.UpdateUserResponseKt
 import co.firstorderlabs.protos.pulpfiction.UpdateUserResponseKt.updatePassword
 import co.firstorderlabs.protos.pulpfiction.post
+import co.firstorderlabs.protos.pulpfiction.updateLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.updateUserResponse
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
@@ -61,6 +64,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.phoneNumbers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postInteractionAggregates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.toDatabaseModel
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.userPostData
@@ -89,6 +93,7 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
 import co.firstorderlabs.pulpfiction.backendserver.utils.getOrThrow
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toLocalDate
+import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import com.password4j.Password
 import org.ktorm.database.Database
@@ -116,6 +121,7 @@ import org.ktorm.support.postgresql.PostgreSqlDialect
 import org.ktorm.support.postgresql.insertOrUpdate
 import software.amazon.awssdk.services.s3.S3Client
 import java.nio.file.Path
+import java.time.Instant
 import java.util.UUID
 
 class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
@@ -233,6 +239,20 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 getPublicUserMetadata(loginSession.userId.toString()).bind()
             }.bind()
             loginSession.toProto(userMetadata)
+        }
+
+    suspend fun logout(loginSessionProto: PulpFictionProtos.CreateLoginSessionResponse.LoginSession): Effect<PulpFictionRequestError, UpdateLoginSessionResponse> =
+        effect {
+            val loginSession = loginSessionProto.toDatabaseModel().bind()
+            val loggedOutAt = Instant.now()
+            loginSession.loggedOutAt = loggedOutAt
+            loginSession.flushChanges()
+
+            updateLoginSessionResponse {
+                this.logout = UpdateLoginSessionResponseKt.logout {
+                    this.loggedOutAt = loggedOutAt.toTimestamp()
+                }
+            }
         }
 
     private suspend fun createComment(
