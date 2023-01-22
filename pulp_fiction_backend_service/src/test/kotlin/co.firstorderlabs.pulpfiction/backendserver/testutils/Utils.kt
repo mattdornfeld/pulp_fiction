@@ -1,5 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver.testutils
 
+import arrow.core.Either
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import co.firstorderlabs.pulpfiction.backendserver.types.IOError
@@ -8,6 +9,8 @@ import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionStartupError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import com.google.common.io.Resources
+import io.grpc.Status
+import io.grpc.StatusException
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.StandardCopyOption
@@ -32,3 +35,12 @@ data class ResourceFile(val fileName: String) {
         tempFile
     }
 }
+
+fun assertThrowsExceptionWithStatus(status: Status, block: suspend () -> Unit) =
+    Either.catch {
+        runBlocking { block() }
+    }.assertTrue { it.isLeft() }
+        .mapLeft { error ->
+            error
+                .assertEquals(status.code) { (it as StatusException).status.code }
+        }

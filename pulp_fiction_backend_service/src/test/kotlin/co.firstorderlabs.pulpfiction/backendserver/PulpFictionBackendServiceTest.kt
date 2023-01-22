@@ -49,6 +49,7 @@ import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricssto
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.metricsstore.S3Metrics.s3RequestTotal
 import co.firstorderlabs.pulpfiction.backendserver.testutils.S3AndPostgresContainers
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
+import co.firstorderlabs.pulpfiction.backendserver.testutils.assertThrowsExceptionWithStatus
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
@@ -395,6 +396,11 @@ internal class PulpFictionBackendServiceTest {
             }
             val updateLoginSessionResponse = pulpFictionBackendService.updateLoginSession(updateLoginSessionRequest)
             updateLoginSessionResponse.logout.loggedOutAt.assertTrue { it.toInstant().isWithinLast(100) }
+
+            // Try to update LoginSession one more time to confirm logout was successful
+            assertThrowsExceptionWithStatus(Status.UNAUTHENTICATED) {
+                pulpFictionBackendService.updateLoginSession(updateLoginSessionRequest)
+            }
         }
 
     @Test

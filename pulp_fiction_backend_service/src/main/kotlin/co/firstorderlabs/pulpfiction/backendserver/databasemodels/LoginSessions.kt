@@ -7,6 +7,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
+import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
 import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toInstant
@@ -40,17 +41,18 @@ interface LoginSession : Entity<LoginSession> {
     var sessionToken: UUID
     var loggedOutAt: Instant?
 
-    fun toProto(userMetadata: UserMetadata): CreateLoginSessionResponse.LoginSession {
-        val loginSession = this
-        return loginSession {
-            this.sessionId = loginSession.id
-            this.userId = loginSession.userId.toString()
-            this.createdAt = loginSession.createdAt.toTimestamp()
-            this.deviceId = loginSession.deviceId
-            this.sessionToken = loginSession.sessionToken.toString()
+    fun toProto(userMetadata: UserMetadata): CreateLoginSessionResponse.LoginSession =
+        loginSession {
+            this.sessionId = this@LoginSession.id
+            this.userId = this@LoginSession.userId.toString()
+            this.createdAt = this@LoginSession.createdAt.toTimestamp()
+            this.deviceId = this@LoginSession.deviceId
+            this.sessionToken = this@LoginSession.sessionToken.toString()
             this.userMetadata = userMetadata
         }
-    }
+
+    fun isExpired(): Boolean =
+        createdAt.isBefore(nowTruncated().minus(MAX_AGE_LOGIN_SESSION))
 
     companion object : Entity.Factory<LoginSession>() {
         fun fromRequest(user: User, request: CreateLoginSessionRequest): LoginSession =

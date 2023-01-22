@@ -29,7 +29,6 @@ import co.firstorderlabs.protos.pulpfiction.post
 import co.firstorderlabs.protos.pulpfiction.updateLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.updateUserResponse
 import co.firstorderlabs.pulpfiction.backendserver.configs.DatabaseConfigs
-import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_AGE_LOGIN_SESSION
 import co.firstorderlabs.pulpfiction.backendserver.configs.ServiceConfigs.MAX_PAGE_SIZE
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.CommentDatum
@@ -91,7 +90,6 @@ import co.firstorderlabs.pulpfiction.backendserver.types.UserNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
 import co.firstorderlabs.pulpfiction.backendserver.utils.getOrThrow
-import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toLocalDate
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
@@ -102,7 +100,6 @@ import org.ktorm.dsl.and
 import org.ktorm.dsl.desc
 import org.ktorm.dsl.eq
 import org.ktorm.dsl.from
-import org.ktorm.dsl.greater
 import org.ktorm.dsl.joinReferencesAndSelect
 import org.ktorm.dsl.limit
 import org.ktorm.dsl.map
@@ -207,25 +204,21 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             val loginSessionMaybe = database.transactionToEffectCatchErrors {
                 database
                     .from(LoginSessions)
-                    .select(LoginSessions.sessionToken, LoginSessions.createdAt)
-                    .where(
-                        (LoginSessions.userId eq userId) and
-                            (LoginSessions.deviceId eq loginSessionProto.deviceId) and
-                            (
-                                LoginSessions.createdAt greater (
-                                    nowTruncated()
-                                        .minus(MAX_AGE_LOGIN_SESSION)
-                                    )
-                                )
-                    )
-                    .orderBy(LoginSessions.createdAt.desc())
+                    .select()
+                    .where(LoginSessions.id eq loginSessionProto.sessionId)
                     .limit(1)
                     .map { LoginSessions.createEntity(it) }
                     .firstOrOption()
             }.bind()
 
             loginSessionMaybe
-                .map { it.sessionToken == sessionToken }
+                .filter {
+                    it.sessionToken == sessionToken &&
+                        it.userId == userId &&
+                        it.deviceId == loginSessionProto.deviceId &&
+                        it.loggedOutAt.toOption().isEmpty() &&
+                        !it.isExpired()
+                }
                 .getOrElse { shift(LoginSessionInvalidError()) }
         }
 
