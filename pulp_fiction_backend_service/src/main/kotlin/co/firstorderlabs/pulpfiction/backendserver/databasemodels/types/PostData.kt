@@ -3,6 +3,7 @@ package co.firstorderlabs.pulpfiction.backendserver.databasemodels.types
 import arrow.core.Either
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import org.ktorm.entity.Entity
@@ -25,9 +26,17 @@ abstract class PostData<A>(tableName: String) : Table<A>(tableName) where A : Po
 interface PostDatum {
     var post: Post
     var updatedAt: Instant
+    var postInteractionAggregate: PostInteractionAggregate
 
     fun getPostUpdateIdentifier(): PulpFictionProtos.Post.PostUpdateIdentifier =
         PostUpdate.getPostUpdateIdentifier(post.postId, updatedAt)
+
+    fun getPostUpdate(): PostUpdate =
+        PostUpdate {
+            this.post = this@PostDatum.post
+            this.updatedAt = this@PostDatum.updatedAt
+            this.postState = PulpFictionProtos.Post.PostState.CREATED
+        }
 }
 
 /**
