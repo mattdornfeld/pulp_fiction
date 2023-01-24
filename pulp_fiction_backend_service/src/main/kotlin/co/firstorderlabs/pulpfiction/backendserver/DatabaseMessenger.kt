@@ -110,6 +110,7 @@ import org.ktorm.entity.add
 import org.ktorm.entity.filter
 import org.ktorm.entity.find
 import org.ktorm.entity.firstOrNull
+import org.ktorm.entity.removeIf
 import org.ktorm.entity.sortedBy
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import org.ktorm.support.postgresql.insertOrUpdate
