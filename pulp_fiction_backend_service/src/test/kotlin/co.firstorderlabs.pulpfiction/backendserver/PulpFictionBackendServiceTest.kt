@@ -681,7 +681,7 @@ internal class PulpFictionBackendServiceTest {
             EndpointName.updateUser,
             DatabaseMetrics.DatabaseOperation.updateUser
         )
-            .assertDatabaseMetricsCorrect(1.0)
+            .assertDatabaseMetricsCorrect(2.0)
     }
 
     private suspend fun setupTestFeed(numUsers: Int): Tuple2<PulpFictionProtos.CreateLoginSessionResponse.LoginSession,
