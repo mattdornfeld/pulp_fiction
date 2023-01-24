@@ -18,6 +18,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest.UpdateUserFollowingStatus
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.User.UserMetadata
 import co.firstorderlabs.protos.pulpfiction.UpdateUserResponseKt
@@ -33,6 +34,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.DatesOfBirth
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.DisplayNames
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Email
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Emails
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Follower
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.ImagePostDatum
@@ -52,6 +54,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.phoneNumbers
@@ -107,6 +110,7 @@ import org.ktorm.entity.add
 import org.ktorm.entity.filter
 import org.ktorm.entity.find
 import org.ktorm.entity.firstOrNull
+import org.ktorm.entity.removeIf
 import org.ktorm.entity.sortedBy
 import org.ktorm.support.postgresql.PostgreSqlDialect
 import org.ktorm.support.postgresql.insertOrUpdate
@@ -580,6 +584,37 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             }
         }
 
+    private suspend fun updateFollowingStatus(
+        userId: UUID,
+        updateUserFollowingStatus: UpdateUserFollowingStatus
+    ):
+        Effect<PulpFictionRequestError, UpdateUserResponse> =
+            effect {
+                val targetUserId = updateUserFollowingStatus.targetUserId.toUUID().bind()
+                when (updateUserFollowingStatus.userFollowingStatus) {
+                    UpdateUserFollowingStatus.UserFollowingStatus.NOT_FOLLOWING -> {
+                        val follower = Follower {
+                            this.userId = userId
+                            this.followerId = targetUserId
+                            this.createdAt = nowTruncated()
+                        }
+                        database.followers.add(follower)
+                    }
+                    UpdateUserFollowingStatus.UserFollowingStatus.FOLLOWING -> {
+                        database.followers
+                            .removeIf { (it.userId eq userId) and (it.followerId eq targetUserId) }
+                    }
+                    else -> {
+                        shift(
+                            UnrecognizedEnumValue(
+                                updateUserFollowingStatus.userFollowingStatus
+                            )
+                        )
+                    }
+                }
+                updateUserResponse { }
+            }
+
     suspend fun updateUser(request: UpdateUserRequest): Effect<PulpFictionRequestError, UpdateUserResponse> =
         effect {
             val userId = request.loginSession.userId
@@ -605,11 +640,12 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                         this.updatePassword = updatePassword {}
                     }
                 }
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_FOLLOWING_STATUS -> {
+                    updateFollowingStatus(user.userId, request.updateUserFollowingStatus).bind()
+                }
                 UpdateUserRequest.UpdateUserRequestCase.RESET_PASSWORD -> {
                     shift(FunctionalityNotImplementedError())
                 }
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_FOLLOWING_STATUS ->
-                    shift(FunctionalityNotImplementedError())
                 else -> {
                     shift(UnrecognizedEnumValue(request.updateUserRequestCase))
                 }
