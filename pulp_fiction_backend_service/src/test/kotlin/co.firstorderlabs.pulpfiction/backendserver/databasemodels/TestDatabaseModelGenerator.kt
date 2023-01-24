@@ -46,33 +46,46 @@ object TestDatabaseModelGenerator {
     fun User.Companion.generateRandom(userId: UUID): User = User {
         this.userId = userId
         this.createdAt = nowTruncated()
-        this.currentDisplayName = faker.funnyName.name()
-        this.email = faker.internet.email()
-        this.phoneNumber = faker.phoneNumber.phoneNumber()
-        this.dateOfBirth = faker.person.birthDate(30)
         this.hashedPassword = faker.unique.toString()
+        this.phoneNumber = PhoneNumber {
+            this.userId = userId
+            this.phoneNumber = faker.phoneNumber.phoneNumber()
+        }
+        this.email = Email {
+            this.userId = userId
+            this.email = faker.internet.email()
+        }
+        this.displayName = DisplayName {
+            this.userId = userId
+            this.currentDisplayName = faker.funnyName.name()
+        }
+        this.dateOfBirth = DateOfBirth {
+            this.userId = userId
+            this.dateOfBirth = faker.person.birthDate(30)
+        }
     }
 
-    fun CommentDatum.Companion.generateRandom(postId: UUID, parentPostId: UUID): CommentDatum = CommentDatum {
-        this.postId = postId
+    fun CommentDatum.Companion.generateRandom(post: Post, parentPostId: UUID): CommentDatum = CommentDatum {
+        this.post = post
         this.updatedAt = Instant.EPOCH
         this.body = faker.worldOfWarcraft.quotes()
         this.parentPostId = parentPostId
     }
 
-    fun ImagePostDatum.Companion.generateRandom(postId: UUID): ImagePostDatum = ImagePostDatum {
-        this.postId = postId
+    fun ImagePostDatum.Companion.generateRandom(post: Post): ImagePostDatum = ImagePostDatum {
+        this.post = post
         this.updatedAt = Instant.EPOCH
         this.imageS3Key = faker.internet.domain()
         this.caption = faker.worldOfWarcraft.quotes()
     }
 
-    fun UserPostDatum.Companion.generateRandom(postId: UUID, userId: UUID): UserPostDatum = UserPostDatum {
-        this.postId = postId
+    fun UserPostDatum.Companion.generateRandom(post: Post): UserPostDatum = UserPostDatum {
+        this.post = post
         this.updatedAt = Instant.EPOCH
-        this.userId = userId
+        this.userId = post.postCreatorId
         this.displayName = displayName
         this.avatarImageS3Key = faker.internet.domain()
+        this.bio = faker.lordOfTheRings.quotes()
     }
 
     fun LoginSession.Companion.generateRandom(userId: UUID): LoginSession = LoginSession {
