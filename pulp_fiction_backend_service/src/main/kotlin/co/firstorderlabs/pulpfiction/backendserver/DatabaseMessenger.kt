@@ -107,7 +107,6 @@ import org.ktorm.dsl.select
 import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
 import org.ktorm.entity.add
-import org.ktorm.entity.clear
 import org.ktorm.entity.filter
 import org.ktorm.entity.find
 import org.ktorm.entity.firstOrNull
@@ -606,11 +605,9 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                         database.transactionToEffect {
                             effectWithDatabaseError {
                                 database.followers
-                                    .filter { it.userId eq userId }
-                                    .filter { it.followerId eq targetUserId }
-                                    .clear()
-                            }
-                        }
+                                    .removeIf { (it.userId eq userId) and (it.followerId eq targetUserId) }
+                            }.bind()
+                        }.bind()
                     }
                     else -> {
                         shift(

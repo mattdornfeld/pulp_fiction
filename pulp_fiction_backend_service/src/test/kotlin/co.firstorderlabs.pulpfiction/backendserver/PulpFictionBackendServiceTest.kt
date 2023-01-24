@@ -1,6 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.Either
+import arrow.core.getOrElse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
@@ -28,6 +29,7 @@ import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.gener
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserFollowingStatusRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionMetric
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionSummary
@@ -48,6 +50,7 @@ import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
+import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import io.grpc.Status
@@ -60,8 +63,10 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.ktorm.dsl.deleteAll
+import org.ktorm.dsl.eq
 import org.ktorm.entity.Tuple2
 import org.ktorm.entity.Tuple3
+import org.ktorm.entity.filter
 import org.ktorm.entity.tupleOf
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.localstack.LocalStackContainer
@@ -243,9 +248,9 @@ internal class PulpFictionBackendServiceTest {
     @Test
     fun testGetUser() {
         runBlocking {
-            val (loginSession, createUserRequest) = createUserAndLogin()
+            val (loginSession, _) = createUserAndLogin()
 
-            val updateDisplayNameRequest = TestProtoModelGenerator.generateRandomUpdateDisplayNameRequest(loginSession)
+            val updateDisplayNameRequest = generateRandomUpdateDisplayNameRequest(loginSession)
 
             val lastUpdateUserResponse = listOf(
                 updateDisplayNameRequest,
@@ -647,17 +652,29 @@ internal class PulpFictionBackendServiceTest {
             user2.first.userId,
             false
         )
+
+        val userId = loginSession.userId.toUUID().getOrElse { throw RequestParsingError() }
+        val followingId = user2.first.userId.toUUID().getOrElse { throw RequestParsingError() }
+
         pulpFictionBackendService.updateUser(followProto)
+        database.followers
+            .filter { it.userId eq userId }
+            .filter { it.followerId eq followingId }
+            .totalRecords
+            .assertEquals(1)
 
-        /* assert results */
-
+        /* unfollow and check again */
         val unfollowProto = generateRandomUpdateUserFollowingStatusRequest(
             loginSession,
             user2.first.userId,
             true
         )
         pulpFictionBackendService.updateUser(unfollowProto)
-        /* assert results */
+        database.followers
+            .filter { it.userId eq userId }
+            .filter { it.followerId eq followingId }
+            .totalRecords
+            .assertEquals(0)
 
         EndpointName.updateUser.assertEndpointMetricsCorrect(2.0)
         Tuple2(
