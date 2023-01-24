@@ -598,17 +598,11 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                             this.followerId = targetUserId
                             this.createdAt = nowTruncated()
                         }
-                        database.transactionToEffect {
-                            effectWithDatabaseError { database.followers.add(follower) }.bind()
-                        }.bind()
+                        database.followers.add(follower)
                     }
                     UpdateUserFollowingStatus.UserFollowingStatus.FOLLOWING -> {
-                        database.transactionToEffect {
-                            effectWithDatabaseError {
-                                database.followers
-                                    .removeIf { (it.userId eq userId) and (it.followerId eq targetUserId) }
-                            }.bind()
-                        }.bind()
+                        database.followers
+                            .removeIf { (it.userId eq userId) and (it.followerId eq targetUserId) }
                     }
                     else -> {
                         shift(
