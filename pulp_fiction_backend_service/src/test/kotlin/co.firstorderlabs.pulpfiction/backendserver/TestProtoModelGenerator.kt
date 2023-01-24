@@ -19,7 +19,9 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
+import co.firstorderlabs.protos.pulpfiction.UpdatePostRequestKt.updateComment
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updateDateOfBirth
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updateEmail
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updatePhoneNumber
@@ -35,6 +37,7 @@ import co.firstorderlabs.protos.pulpfiction.createPostRequest
 import co.firstorderlabs.protos.pulpfiction.createUserRequest
 import co.firstorderlabs.protos.pulpfiction.getFeedRequest
 import co.firstorderlabs.protos.pulpfiction.getPostRequest
+import co.firstorderlabs.protos.pulpfiction.updatePostRequest
 import co.firstorderlabs.protos.pulpfiction.updateUserRequest
 import co.firstorderlabs.pulpfiction.backendserver.testutils.nextByteString
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
@@ -229,4 +232,18 @@ object TestProtoModelGenerator {
 
     fun LoginSession.generateRandomGetPostRequest(): PulpFictionProtos.GetPostRequest =
         buildGetPostRequest(UUID.randomUUID().toString())
+
+    fun LoginSession.generateUpdatePostRequest(postId: String): UpdatePostRequest =
+        updatePostRequest {
+            this.postId = postId
+            this.loginSession = this@generateUpdatePostRequest
+        }
+
+    fun UpdatePostRequest.withRandomUpdateCommentRequest(): UpdatePostRequest {
+        val builder = this.toBuilder()
+        builder.updateComment = updateComment {
+            this.newBody = faker.lovecraft.unique.toString()
+        }
+        return builder.build()
+    }
 }

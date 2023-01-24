@@ -42,7 +42,8 @@ CREATE TABLE login_sessions
     user_id       UUID      NOT NULL REFERENCES users (user_id),
     created_at    TIMESTAMP NOT NULL,
     device_id     VARCHAR   NOT NULL,
-    session_token UUID      NOT NULL
+    session_token UUID      NOT NULL,
+    logged_out_at TIMESTAMP
 );
 
 CREATE INDEX CONCURRENTLY login_sessions_user_id ON login_sessions (user_id);

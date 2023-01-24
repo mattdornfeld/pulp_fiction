@@ -38,7 +38,8 @@ class DatabaseError(cause: Throwable) : PulpFictionRequestError(cause) {
         StatusException(Status.INTERNAL.withCause(this))
 }
 
-open class RequestParsingError(msgMaybe: String?, causeMaybe: Throwable?) : PulpFictionRequestError(msgMaybe, causeMaybe) {
+open class RequestParsingError(msgMaybe: String?, causeMaybe: Throwable?) :
+    PulpFictionRequestError(msgMaybe, causeMaybe) {
     constructor(msg: String) : this(msg, null)
     constructor(cause: Throwable) : this(null, cause)
     constructor() : this(null, null)
@@ -86,7 +87,12 @@ class InvalidUserPasswordError() : PulpFictionRequestError() {
         StatusException(Status.UNAUTHENTICATED.withCause(this))
 }
 
-class PostNotFoundError() : PulpFictionRequestError() {
+class PostNotFoundError(postId: UUID) : PulpFictionRequestError("Post $postId not found") {
+    override fun toStatusException(): StatusException =
+        StatusException(Status.NOT_FOUND.withCause(this))
+}
+
+class UserPostNotFoundError(userId: UUID) : PulpFictionRequestError("Post for user $userId not found") {
     override fun toStatusException(): StatusException =
         StatusException(Status.NOT_FOUND.withCause(this))
 }
@@ -96,9 +102,15 @@ class FunctionalityNotImplementedError() : PulpFictionRequestError() {
         StatusException(Status.UNIMPLEMENTED.withCause(this))
 }
 
-class FeedNotImplementedError(postType: String) : PulpFictionRequestError("Feed for post type: $postType not implemented.") {
+class FeedNotImplementedError(postType: String) :
+    PulpFictionRequestError("Feed for post type: $postType not implemented.") {
     override fun toStatusException(): StatusException =
         StatusException(Status.UNIMPLEMENTED.withCause(this))
+}
+
+class InvalidDataModelError() : PulpFictionRequestError() {
+    override fun toStatusException(): StatusException =
+        StatusException(Status.INVALID_ARGUMENT.withCause(this))
 }
 
 class ServiceStartupError(cause: Throwable) : PulpFictionStartupError(cause)

@@ -24,6 +24,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.phoneNumbers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postInteractionAggregates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
@@ -107,7 +108,7 @@ internal class MigrateDatabaseTest {
         val parentPostUser = User.generateRandom(parentPostUpdate.post.postCreatorId)
         val commentPostUpdate = PostUpdate.generateRandom()
         val commentPostUser = User.generateRandom(commentPostUpdate.post.postCreatorId)
-        val commmentDatum = CommentDatum.generateRandom(commentPostUpdate.post, parentPostUpdate.post.postId)
+        val commentDatum = CommentDatum.generateRandom(commentPostUpdate.post, parentPostUpdate.post.postId)
         database.useTransaction {
             parentPostUser.addToDatabase()
             commentPostUser.addToDatabase()
@@ -115,12 +116,13 @@ internal class MigrateDatabaseTest {
             database.posts.add(commentPostUpdate.post)
             database.postUpdates.add(parentPostUpdate)
             database.postUpdates.add(commentPostUpdate)
-            database.commentData.add(commmentDatum)
+            database.commentData.add(commentDatum)
+            database.postInteractionAggregates.add(commentDatum.postInteractionAggregate)
         }
 
         val commentData = database.from(CommentData).joinReferencesAndSelect().map { CommentData.createEntity(it) }
         Assertions.assertEquals(1, commentData.size)
-        Assertions.assertEquals(commmentDatum, commentData[0])
+        Assertions.assertEquals(commentDatum, commentData[0])
     }
 
     @Test
@@ -133,9 +135,11 @@ internal class MigrateDatabaseTest {
             database.posts.add(postUpdate.post)
             database.postUpdates.add(postUpdate)
             database.imagePostData.add(imagePostDatum)
+            database.postInteractionAggregates.add(imagePostDatum.postInteractionAggregate)
         }
 
-        val imagePostData = database.from(ImagePostData).joinReferencesAndSelect().map { ImagePostData.createEntity(it) }
+        val imagePostData =
+            database.from(ImagePostData).joinReferencesAndSelect().map { ImagePostData.createEntity(it) }
         Assertions.assertEquals(1, imagePostData.size)
         Assertions.assertEquals(imagePostDatum, imagePostData[0])
     }
@@ -183,6 +187,7 @@ internal class MigrateDatabaseTest {
             database.posts.add(postUpdate.post)
             database.postUpdates.add(postUpdate)
             database.userPostData.add(userPostDatum)
+            database.postInteractionAggregates.add(userPostDatum.postInteractionAggregate)
         }
         val userPostData = database.from(UserPostData).joinReferencesAndSelect().map { UserPostData.createEntity(it) }
 

@@ -16,11 +16,13 @@ import org.ktorm.schema.timestamp
 import org.ktorm.schema.uuid
 import org.ktorm.schema.varchar
 import software.amazon.awssdk.services.s3.model.Tagging
-import java.time.Instant
 import java.util.UUID
 
 object UserPostData : PostData<UserPostDatum>("user_post_data") {
-    override val postId = uuid("post_id").primaryKey().references(Posts) { it.post }
+    override val postId = uuid("post_id")
+        .primaryKey()
+        .references(Posts) { it.post }
+        .references(PostInteractionAggregates) { it.postInteractionAggregate }
     override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val userId = uuid("user_id").bindTo { it.userId }
     val displayName = varchar("display_name").bindTo { it.displayName }
@@ -50,8 +52,6 @@ interface UserPostDatum : Entity<UserPostDatum>, PostDatum, ReferencesS3Key {
         }
     }
 
-    override var post: Post
-    override var updatedAt: Instant
     var userId: UUID
     var displayName: String
     var avatarImageS3Key: String?

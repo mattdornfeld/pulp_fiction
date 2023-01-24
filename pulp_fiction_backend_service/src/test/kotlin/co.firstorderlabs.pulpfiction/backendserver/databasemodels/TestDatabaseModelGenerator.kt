@@ -9,6 +9,7 @@ import kotlin.random.Random
 
 object TestDatabaseModelGenerator {
     private val faker = Faker()
+    private val random = ThreadLocalRandom.current()
 
     private inline fun <reified T : Enum<T>> generateRandomEnumValue(): T {
         val unrecognizedName = "UNRECOGNIZED"
@@ -70,6 +71,7 @@ object TestDatabaseModelGenerator {
         this.updatedAt = Instant.EPOCH
         this.body = faker.worldOfWarcraft.quotes()
         this.parentPostId = parentPostId
+        this.postInteractionAggregate = PostInteractionAggregate.generateRandom(post.postId)
     }
 
     fun ImagePostDatum.Companion.generateRandom(post: Post): ImagePostDatum = ImagePostDatum {
@@ -77,6 +79,7 @@ object TestDatabaseModelGenerator {
         this.updatedAt = Instant.EPOCH
         this.imageS3Key = faker.internet.domain()
         this.caption = faker.worldOfWarcraft.quotes()
+        this.postInteractionAggregate = PostInteractionAggregate.generateRandom(post.postId)
     }
 
     fun UserPostDatum.Companion.generateRandom(post: Post): UserPostDatum = UserPostDatum {
@@ -86,6 +89,12 @@ object TestDatabaseModelGenerator {
         this.displayName = displayName
         this.avatarImageS3Key = faker.internet.domain()
         this.bio = faker.lordOfTheRings.quotes()
+        this.postInteractionAggregate = PostInteractionAggregate {
+            this.postId = post.postId
+            this.numLikes = 0
+            this.numDislikes = 0
+            this.numChildComments = 0
+        }
     }
 
     fun LoginSession.Companion.generateRandom(userId: UUID): LoginSession = LoginSession {
@@ -106,5 +115,12 @@ object TestDatabaseModelGenerator {
         this.postLikerUserId = userId
         this.postLikeType = generateRandomEnumValue()
         this.likedAt = generateRandomInstant()
+    }
+
+    fun PostInteractionAggregate.Companion.generateRandom(postId: UUID): PostInteractionAggregate = PostInteractionAggregate {
+        this.postId = postId
+        this.numLikes = random.nextLong()
+        this.numDislikes = random.nextLong()
+        this.numChildComments = random.nextLong()
     }
 }

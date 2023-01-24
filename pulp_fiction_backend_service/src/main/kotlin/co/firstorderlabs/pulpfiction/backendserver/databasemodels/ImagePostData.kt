@@ -1,6 +1,7 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import co.firstorderlabs.protos.pulpfiction.PostKt.imagePost
+import co.firstorderlabs.protos.pulpfiction.PostKt.loggedInUserPostInteractions
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.CreateImagePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
@@ -15,10 +16,12 @@ import org.ktorm.schema.timestamp
 import org.ktorm.schema.uuid
 import org.ktorm.schema.varchar
 import software.amazon.awssdk.services.s3.model.Tagging
-import java.time.Instant
 
 object ImagePostData : PostData<ImagePostDatum>("image_post_data") {
-    override val postId = uuid("post_id").primaryKey().references(Posts) { it.post }
+    override val postId = uuid("post_id")
+        .primaryKey()
+        .references(Posts) { it.post }
+        .references(PostInteractionAggregates) { it.postInteractionAggregate }
     override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val imageS3Key = varchar("image_s3_key").bindTo { it.imageS3Key }
     val caption = varchar("caption").bindTo { it.caption }
@@ -43,8 +46,6 @@ interface ImagePostDatum : Entity<ImagePostDatum>, ReferencesS3Key, PostDatum {
         }
     }
 
-    override var post: Post
-    override var updatedAt: Instant
     var imageS3Key: String
     var caption: String
 
@@ -58,14 +59,15 @@ interface ImagePostDatum : Entity<ImagePostDatum>, ReferencesS3Key, PostDatum {
     ).toTagging()
 
     fun toProto(
-        loggedInUserPostInteractions: PulpFictionProtos.Post.LoggedInUserPostInteractions,
-        postInteractionAggregates: PulpFictionProtos.Post.InteractionAggregates
+        loggedInUserPostInteractions: PulpFictionProtos.Post.LoggedInUserPostInteractions
     ): PulpFictionProtos.Post.ImagePost = imagePost {
         this.imageUrl = this@ImagePostDatum.imageS3Key // TODO (matt): Replace with url
         this.caption = this@ImagePostDatum.caption
-        this.interactionAggregates = postInteractionAggregates
+        this.interactionAggregates = this@ImagePostDatum.postInteractionAggregate.toProto()
         this.loggedInUserPostInteractions = loggedInUserPostInteractions
     }
+
+    fun toProto(): PulpFictionProtos.Post.ImagePost = toProto(loggedInUserPostInteractions {})
 }
 
 val Database.imagePostData get() = this.sequenceOf(ImagePostData)
