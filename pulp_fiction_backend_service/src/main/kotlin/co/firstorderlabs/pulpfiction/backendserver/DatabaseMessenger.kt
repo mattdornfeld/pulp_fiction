@@ -96,6 +96,7 @@ import co.firstorderlabs.pulpfiction.backendserver.types.UserPostNotFoundError
 import co.firstorderlabs.pulpfiction.backendserver.utils.effectWithError
 import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
 import co.firstorderlabs.pulpfiction.backendserver.utils.getOrThrow
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toLocalDate
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
