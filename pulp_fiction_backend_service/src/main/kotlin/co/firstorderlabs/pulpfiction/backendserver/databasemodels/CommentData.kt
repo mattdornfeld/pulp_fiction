@@ -9,6 +9,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.LoggedInUserP
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostDatum
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
@@ -17,7 +18,6 @@ import org.ktorm.entity.sequenceOf
 import org.ktorm.schema.timestamp
 import org.ktorm.schema.uuid
 import org.ktorm.schema.varchar
-import java.time.Instant
 import java.util.UUID
 
 object CommentData : PostData<CommentDatum>("comment_data") {
@@ -67,7 +67,7 @@ interface CommentDatum : Entity<CommentDatum>, PostDatum {
     fun withBody(newBody: String): CommentDatum =
         CommentDatum {
             this.post = this@CommentDatum.post
-            this.updatedAt = Instant.now()
+            this.updatedAt = nowTruncated()
             this.body = newBody
             this.parentPostId = this@CommentDatum.parentPostId
         }

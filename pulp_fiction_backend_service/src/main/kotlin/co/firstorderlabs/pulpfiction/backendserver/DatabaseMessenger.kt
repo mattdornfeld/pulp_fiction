@@ -126,7 +126,6 @@ import org.ktorm.support.postgresql.PostgreSqlDialect
 import org.ktorm.support.postgresql.insertOrUpdate
 import software.amazon.awssdk.services.s3.S3Client
 import java.nio.file.Path
-import java.time.Instant
 import java.util.UUID
 
 class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
@@ -245,7 +244,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     suspend fun logout(loginSessionProto: PulpFictionProtos.CreateLoginSessionResponse.LoginSession): Effect<PulpFictionRequestError, UpdateLoginSessionResponse> =
         effect {
             val loginSession = loginSessionProto.toDatabaseModel().bind()
-            val loggedOutAt = Instant.now()
+            val loggedOutAt = nowTruncated()
             loginSession.loggedOutAt = loggedOutAt
             database.loginSessions.update(loginSession)
 
