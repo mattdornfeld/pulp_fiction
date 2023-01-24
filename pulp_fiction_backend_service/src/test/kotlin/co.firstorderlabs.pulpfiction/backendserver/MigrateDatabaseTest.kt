@@ -17,6 +17,8 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.datesOfBirth
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.displayNames
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
@@ -67,19 +69,25 @@ internal class MigrateDatabaseTest {
         tables.forEach { database.deleteAll(it) }
     }
 
+    private fun User.addToDatabase() {
+        database.users.add(this)
+        database.emails.add(this.email)
+        database.phoneNumbers.add(this.phoneNumber)
+        database.displayNames.add(this.displayName)
+        database.datesOfBirth.add(this.dateOfBirth)
+    }
+
     @Test
     fun testWriteToPostsTable() {
         val expectedPostUpdate = PostUpdate.generateRandom()
         val user = User.generateRandom(expectedPostUpdate.post.postCreatorId)
         database.useTransaction {
-            database.users.add(user)
+            user.addToDatabase()
             database.posts.add(expectedPostUpdate.post)
             database.postUpdates.add(expectedPostUpdate)
         }
 
         val postUpdates = database.from(PostUpdates).joinReferencesAndSelect().map { PostUpdates.createEntity(it) }
-        println(expectedPostUpdate)
-        println(postUpdates[0])
         Assertions.assertEquals(1, postUpdates.size)
         Assertions.assertEquals(expectedPostUpdate, postUpdates[0])
     }
@@ -87,9 +95,7 @@ internal class MigrateDatabaseTest {
     @Test
     fun testWriteToUsersTable() {
         val expectedUser = User.generateRandom()
-        database.users.add(expectedUser)
-        database.emails.add(expectedUser.email)
-        database.phoneNumbers.add(expectedUser.phoneNumber)
+        expectedUser.addToDatabase()
 
         val user = database.users.find { it.userId eq expectedUser.userId }.getOrThrow()
         expectedUser.assertEquals(user)
@@ -101,10 +107,10 @@ internal class MigrateDatabaseTest {
         val parentPostUser = User.generateRandom(parentPostUpdate.post.postCreatorId)
         val commentPostUpdate = PostUpdate.generateRandom()
         val commentPostUser = User.generateRandom(commentPostUpdate.post.postCreatorId)
-        val commmentDatum = CommentDatum.generateRandom(commentPostUpdate.post.postId, parentPostUpdate.post.postId)
+        val commmentDatum = CommentDatum.generateRandom(commentPostUpdate.post, parentPostUpdate.post.postId)
         database.useTransaction {
-            database.users.add(parentPostUser)
-            database.users.add(commentPostUser)
+            parentPostUser.addToDatabase()
+            commentPostUser.addToDatabase()
             database.posts.add(parentPostUpdate.post)
             database.posts.add(commentPostUpdate.post)
             database.postUpdates.add(parentPostUpdate)
@@ -112,7 +118,7 @@ internal class MigrateDatabaseTest {
             database.commentData.add(commmentDatum)
         }
 
-        val commentData = database.from(CommentData).select().map { CommentData.createEntity(it) }
+        val commentData = database.from(CommentData).joinReferencesAndSelect().map { CommentData.createEntity(it) }
         Assertions.assertEquals(1, commentData.size)
         Assertions.assertEquals(commmentDatum, commentData[0])
     }
@@ -121,15 +127,15 @@ internal class MigrateDatabaseTest {
     fun testWriteToImagePostDataTable() {
         val postUpdate = PostUpdate.generateRandom()
         val user = User.generateRandom(postUpdate.post.postCreatorId)
-        val imagePostDatum = ImagePostDatum.generateRandom(postUpdate.post.postId)
+        val imagePostDatum = ImagePostDatum.generateRandom(postUpdate.post)
         database.useTransaction {
-            database.users.add(user)
+            user.addToDatabase()
             database.posts.add(postUpdate.post)
             database.postUpdates.add(postUpdate)
             database.imagePostData.add(imagePostDatum)
         }
 
-        val imagePostData = database.from(ImagePostData).select().map { ImagePostData.createEntity(it) }
+        val imagePostData = database.from(ImagePostData).joinReferencesAndSelect().map { ImagePostData.createEntity(it) }
         Assertions.assertEquals(1, imagePostData.size)
         Assertions.assertEquals(imagePostDatum, imagePostData[0])
     }
@@ -171,14 +177,14 @@ internal class MigrateDatabaseTest {
     fun testWriteToUserPostDataTable() {
         val postUpdate = PostUpdate.generateRandom()
         val user = User.generateRandom(postUpdate.post.postCreatorId)
-        val userPostDatum = UserPostDatum.generateRandom(postUpdate.post.postId, user.userId)
+        val userPostDatum = UserPostDatum.generateRandom(postUpdate.post)
         database.useTransaction {
             database.users.add(user)
             database.posts.add(postUpdate.post)
             database.postUpdates.add(postUpdate)
             database.userPostData.add(userPostDatum)
         }
-        val userPostData = database.from(UserPostData).select().map { UserPostData.createEntity(it) }
+        val userPostData = database.from(UserPostData).joinReferencesAndSelect().map { UserPostData.createEntity(it) }
 
         Assertions.assertEquals(userPostDatum, userPostData.first())
     }
