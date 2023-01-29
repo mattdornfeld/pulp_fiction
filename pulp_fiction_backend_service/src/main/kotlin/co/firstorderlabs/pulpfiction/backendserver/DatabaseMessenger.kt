@@ -627,6 +627,24 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 updateUserResponse { }
             }
 
+    private fun updatePassword(user: User, request: UpdateUserRequest): Effect<PulpFictionRequestError, UpdateUserResponse> =
+        effect {
+
+            val authenticated = Password.check(
+                request.updatePassword.oldPassword,
+                user.hashedPassword
+            ).withBcrypt()
+            if (!authenticated) {
+                shift(InvalidUserPasswordError())
+            } else {
+                user.hashedPassword = Password.hash(request.updatePassword.newPassword).withBcrypt().result
+                user.flushChanges()
+            }
+            updateUserResponse {
+                this.updatePassword = updatePassword {}
+            }
+        }
+
     suspend fun updateUser(request: UpdateUserRequest): Effect<PulpFictionRequestError, UpdateUserResponse> =
         effect {
             val userId = request.loginSession.userId
@@ -637,30 +655,14 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     updateUserMetadata(user, request.updateUserMetadata).bind()
                 UpdateUserRequest.UpdateUserRequestCase.UPDATE_SENSITIVE_USER_METADATA ->
                     updateSensitiveUserMetadata(user, request.updateSensitiveUserMetadata).bind()
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_PASSWORD -> {
-                    val authenticated = Password.check(
-                        request.updatePassword.oldPassword,
-                        user.hashedPassword
-                    ).withBcrypt()
-                    if (!authenticated) {
-                        shift(InvalidUserPasswordError())
-                    } else {
-                        user.hashedPassword = Password.hash(request.updatePassword.newPassword).withBcrypt().result
-                        user.flushChanges()
-                    }
-                    updateUserResponse {
-                        this.updatePassword = updatePassword {}
-                    }
-                }
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_FOLLOWING_STATUS -> {
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_PASSWORD ->
+                    updatePassword(user, request).bind()
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_FOLLOWING_STATUS ->
                     updateFollowingStatus(user.userId, request.updateUserFollowingStatus).bind()
-                }
-                UpdateUserRequest.UpdateUserRequestCase.RESET_PASSWORD -> {
+                UpdateUserRequest.UpdateUserRequestCase.RESET_PASSWORD ->
                     shift(FunctionalityNotImplementedError())
-                }
-                else -> {
+                else ->
                     shift(UnrecognizedEnumValue(request.updateUserRequestCase))
-                }
             }
         }
 
