@@ -1,6 +1,8 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.Either
+import arrow.core.None
+import arrow.core.Some
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.getOrElse
@@ -18,6 +20,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateLoginSessionResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostRequest.UpdateComment
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostRequest.UpdatePostLikeStatus
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest.UpdateUserFollowingStatus
@@ -48,7 +51,6 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PhoneNumber
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PhoneNumbers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregates
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
@@ -56,9 +58,11 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.addPostLike
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getPostLikeMaybe
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.phoneNumbers
@@ -432,11 +436,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         postId: UUID,
         userId: UUID
     ): Effect<PulpFictionRequestError, PulpFictionProtos.Post.LoggedInUserPostInteractions> = effect {
-        val postLike = database.from(PostLikes)
-            .select(PostLikes.postLikeType)
-            .where { (PostLikes.postId eq postId) and (PostLikes.postLikerUserId eq userId) }
-            .map { PostLikes.createEntity(it) }
-            .firstOrOption()
+        val postLike = database.getPostLikeMaybe(postId, userId).bind()
             .map { it.postLikeType }
             .getOrElse { PulpFictionProtos.Post.PostLike.NEUTRAL }
 
@@ -627,7 +627,10 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 updateUserResponse { }
             }
 
-    private fun updatePassword(user: User, request: UpdateUserRequest): Effect<PulpFictionRequestError, UpdateUserResponse> =
+    private fun updatePassword(
+        user: User,
+        request: UpdateUserRequest
+    ): Effect<PulpFictionRequestError, UpdateUserResponse> =
         effect {
 
             val authenticated = Password.check(
@@ -902,27 +905,56 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         commentDatum.addToDatabase(database)
 
         val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
-        updatePostResponse {
-            this.post = post {
-                this.metadata = commentDatum.getPostUpdate().toProto()
-                this.comment = commentDatum.toProto(loggedInUserPostInteractions)
-            }
-        }
+        updatePostResponse {}
     }
+
+    private fun updatePostLikeStatus(
+        postId: UUID,
+        loggedInUserId: UUID,
+        updatePostLikeStatus: UpdatePostLikeStatus
+    ): Effect<PulpFictionRequestError, UpdatePostResponse> =
+        effect {
+            when (val postLikeMaybe = database.getPostLikeMaybe(postId, loggedInUserId).bind()) {
+                None -> {
+                    database.addPostLike(postId, loggedInUserId, updatePostLikeStatus.newPostLikeStatus).bind()
+                }
+                is Some -> {
+                    val postLike = postLikeMaybe.value
+                    postLike.updatePostLikeStatus(updatePostLikeStatus.newPostLikeStatus)
+                    postLike.flushChanges()
+                }
+            }
+
+            updatePostResponse { }
+        }
 
     fun updatePost(request: PulpFictionProtos.UpdatePostRequest): Effect<PulpFictionRequestError, UpdatePostResponse> =
         effect {
             val userId = request.loginSession.userId.toUUID().bind()
             val postId = request.postId.toUUID().bind()
             when (request.updatePostRequestCase) {
-                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.UPDATECOMMENT -> updateComment(
-                    postId,
-                    userId,
-                    request.updateComment
-                ).logDatabaseMetrics(
-                    EndpointMetrics.EndpointName.updatePost,
-                    DatabaseMetrics.DatabaseOperation.updateComment
-                ).bind()
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.UPDATECOMMENT ->
+                    updateComment(
+                        postId,
+                        userId,
+                        request.updateComment
+                    ).logDatabaseMetrics(
+                        EndpointMetrics.EndpointName.updatePost,
+                        DatabaseMetrics.DatabaseOperation.updateComment
+                    ).bind()
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.UPDATEPOSTLIKESTATUS ->
+                    updatePostLikeStatus(
+                        postId,
+                        userId,
+                        request.updatePostLikeStatus
+                    ).logDatabaseMetrics(
+                        EndpointMetrics.EndpointName.updatePost,
+                        DatabaseMetrics.DatabaseOperation.updatePostLikeStatus
+                    ).bind()
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.DELETEPOST -> TODO()
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.UPDATEIMAGEPOST -> TODO()
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.REPORTPOST -> TODO()
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.UPDATEPOSTREQUEST_NOT_SET -> TODO()
                 else -> shift(UnrecognizedEnumValue(request.updatePostRequestCase))
             }
         }

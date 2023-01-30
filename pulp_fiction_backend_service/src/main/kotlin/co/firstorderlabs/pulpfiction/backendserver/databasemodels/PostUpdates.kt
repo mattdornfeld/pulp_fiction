@@ -1,6 +1,8 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
+import arrow.core.continuations.Effect
+import arrow.core.continuations.effect
 import arrow.core.continuations.either
 import co.firstorderlabs.protos.pulpfiction.PostKt.postMetadata
 import co.firstorderlabs.protos.pulpfiction.PostKt.postUpdateIdentifier
@@ -13,6 +15,7 @@ import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toTimestamp
 import org.ktorm.database.Database
 import org.ktorm.entity.Entity
+import org.ktorm.entity.add
 import org.ktorm.entity.sequenceOf
 import org.ktorm.schema.Table
 import org.ktorm.schema.enum
@@ -66,3 +69,11 @@ interface PostUpdate : Entity<PostUpdate> {
 }
 
 val Database.postUpdates get() = this.sequenceOf(PostUpdates)
+
+fun Database.addPostUpdate(postUpdate: PostUpdate): Effect<PulpFictionRequestError, Unit> =
+    effect {
+        useTransaction {
+            this@addPostUpdate.addPost(postUpdate.post).bind()
+            this@addPostUpdate.postUpdates.add(postUpdate)
+        }
+    }

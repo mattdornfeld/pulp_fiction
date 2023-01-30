@@ -40,7 +40,7 @@ object DatabaseMetrics {
         login,
         logout,
         updateComment,
-        updatePost,
+        updatePostLikeStatus,
         updateUser;
 
         override fun getValue(): String = name

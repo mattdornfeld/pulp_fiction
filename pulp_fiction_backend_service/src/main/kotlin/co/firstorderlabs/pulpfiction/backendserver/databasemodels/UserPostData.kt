@@ -22,7 +22,6 @@ object UserPostData : PostData<UserPostDatum>("user_post_data") {
     override val postId = uuid("post_id")
         .primaryKey()
         .references(Posts) { it.post }
-        .references(PostInteractionAggregates) { it.postInteractionAggregate }
     override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val userId = uuid("user_id").bindTo { it.userId }
     val displayName = varchar("display_name").bindTo { it.displayName }

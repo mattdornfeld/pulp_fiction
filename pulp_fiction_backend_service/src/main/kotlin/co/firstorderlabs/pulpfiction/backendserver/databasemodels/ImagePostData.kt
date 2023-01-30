@@ -21,7 +21,6 @@ object ImagePostData : PostData<ImagePostDatum>("image_post_data") {
     override val postId = uuid("post_id")
         .primaryKey()
         .references(Posts) { it.post }
-        .references(PostInteractionAggregates) { it.postInteractionAggregate }
     override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val imageS3Key = varchar("image_s3_key").bindTo { it.imageS3Key }
     val caption = varchar("caption").bindTo { it.caption }
@@ -63,7 +62,7 @@ interface ImagePostDatum : Entity<ImagePostDatum>, ReferencesS3Key, PostDatum {
     ): PulpFictionProtos.Post.ImagePost = imagePost {
         this.imageUrl = this@ImagePostDatum.imageS3Key // TODO (matt): Replace with url
         this.caption = this@ImagePostDatum.caption
-        this.interactionAggregates = this@ImagePostDatum.postInteractionAggregate.toProto()
+        this.interactionAggregates = this@ImagePostDatum.post.postInteractionAggregate.toProto()
         this.loggedInUserPostInteractions = loggedInUserPostInteractions
     }
 
