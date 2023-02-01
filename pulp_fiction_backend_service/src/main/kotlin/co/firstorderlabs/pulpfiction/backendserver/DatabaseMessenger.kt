@@ -62,6 +62,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.addPostLike
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getLatestNotDeletedPostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getLatestPostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getPostLikeMaybe
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
@@ -451,7 +452,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         request: GetPostRequest
     ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         val postId = request.postId.toUUID().bind()
-        val postUpdate = database.getLatestPostUpdate(postId).bind()
+        val postUpdate = database.getLatestNotDeletedPostUpdate(postId).bind()
 
         if (postUpdate.postState == PostState.DELETED) {
             shift(PostNotFoundError(postId))
@@ -718,6 +719,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .limit(offset = count * MAX_PAGE_SIZE, limit = MAX_PAGE_SIZE)
         paginatedPosts.map { row ->
             val postId = row[Posts.postId] ?: shift(InvalidDataModelError())
+            // TODO (matt): Filter out deleted posts
             val postUpdate = database.getLatestPostUpdate(postId).bind()
             val loggedInUser = request.loginSession.userId.toUUID().bind()
 
@@ -929,7 +931,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
     ): Effect<PulpFictionRequestError, UpdatePostResponse> =
         effect {
             val deletedPostUpdate =
-                database.getLatestPostUpdate(postId).bind().withState(PulpFictionProtos.Post.PostState.DELETED)
+                database.getLatestNotDeletedPostUpdate(postId).bind()
+                    .withState(PulpFictionProtos.Post.PostState.DELETED)
 
             if (deletedPostUpdate.post.postCreatorId != loggedInUserId) {
                 shift(LoginSessionInvalidError())

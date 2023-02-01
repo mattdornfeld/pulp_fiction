@@ -1,13 +1,10 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
-import arrow.core.Option
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.continuations.either
 import arrow.core.getOrElse
-import arrow.core.none
-import arrow.core.some
 import co.firstorderlabs.protos.pulpfiction.PostKt.postMetadata
 import co.firstorderlabs.protos.pulpfiction.PostKt.postUpdateIdentifier
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest
@@ -31,7 +28,6 @@ import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
 import org.ktorm.entity.add
 import org.ktorm.entity.sequenceOf
-import org.ktorm.schema.ColumnDeclaring
 import org.ktorm.schema.Table
 import org.ktorm.schema.enum
 import org.ktorm.schema.timestamp
@@ -100,28 +96,22 @@ fun Database.addPostUpdate(postUpdate: PostUpdate): Effect<PulpFictionRequestErr
         }
     }
 
-fun Database.getLatestPostUpdate(
-    postId: UUID,
-    condition: () -> ColumnDeclaring<Boolean>
-): Effect<PulpFictionRequestError, PostUpdate> =
-    getLatestPostUpdate(postId, condition.some())
+fun Database.getLatestNotDeletedPostUpdate(postId: UUID): Effect<PulpFictionRequestError, PostUpdate> =
+    this.getLatestPostUpdate(postId) { it.postState != PostState.DELETED }
 
 fun Database.getLatestPostUpdate(
     postId: UUID,
-    condition: Option<() -> ColumnDeclaring<Boolean>> = none()
+    postQueryFilter: (PostUpdate) -> Boolean = { true }
 ): Effect<PulpFictionRequestError, PostUpdate> =
     effect {
-        val query = this@getLatestPostUpdate
+        this@getLatestPostUpdate
             .from(PostUpdates)
             .joinReferencesAndSelect()
             .where(PostUpdates.postId eq postId)
-
-        condition
-            .map { query.where(it) }
-            .getOrElse { query }
             .orderBy(PostUpdates.updatedAt.desc())
             .limit(1)
             .map { PostUpdates.createEntity(it) }
+            .filter(postQueryFilter)
             .firstOrOption()
             .getOrElse { shift(PostNotFoundError(postId)) }
     }

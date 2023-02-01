@@ -955,4 +955,21 @@ internal class PulpFictionBackendServiceTest {
                 ).post
             }
         }
+
+    @Test
+    fun testDeletePostFromNonLoggedInUserFails(): Unit =
+        runBlocking {
+            val loginSession1 = createUserAndLogin().first
+            val createImagePostRequest = loginSession1
+                .generateRandomCreatePostRequest()
+                .withRandomCreateImagePostRequest()
+            val postMetadata = pulpFictionBackendService.createPost(createImagePostRequest).postMetadata
+
+            val loginSession2 = createUserAndLogin().first
+            val updatePostRequest = loginSession2.generateUpdatePostRequest(postMetadata.postUpdateIdentifier.postId)
+                .withDeletePostRequest()
+            assertThrowsExceptionWithStatus(Status.UNAUTHENTICATED) {
+                pulpFictionBackendService.updatePost(updatePostRequest)
+            }
+        }
 }
