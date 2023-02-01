@@ -1,5 +1,6 @@
 package co.firstorderlabs.pulpfiction.backendserver.types
 
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
 import com.google.protobuf.Internal
 import io.grpc.Status
 import io.grpc.StatusException
@@ -109,6 +110,11 @@ class FeedNotImplementedError(postType: String) :
 }
 
 class InvalidDataModelError() : PulpFictionRequestError() {
+    override fun toStatusException(): StatusException =
+        StatusException(Status.INVALID_ARGUMENT.withCause(this))
+}
+
+class InvalidPostTypeError(postType: PostType) : PulpFictionRequestError("PostType $postType is invalid") {
     override fun toStatusException(): StatusException =
         StatusException(Status.INVALID_ARGUMENT.withCause(this))
 }

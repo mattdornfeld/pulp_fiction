@@ -33,6 +33,7 @@ import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.gener
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserAvatarRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserFollowingStatusRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateUpdatePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withDeletePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomUpdateCommentRequest
@@ -928,5 +929,30 @@ internal class PulpFictionBackendServiceTest {
                 post,
                 DatabaseMetrics.DatabaseOperation.updateComment
             )
+        }
+
+    @Test
+    fun testDeletePost(): Unit =
+        runBlocking {
+            val loginSession = createUserAndLogin().first
+
+            val createImagePostRequest = loginSession
+                .generateRandomCreatePostRequest()
+                .withRandomCreateImagePostRequest()
+            val postMetadata = pulpFictionBackendService.createPost(createImagePostRequest).postMetadata
+
+            val updatePostRequest =
+                loginSession.generateUpdatePostRequest(postMetadata.postUpdateIdentifier.postId)
+                    .withDeletePostRequest()
+            pulpFictionBackendService.updatePost(updatePostRequest)
+
+            assertThrowsExceptionWithStatus(Status.NOT_FOUND) {
+                pulpFictionBackendService.getPost(
+                    getPostRequest {
+                        this.loginSession = loginSession
+                        this.postId = postMetadata.postUpdateIdentifier.postId
+                    }
+                ).post
+            }
         }
 }
