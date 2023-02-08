@@ -37,6 +37,7 @@ import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withD
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomUpdateCommentRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomUpdateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionMetric
@@ -971,5 +972,25 @@ internal class PulpFictionBackendServiceTest {
             assertThrowsExceptionWithStatus(Status.UNAUTHENTICATED) {
                 pulpFictionBackendService.updatePost(updatePostRequest)
             }
+        }
+
+    @Test
+    fun testUpdateImagePostCaption(): Unit =
+        runBlocking {
+            val loginSession = createUserAndLogin().first
+            val createImagePostRequest = loginSession
+                .generateRandomCreatePostRequest()
+                .withRandomCreateImagePostRequest()
+            val postMetadata = pulpFictionBackendService.createPost(createImagePostRequest).postMetadata
+
+            val updateImagePostRequest = loginSession
+                .generateUpdatePostRequest(postMetadata.postUpdateIdentifier.postId)
+                .withRandomUpdateImagePostRequest()
+            pulpFictionBackendService.updatePost(updateImagePostRequest)
+
+            val getPostRequest = loginSession.buildGetPostRequest(postMetadata)
+            val post = pulpFictionBackendService.getPost(getPostRequest).post
+
+            updateImagePostRequest.updateImagePost.newCaption.assertEquals(post.imagePost.caption)
         }
 }
