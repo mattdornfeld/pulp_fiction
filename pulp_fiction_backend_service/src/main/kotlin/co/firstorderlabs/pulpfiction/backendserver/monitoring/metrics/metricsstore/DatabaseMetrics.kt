@@ -40,6 +40,7 @@ object DatabaseMetrics {
         getUser,
         login,
         logout,
+        reportPost,
         updateComment,
         updateImagePost,
         updatePostLikeStatus,

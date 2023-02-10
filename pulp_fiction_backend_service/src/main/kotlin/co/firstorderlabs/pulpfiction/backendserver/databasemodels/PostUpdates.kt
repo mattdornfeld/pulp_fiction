@@ -64,6 +64,15 @@ interface PostUpdate : Entity<PostUpdate> {
             this.postState = postState
         }
 
+    fun createPostReport(postReporterUserId: UUID, reportReason: String): PostReport =
+        PostReport {
+            this.post = this@PostUpdate.post
+            this.updatedAt = this@PostUpdate.updatedAt
+            this.reportedAt = nowTruncated()
+            this.postReporterUserId = postReporterUserId
+            this.reportReason = reportReason
+        }
+
     companion object : Entity.Factory<PostUpdate>() {
         fun fromPost(post: Post): PostUpdate =
             PostUpdate {
