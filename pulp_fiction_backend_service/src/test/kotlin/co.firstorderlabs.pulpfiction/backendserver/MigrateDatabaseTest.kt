@@ -16,7 +16,8 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.TestDatabaseMo
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.addCommentDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.addPostUpdate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.datesOfBirth
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.displayNames
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
@@ -33,6 +34,8 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.users
 import co.firstorderlabs.pulpfiction.backendserver.testutils.S3AndPostgresContainers
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.getOrThrow
+import co.firstorderlabs.pulpfiction.backendserver.testutils.runBlockingEffect
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
@@ -79,19 +82,19 @@ internal class MigrateDatabaseTest {
     }
 
     @Test
-    fun testWriteToPostsTable() {
-        val expectedPostUpdate = PostUpdate.generateRandom()
-        val user = User.generateRandom(expectedPostUpdate.post.postCreatorId)
-        database.useTransaction {
-            user.addToDatabase()
-            database.posts.add(expectedPostUpdate.post)
-            database.postUpdates.add(expectedPostUpdate)
-        }
+    fun testWriteToPostsTable() =
+        runBlockingEffect<PulpFictionRequestError, Unit> {
+            val expectedPostUpdate = PostUpdate.generateRandom()
+            val user = User.generateRandom(expectedPostUpdate.post.postCreatorId)
+            database.useTransaction {
+                user.addToDatabase()
+                database.addPostUpdate(expectedPostUpdate).bind()
+            }
 
-        val postUpdates = database.from(PostUpdates).joinReferencesAndSelect().map { PostUpdates.createEntity(it) }
-        Assertions.assertEquals(1, postUpdates.size)
-        Assertions.assertEquals(expectedPostUpdate, postUpdates[0])
-    }
+            val postUpdates = database.from(PostUpdates).joinReferencesAndSelect().map { PostUpdates.createEntity(it) }
+            Assertions.assertEquals(1, postUpdates.size)
+            Assertions.assertEquals(expectedPostUpdate, postUpdates[0])
+        }
 
     @Test
     fun testWriteToUsersTable() {
@@ -103,27 +106,30 @@ internal class MigrateDatabaseTest {
     }
 
     @Test
-    fun testWriteToCommentDataTable() {
-        val parentPostUpdate = PostUpdate.generateRandom()
-        val parentPostUser = User.generateRandom(parentPostUpdate.post.postCreatorId)
-        val commentPostUpdate = PostUpdate.generateRandom()
-        val commentPostUser = User.generateRandom(commentPostUpdate.post.postCreatorId)
-        val commentDatum = CommentDatum.generateRandom(commentPostUpdate.post, parentPostUpdate.post.postId)
-        database.useTransaction {
-            parentPostUser.addToDatabase()
-            commentPostUser.addToDatabase()
-            database.posts.add(parentPostUpdate.post)
-            database.posts.add(commentPostUpdate.post)
-            database.postUpdates.add(parentPostUpdate)
-            database.postUpdates.add(commentPostUpdate)
-            database.commentData.add(commentDatum)
-            database.postInteractionAggregates.add(commentDatum.postInteractionAggregate)
-        }
+    fun testWriteToCommentDataTable() =
+        runBlockingEffect<PulpFictionRequestError, Unit> {
+            val parentPostUpdate = PostUpdate.generateRandom()
+            val parentPostUser = User.generateRandom(parentPostUpdate.post.postCreatorId)
+            val commentPostUpdate = PostUpdate.generateRandom()
+            val commentPostUser = User.generateRandom(commentPostUpdate.post.postCreatorId)
+            val commentDatum = CommentDatum.generateRandom(commentPostUpdate.post, parentPostUpdate.post.postId)
+            database.useTransaction {
+                parentPostUser.addToDatabase()
+                commentPostUser.addToDatabase()
+                database.addPostUpdate(parentPostUpdate).bind()
+                database.addCommentDatum(commentDatum).bind()
+//            database.posts.add(parentPostUpdate.post)
+//            database.posts.add(commentPostUpdate.post)
+//            database.postUpdates.add(parentPostUpdate)
+//            database.postUpdates.add(commentPostUpdate)
+//            database.commentData.add(commentDatum)
+//            database.postInteractionAggregates.add(commentDatum.postInteractionAggregate)
+            }
 
-        val commentData = database.from(CommentData).joinReferencesAndSelect().map { CommentData.createEntity(it) }
-        Assertions.assertEquals(1, commentData.size)
-        Assertions.assertEquals(commentDatum, commentData[0])
-    }
+            val commentData = database.from(CommentData).joinReferencesAndSelect().map { CommentData.createEntity(it) }
+            Assertions.assertEquals(1, commentData.size)
+            Assertions.assertEquals(commentDatum, commentData[0])
+        }
 
     @Test
     fun testWriteToImagePostDataTable() {
@@ -135,7 +141,7 @@ internal class MigrateDatabaseTest {
             database.posts.add(postUpdate.post)
             database.postUpdates.add(postUpdate)
             database.imagePostData.add(imagePostDatum)
-            database.postInteractionAggregates.add(imagePostDatum.postInteractionAggregate)
+            database.postInteractionAggregates.add(imagePostDatum.post.postInteractionAggregate)
         }
 
         val imagePostData =
@@ -187,7 +193,7 @@ internal class MigrateDatabaseTest {
             database.posts.add(postUpdate.post)
             database.postUpdates.add(postUpdate)
             database.userPostData.add(userPostDatum)
-            database.postInteractionAggregates.add(userPostDatum.postInteractionAggregate)
+            database.postInteractionAggregates.add(userPostDatum.post.postInteractionAggregate)
         }
         val userPostData = database.from(UserPostData).joinReferencesAndSelect().map { UserPostData.createEntity(it) }
 

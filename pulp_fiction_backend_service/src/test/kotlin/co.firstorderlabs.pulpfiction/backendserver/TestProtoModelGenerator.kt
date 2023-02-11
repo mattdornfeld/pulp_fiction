@@ -21,7 +21,10 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
+import co.firstorderlabs.protos.pulpfiction.UpdatePostRequestKt.deletePost
+import co.firstorderlabs.protos.pulpfiction.UpdatePostRequestKt.reportPost
 import co.firstorderlabs.protos.pulpfiction.UpdatePostRequestKt.updateComment
+import co.firstorderlabs.protos.pulpfiction.UpdatePostRequestKt.updateImagePost
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updateDateOfBirth
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updateEmail
 import co.firstorderlabs.protos.pulpfiction.UpdateUserRequestKt.UpdateSensitiveUserMetadataKt.updatePhoneNumber
@@ -243,6 +246,28 @@ object TestProtoModelGenerator {
         val builder = this.toBuilder()
         builder.updateComment = updateComment {
             this.newBody = faker.lovecraft.unique.toString()
+        }
+        return builder.build()
+    }
+
+    fun UpdatePostRequest.withDeletePostRequest(): UpdatePostRequest {
+        val builder = this.toBuilder()
+        builder.deletePost = deletePost {}
+        return builder.build()
+    }
+
+    fun UpdatePostRequest.withRandomUpdateImagePostRequest(): UpdatePostRequest {
+        val builder = this.toBuilder()
+        builder.updateImagePost = updateImagePost {
+            this.newCaption = faker.lovecraft.unique.toString()
+        }
+        return builder.build()
+    }
+
+    fun UpdatePostRequest.withRandomReportPostRequest(): UpdatePostRequest {
+        val builder = this.toBuilder()
+        builder.reportPost = reportPost {
+            this.reportReason = faker.lovecraft.unique.toString()
         }
         return builder.build()
     }

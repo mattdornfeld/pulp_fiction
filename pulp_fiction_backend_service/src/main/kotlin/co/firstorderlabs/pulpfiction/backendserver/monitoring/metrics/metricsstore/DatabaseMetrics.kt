@@ -34,13 +34,16 @@ object DatabaseMetrics {
         checkUserPasswordValid,
         createPost,
         createUser,
+        deletePost,
         getFeed,
         getPost,
         getUser,
         login,
         logout,
+        reportPost,
         updateComment,
-        updatePost,
+        updateImagePost,
+        updatePostLikeStatus,
         updateUser;
 
         override fun getValue(): String = name

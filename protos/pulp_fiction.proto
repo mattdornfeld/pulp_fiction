@@ -305,9 +305,7 @@ message UpdatePostRequest {
   }
 }
 
-message UpdatePostResponse {
-  Post post = 1;
-}
+message UpdatePostResponse {}
 
 message UpdateUserRequest {
   message UpdateUserMetadata {

@@ -7,9 +7,9 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateLoginSessionResponse.LoginSession
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreateUserResponse
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostMetadata
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostType
-import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserResponse
 import co.firstorderlabs.protos.pulpfiction.UpdateLoginSessionRequestKt.logout
@@ -33,10 +33,14 @@ import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.gener
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserAvatarRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateRandomUpdateUserFollowingStatusRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.generateUpdatePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withDeletePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomReportPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomUpdateCommentRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomUpdateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getPostReports
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionMetric
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionSummary
@@ -58,7 +62,9 @@ import co.firstorderlabs.pulpfiction.backendserver.testutils.assertNotEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertThrowsExceptionWithStatus
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
+import co.firstorderlabs.pulpfiction.backendserver.testutils.runBlockingEffect
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import co.firstorderlabs.pulpfiction.backendserver.utils.toInstant
@@ -871,7 +877,7 @@ internal class PulpFictionBackendServiceTest {
     private suspend fun assertPostUpdatedSuccessfully(
         loginSession: LoginSession,
         postMetadata: PostMetadata,
-        updatePostResponse: UpdatePostResponse,
+        post: Post,
         databaseOperation: DatabaseMetrics.DatabaseOperation
     ) {
         EndpointName.updatePost.assertEndpointMetricsCorrect(1.0)
@@ -881,9 +887,9 @@ internal class PulpFictionBackendServiceTest {
             databaseOperation
         ).assertDatabaseMetricsCorrect(1.0)
 
-        postMetadata.postUpdateIdentifier.assertNotEquals(updatePostResponse.post.metadata.postUpdateIdentifier)
-        postMetadata.postUpdateIdentifier.postId.assertEquals(updatePostResponse.post.metadata.postUpdateIdentifier.postId)
-        updatePostResponse.post.metadata.postUpdateIdentifier.updatedAt
+        postMetadata.postUpdateIdentifier.assertNotEquals(post.metadata.postUpdateIdentifier)
+        postMetadata.postUpdateIdentifier.postId.assertEquals(post.metadata.postUpdateIdentifier.postId)
+        post.metadata.postUpdateIdentifier.updatedAt
             .assertTrue { it.toInstant().isWithinLast(100) }
 
         val getPostRequest = getPostRequest {
@@ -892,7 +898,7 @@ internal class PulpFictionBackendServiceTest {
         }
 
         val getPostResponse = pulpFictionBackendService.getPost(getPostRequest)
-        updatePostResponse.post.assertEquals(getPostResponse.post)
+        post.assertEquals(getPostResponse.post)
     }
 
     @Test
@@ -913,14 +919,108 @@ internal class PulpFictionBackendServiceTest {
             val updatePostRequest =
                 loginSession.generateUpdatePostRequest(postMetadata.postUpdateIdentifier.postId)
                     .withRandomUpdateCommentRequest()
-            val updatePostResponse = pulpFictionBackendService.updatePost(updatePostRequest)
+            pulpFictionBackendService.updatePost(updatePostRequest)
+            val post = pulpFictionBackendService.getPost(
+                getPostRequest {
+                    this.loginSession = loginSession
+                    this.postId = postMetadata.postUpdateIdentifier.postId
+                }
+            ).post
 
-            updatePostRequest.updateComment.newBody.assertEquals(updatePostResponse.post.comment.body)
+            updatePostRequest.updateComment.newBody.assertEquals(post.comment.body)
             assertPostUpdatedSuccessfully(
                 loginSession,
                 postMetadata,
-                updatePostResponse,
+                post,
                 DatabaseMetrics.DatabaseOperation.updateComment
             )
+        }
+
+    @Test
+    fun testDeletePost(): Unit =
+        runBlocking {
+            val loginSession = createUserAndLogin().first
+
+            val createImagePostRequest = loginSession
+                .generateRandomCreatePostRequest()
+                .withRandomCreateImagePostRequest()
+            val postMetadata = pulpFictionBackendService.createPost(createImagePostRequest).postMetadata
+
+            val updatePostRequest =
+                loginSession.generateUpdatePostRequest(postMetadata.postUpdateIdentifier.postId)
+                    .withDeletePostRequest()
+            pulpFictionBackendService.updatePost(updatePostRequest)
+
+            assertThrowsExceptionWithStatus(Status.NOT_FOUND) {
+                pulpFictionBackendService.getPost(
+                    getPostRequest {
+                        this.loginSession = loginSession
+                        this.postId = postMetadata.postUpdateIdentifier.postId
+                    }
+                ).post
+            }
+        }
+
+    @Test
+    fun testDeletePostFromNonLoggedInUserFails(): Unit =
+        runBlocking {
+            val loginSession1 = createUserAndLogin().first
+            val createImagePostRequest = loginSession1
+                .generateRandomCreatePostRequest()
+                .withRandomCreateImagePostRequest()
+            val postMetadata = pulpFictionBackendService.createPost(createImagePostRequest).postMetadata
+
+            val loginSession2 = createUserAndLogin().first
+            val updatePostRequest = loginSession2.generateUpdatePostRequest(postMetadata.postUpdateIdentifier.postId)
+                .withDeletePostRequest()
+            assertThrowsExceptionWithStatus(Status.UNAUTHENTICATED) {
+                pulpFictionBackendService.updatePost(updatePostRequest)
+            }
+        }
+
+    @Test
+    fun testUpdateImagePostCaption(): Unit =
+        runBlocking {
+            val loginSession = createUserAndLogin().first
+            val createImagePostRequest = loginSession
+                .generateRandomCreatePostRequest()
+                .withRandomCreateImagePostRequest()
+            val postMetadata = pulpFictionBackendService.createPost(createImagePostRequest).postMetadata
+
+            val updateImagePostRequest = loginSession
+                .generateUpdatePostRequest(postMetadata.postUpdateIdentifier.postId)
+                .withRandomUpdateImagePostRequest()
+            pulpFictionBackendService.updatePost(updateImagePostRequest)
+
+            val getPostRequest = loginSession.buildGetPostRequest(postMetadata)
+            val post = pulpFictionBackendService.getPost(getPostRequest).post
+
+            updateImagePostRequest.updateImagePost.newCaption.assertEquals(post.imagePost.caption)
+        }
+
+    @Test
+    fun testReportPost(): Unit =
+        runBlockingEffect<PulpFictionRequestError, Unit> {
+            val loginSession = createUserAndLogin().first
+            val createImagePostRequest = loginSession
+                .generateRandomCreatePostRequest()
+                .withRandomCreateImagePostRequest()
+            val postMetadata = pulpFictionBackendService.createPost(createImagePostRequest).postMetadata
+
+            val reportPostRequest = loginSession
+                .generateUpdatePostRequest(postMetadata.postUpdateIdentifier.postId)
+                .withRandomReportPostRequest()
+            pulpFictionBackendService.updatePost(reportPostRequest)
+
+            val expectedPostId = postMetadata.postUpdateIdentifier.postId.toUUID().bind()
+            val postReports = database.getPostReports(expectedPostId).bind()
+
+            val expectedPostReporterUserId = loginSession.userId.toUUID().bind()
+            postReports.assertTrue { it.size == 1 }
+            postReports[0]
+                .assertEquals(expectedPostId) { it.post.postId }
+                .assertEquals(expectedPostReporterUserId) { it.postReporterUserId }
+                .assertEquals(reportPostRequest.reportPost.reportReason) { it.reportReason }
+                .assertTrue { it.reportedAt.isWithinLast(100) }
         }
 }

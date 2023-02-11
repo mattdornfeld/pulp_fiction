@@ -1,5 +1,8 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
+import arrow.core.continuations.Effect
+import arrow.core.continuations.effect
+import arrow.core.getOrElse
 import co.firstorderlabs.protos.pulpfiction.PostKt.imagePost
 import co.firstorderlabs.protos.pulpfiction.PostKt.loggedInUserPostInteractions
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
@@ -9,19 +12,29 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.ReferencesS3Key.Companion.JPG
+import co.firstorderlabs.pulpfiction.backendserver.types.PostNotFoundError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
+import co.firstorderlabs.pulpfiction.backendserver.utils.firstOrOption
+import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import org.ktorm.database.Database
+import org.ktorm.dsl.eq
+import org.ktorm.dsl.from
+import org.ktorm.dsl.joinReferencesAndSelect
+import org.ktorm.dsl.map
+import org.ktorm.dsl.where
 import org.ktorm.entity.Entity
+import org.ktorm.entity.add
 import org.ktorm.entity.sequenceOf
 import org.ktorm.schema.timestamp
 import org.ktorm.schema.uuid
 import org.ktorm.schema.varchar
 import software.amazon.awssdk.services.s3.model.Tagging
+import java.util.UUID
 
 object ImagePostData : PostData<ImagePostDatum>("image_post_data") {
     override val postId = uuid("post_id")
         .primaryKey()
         .references(Posts) { it.post }
-        .references(PostInteractionAggregates) { it.postInteractionAggregate }
     override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val imageS3Key = varchar("image_s3_key").bindTo { it.imageS3Key }
     val caption = varchar("caption").bindTo { it.caption }
@@ -63,11 +76,34 @@ interface ImagePostDatum : Entity<ImagePostDatum>, ReferencesS3Key, PostDatum {
     ): PulpFictionProtos.Post.ImagePost = imagePost {
         this.imageUrl = this@ImagePostDatum.imageS3Key // TODO (matt): Replace with url
         this.caption = this@ImagePostDatum.caption
-        this.interactionAggregates = this@ImagePostDatum.postInteractionAggregate.toProto()
+        this.interactionAggregates = this@ImagePostDatum.post.postInteractionAggregate.toProto()
         this.loggedInUserPostInteractions = loggedInUserPostInteractions
     }
 
     fun toProto(): PulpFictionProtos.Post.ImagePost = toProto(loggedInUserPostInteractions {})
+
+    fun withCaption(newCaption: String): ImagePostDatum =
+        ImagePostDatum {
+            this.post = this@ImagePostDatum.post
+            this.updatedAt = nowTruncated()
+            this.imageS3Key = this@ImagePostDatum.imageS3Key
+            this.caption = newCaption
+        }
 }
 
 val Database.imagePostData get() = this.sequenceOf(ImagePostData)
+
+fun Database.getImagePostDatum(postId: UUID): Effect<PulpFictionRequestError, ImagePostDatum> = effect {
+    this@getImagePostDatum
+        .from(ImagePostData)
+        .joinReferencesAndSelect()
+        .where { ImagePostData.postId eq postId }
+        .map { ImagePostData.createEntity(it) }
+        .firstOrOption()
+        .getOrElse { shift(PostNotFoundError(postId)) }
+}
+
+fun Database.addImagePostDatumUpdate(imagePostDatum: ImagePostDatum): Effect<PulpFictionRequestError, Unit> = effect {
+    this@addImagePostDatumUpdate.postUpdates.add(imagePostDatum.getPostUpdate())
+    this@addImagePostDatumUpdate.imagePostData.add(imagePostDatum)
+}

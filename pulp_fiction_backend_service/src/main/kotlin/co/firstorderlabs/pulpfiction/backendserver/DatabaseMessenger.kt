@@ -1,6 +1,8 @@
 package co.firstorderlabs.pulpfiction.backendserver
 
 import arrow.core.Either
+import arrow.core.None
+import arrow.core.Some
 import arrow.core.continuations.Effect
 import arrow.core.continuations.effect
 import arrow.core.getOrElse
@@ -16,8 +18,12 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.CreatePostRequest.
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetFeedRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetPostRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.GetUserRequest
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.PostState
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateLoginSessionResponse
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostRequest.ReportPost
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostRequest.UpdateComment
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostRequest.UpdateImagePost
+import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostRequest.UpdatePostLikeStatus
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdatePostResponse
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.UpdateUserRequest.UpdateUserFollowingStatus
@@ -46,23 +52,29 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSession
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PhoneNumber
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PhoneNumbers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Post
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregate
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregates
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdate
-import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.User
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostDatum
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Users
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.addImagePostDatumUpdate
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.addPostLike
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.commentData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.emails
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getImagePostDatum
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getLatestNotDeletedPostUpdate
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getLatestPostUpdate
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getPostLikeMaybe
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.imagePostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.loginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.phoneNumbers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postInteractionAggregates
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postReports
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.postUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.toDatabaseModel
@@ -432,11 +444,7 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         postId: UUID,
         userId: UUID
     ): Effect<PulpFictionRequestError, PulpFictionProtos.Post.LoggedInUserPostInteractions> = effect {
-        val postLike = database.from(PostLikes)
-            .select(PostLikes.postLikeType)
-            .where { (PostLikes.postId eq postId) and (PostLikes.postLikerUserId eq userId) }
-            .map { PostLikes.createEntity(it) }
-            .firstOrOption()
+        val postLike = database.getPostLikeMaybe(postId, userId).bind()
             .map { it.postLikeType }
             .getOrElse { PulpFictionProtos.Post.PostLike.NEUTRAL }
 
@@ -449,32 +457,36 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         request: GetPostRequest
     ): Effect<PulpFictionRequestError, PulpFictionProtos.Post> = effect {
         val postId = request.postId.toUUID().bind()
-        val postUpdate = getPostUpdate(postId).bind()
+        val postUpdate = database.getLatestNotDeletedPostUpdate(postId).bind()
 
-        val userId = request.loginSession.userId.toUUID().bind()
-        post {
-            this.metadata = postUpdate.toProto()
+        if (postUpdate.postState == PostState.DELETED) {
+            shift(PostNotFoundError(postId))
+        } else {
+            val userId = request.loginSession.userId.toUUID().bind()
+            post {
+                this.metadata = postUpdate.toProto()
 
-            when (postUpdate.post.postType) {
-                PulpFictionProtos.Post.PostType.COMMENT -> {
-                    val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
-                    this.comment = getPostData(postId, CommentData)
-                        .bind()
-                        .toProto(loggedInUserPostInteractions)
-                }
-                PulpFictionProtos.Post.PostType.IMAGE -> {
-                    val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
-                    this.imagePost = getPostData(postId, ImagePostData)
-                        .bind()
-                        .toProto(loggedInUserPostInteractions)
-                }
-                PulpFictionProtos.Post.PostType.USER -> {
-                    this.userPost = getPostData(postId, UserPostData)
-                        .bind()
-                        .toProto()
-                }
-                else -> {
-                    shift(RequestParsingError("GetPost is not implemented for PostType ${postUpdate.post.postType}"))
+                when (postUpdate.post.postType) {
+                    PulpFictionProtos.Post.PostType.COMMENT -> {
+                        val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
+                        this.comment = getPostData(postId, CommentData)
+                            .bind()
+                            .toProto(loggedInUserPostInteractions)
+                    }
+                    PulpFictionProtos.Post.PostType.IMAGE -> {
+                        val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
+                        this.imagePost = getPostData(postId, ImagePostData)
+                            .bind()
+                            .toProto(loggedInUserPostInteractions)
+                    }
+                    PulpFictionProtos.Post.PostType.USER -> {
+                        this.userPost = getPostData(postId, UserPostData)
+                            .bind()
+                            .toProto()
+                    }
+                    else -> {
+                        shift(RequestParsingError("GetPost is not implemented for PostType ${postUpdate.post.postType}"))
+                    }
                 }
             }
         }
@@ -627,6 +639,27 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 updateUserResponse { }
             }
 
+    private fun updatePassword(
+        user: User,
+        request: UpdateUserRequest
+    ): Effect<PulpFictionRequestError, UpdateUserResponse> =
+        effect {
+
+            val authenticated = Password.check(
+                request.updatePassword.oldPassword,
+                user.hashedPassword
+            ).withBcrypt()
+            if (!authenticated) {
+                shift(InvalidUserPasswordError())
+            } else {
+                user.hashedPassword = Password.hash(request.updatePassword.newPassword).withBcrypt().result
+                user.flushChanges()
+            }
+            updateUserResponse {
+                this.updatePassword = updatePassword {}
+            }
+        }
+
     suspend fun updateUser(request: UpdateUserRequest): Effect<PulpFictionRequestError, UpdateUserResponse> =
         effect {
             val userId = request.loginSession.userId
@@ -637,30 +670,14 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                     updateUserMetadata(user, request.updateUserMetadata).bind()
                 UpdateUserRequest.UpdateUserRequestCase.UPDATE_SENSITIVE_USER_METADATA ->
                     updateSensitiveUserMetadata(user, request.updateSensitiveUserMetadata).bind()
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_PASSWORD -> {
-                    val authenticated = Password.check(
-                        request.updatePassword.oldPassword,
-                        user.hashedPassword
-                    ).withBcrypt()
-                    if (!authenticated) {
-                        shift(InvalidUserPasswordError())
-                    } else {
-                        user.hashedPassword = Password.hash(request.updatePassword.newPassword).withBcrypt().result
-                        user.flushChanges()
-                    }
-                    updateUserResponse {
-                        this.updatePassword = updatePassword {}
-                    }
-                }
-                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_FOLLOWING_STATUS -> {
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_PASSWORD ->
+                    updatePassword(user, request).bind()
+                UpdateUserRequest.UpdateUserRequestCase.UPDATE_USER_FOLLOWING_STATUS ->
                     updateFollowingStatus(user.userId, request.updateUserFollowingStatus).bind()
-                }
-                UpdateUserRequest.UpdateUserRequestCase.RESET_PASSWORD -> {
+                UpdateUserRequest.UpdateUserRequestCase.RESET_PASSWORD ->
                     shift(FunctionalityNotImplementedError())
-                }
-                else -> {
+                else ->
                     shift(UnrecognizedEnumValue(request.updateUserRequestCase))
-                }
             }
         }
 
@@ -707,7 +724,8 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             .limit(offset = count * MAX_PAGE_SIZE, limit = MAX_PAGE_SIZE)
         paginatedPosts.map { row ->
             val postId = row[Posts.postId] ?: shift(InvalidDataModelError())
-            val postUpdate = getPostUpdate(postId).bind()
+            // TODO (matt): Filter out deleted posts
+            val postUpdate = database.getLatestPostUpdate(postId).bind()
             val loggedInUser = request.loginSession.userId.toUUID().bind()
 
             when (row[Posts.postType]) {
@@ -829,17 +847,6 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
         }
     }
 
-    private suspend fun getPostUpdate(postId: UUID): Effect<PulpFictionRequestError, PostUpdate> = effect {
-        database.from(PostUpdates)
-            .joinReferencesAndSelect()
-            .where(PostUpdates.postId eq postId)
-            .orderBy(PostUpdates.updatedAt.desc())
-            .limit(1)
-            .map { PostUpdates.createEntity(it) }
-            .firstOrOption()
-            .getOrElse { shift(PostNotFoundError(postId)) }
-    }
-
     private suspend fun buildImagePostFeed(
         postId: UUID,
         loggedInUserId: UUID,
@@ -880,9 +887,20 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
             }
         }
 
+    private fun checkLoggedInUserHasPermissionToUpdatePost(
+        post: Post,
+        loggedInUserId: UUID
+    ): Effect<PulpFictionRequestError, Unit> =
+        effect {
+            if (post.postCreatorId != loggedInUserId) {
+                shift(LoginSessionInvalidError())
+            } else {
+            }
+        }
+
     private fun updateComment(
         postId: UUID,
-        userId: UUID,
+        loggedInUserId: UUID,
         updateComment: UpdateComment
     ): Effect<PulpFictionRequestError, UpdatePostResponse> = effect {
         val commentDatum =
@@ -897,30 +915,128 @@ class DatabaseMessenger(private val database: Database, s3Client: S3Client) {
                 .getOrElse { shift(PostNotFoundError(postId)) }
                 .withBody(updateComment.newBody)
 
+        checkLoggedInUserHasPermissionToUpdatePost(commentDatum.post, loggedInUserId).bind()
         commentDatum.addToDatabase(database)
-
-        val loggedInUserPostInteractions = getLoggedInUserPostInteractions(postId, userId).bind()
-        updatePostResponse {
-            this.post = post {
-                this.metadata = commentDatum.getPostUpdate().toProto()
-                this.comment = commentDatum.toProto(loggedInUserPostInteractions)
-            }
-        }
+        updatePostResponse {}
     }
+
+    private fun updatePostLikeStatus(
+        postId: UUID,
+        loggedInUserId: UUID,
+        updatePostLikeStatus: UpdatePostLikeStatus
+    ): Effect<PulpFictionRequestError, UpdatePostResponse> =
+        effect {
+            when (val postLikeMaybe = database.getPostLikeMaybe(postId, loggedInUserId).bind()) {
+                None -> {
+                    database.addPostLike(postId, loggedInUserId, updatePostLikeStatus.newPostLikeStatus).bind()
+                }
+                is Some -> {
+                    val postLike = postLikeMaybe.value
+                    postLike.updatePostLikeStatus(updatePostLikeStatus.newPostLikeStatus)
+                    postLike.flushChanges()
+                }
+            }
+
+            updatePostResponse { }
+        }
+
+    private fun deletePost(
+        postId: UUID,
+        loggedInUserId: UUID
+    ): Effect<PulpFictionRequestError, UpdatePostResponse> =
+        effect {
+            val deletedPostUpdate =
+                database.getLatestNotDeletedPostUpdate(postId).bind()
+                    .withState(PulpFictionProtos.Post.PostState.DELETED)
+
+            checkLoggedInUserHasPermissionToUpdatePost(deletedPostUpdate.post, loggedInUserId).bind()
+            database.postUpdates.add(deletedPostUpdate)
+            updatePostResponse { }
+        }
+
+    private fun updateImagePost(
+        postId: UUID,
+        updateImagePost: UpdateImagePost
+    ): Effect<PulpFictionRequestError, UpdatePostResponse> =
+        effect {
+            val imagePostDatum = database
+                .getImagePostDatum(postId)
+                .bind()
+                .withCaption(updateImagePost.newCaption)
+            database.addImagePostDatumUpdate(imagePostDatum)
+            updatePostResponse { }
+        }
+
+    private fun reportPost(
+        postId: UUID,
+        postReporterUserId: UUID,
+        reportPost: ReportPost
+    ): Effect<PulpFictionRequestError, UpdatePostResponse> =
+        effect {
+            val postReport = database
+                .getLatestPostUpdate(postId)
+                .bind()
+                .createPostReport(postReporterUserId, reportPost.reportReason)
+
+            database.postReports.add(postReport)
+
+            updatePostResponse { }
+        }
 
     fun updatePost(request: PulpFictionProtos.UpdatePostRequest): Effect<PulpFictionRequestError, UpdatePostResponse> =
         effect {
-            val userId = request.loginSession.userId.toUUID().bind()
+            val loggedInUserId = request.loginSession.userId.toUUID().bind()
             val postId = request.postId.toUUID().bind()
+
             when (request.updatePostRequestCase) {
-                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.UPDATECOMMENT -> updateComment(
-                    postId,
-                    userId,
-                    request.updateComment
-                ).logDatabaseMetrics(
-                    EndpointMetrics.EndpointName.updatePost,
-                    DatabaseMetrics.DatabaseOperation.updateComment
-                ).bind()
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.UPDATECOMMENT ->
+                    updateComment(
+                        postId,
+                        loggedInUserId,
+                        request.updateComment
+                    ).logDatabaseMetrics(
+                        EndpointMetrics.EndpointName.updatePost,
+                        DatabaseMetrics.DatabaseOperation.updateComment
+                    ).bind()
+
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.UPDATEPOSTLIKESTATUS ->
+                    updatePostLikeStatus(
+                        postId,
+                        loggedInUserId,
+                        request.updatePostLikeStatus
+                    ).logDatabaseMetrics(
+                        EndpointMetrics.EndpointName.updatePost,
+                        DatabaseMetrics.DatabaseOperation.updatePostLikeStatus
+                    ).bind()
+
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.DELETEPOST ->
+                    deletePost(
+                        postId,
+                        loggedInUserId,
+                    ).logDatabaseMetrics(
+                        EndpointMetrics.EndpointName.updatePost,
+                        DatabaseMetrics.DatabaseOperation.deletePost
+                    ).bind()
+
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.UPDATEIMAGEPOST ->
+                    updateImagePost(
+                        postId,
+                        request.updateImagePost,
+                    ).logDatabaseMetrics(
+                        EndpointMetrics.EndpointName.updatePost,
+                        DatabaseMetrics.DatabaseOperation.updateImagePost
+                    ).bind()
+
+                PulpFictionProtos.UpdatePostRequest.UpdatePostRequestCase.REPORTPOST ->
+                    reportPost(
+                        postId,
+                        loggedInUserId,
+                        request.reportPost,
+                    ).logDatabaseMetrics(
+                        EndpointMetrics.EndpointName.updatePost,
+                        DatabaseMetrics.DatabaseOperation.reportPost
+                    ).bind()
+
                 else -> shift(UnrecognizedEnumValue(request.updatePostRequestCase))
             }
         }

@@ -1,6 +1,8 @@
 package co.firstorderlabs.pulpfiction.backendserver.databasemodels
 
 import arrow.core.Either
+import arrow.core.continuations.Effect
+import arrow.core.continuations.effect
 import arrow.core.continuations.either
 import co.firstorderlabs.protos.pulpfiction.PostKt.comment
 import co.firstorderlabs.protos.pulpfiction.PostKt.loggedInUserPostInteractions
@@ -8,6 +10,7 @@ import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos
 import co.firstorderlabs.protos.pulpfiction.PulpFictionProtos.Post.LoggedInUserPostInteractions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostData
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.types.PostDatum
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.nowTruncated
 import co.firstorderlabs.pulpfiction.backendserver.utils.toUUID
@@ -24,7 +27,6 @@ object CommentData : PostData<CommentDatum>("comment_data") {
     override val postId = uuid("post_id")
         .primaryKey()
         .references(Posts) { it.post }
-        .references(PostInteractionAggregates) { it.postInteractionAggregate }
     override val updatedAt = timestamp("updated_at").primaryKey().bindTo { it.updatedAt }
     val body = varchar("body").bindTo { it.body }
     val parentPostId = uuid("parent_post_id").bindTo { it.parentPostId }
@@ -52,7 +54,7 @@ interface CommentDatum : Entity<CommentDatum>, PostDatum {
     fun toProto(loggedInUserPostInteractions: LoggedInUserPostInteractions): PulpFictionProtos.Post.Comment = comment {
         this.body = this@CommentDatum.body
         this.parentPostId = this@CommentDatum.parentPostId.toString()
-        this.interactionAggregates = this@CommentDatum.postInteractionAggregate.toProto()
+        this.interactionAggregates = this@CommentDatum.post.postInteractionAggregate.toProto()
         this.loggedInUserPostInteractions = loggedInUserPostInteractions
     }
 
@@ -74,3 +76,11 @@ interface CommentDatum : Entity<CommentDatum>, PostDatum {
 }
 
 val Database.commentData get() = this.sequenceOf(CommentData)
+
+fun Database.addCommentDatum(commentDatum: CommentDatum): Effect<PulpFictionRequestError, Unit> =
+    effect {
+        useTransaction {
+            this@addCommentDatum.addPostUpdate(commentDatum.getPostUpdate()).bind()
+            this@addCommentDatum.commentData.add(commentDatum)
+        }
+    }
