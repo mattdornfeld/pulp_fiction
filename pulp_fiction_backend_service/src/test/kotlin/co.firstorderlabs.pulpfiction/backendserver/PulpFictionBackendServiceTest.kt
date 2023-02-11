@@ -36,9 +36,11 @@ import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.gener
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withDeletePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomCreateImagePostRequest
+import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomReportPostRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomUpdateCommentRequest
 import co.firstorderlabs.pulpfiction.backendserver.TestProtoModelGenerator.withRandomUpdateImagePostRequest
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.followers
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.getPostReports
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionCounter
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionMetric
 import co.firstorderlabs.pulpfiction.backendserver.monitoring.metrics.collectors.PulpFictionSummary
@@ -60,7 +62,9 @@ import co.firstorderlabs.pulpfiction.backendserver.testutils.assertNotEquals
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertThrowsExceptionWithStatus
 import co.firstorderlabs.pulpfiction.backendserver.testutils.assertTrue
 import co.firstorderlabs.pulpfiction.backendserver.testutils.isWithinLast
+import co.firstorderlabs.pulpfiction.backendserver.testutils.runBlockingEffect
 import co.firstorderlabs.pulpfiction.backendserver.types.LoginSessionInvalidError
+import co.firstorderlabs.pulpfiction.backendserver.types.PulpFictionRequestError
 import co.firstorderlabs.pulpfiction.backendserver.types.RequestParsingError
 import co.firstorderlabs.pulpfiction.backendserver.utils.getResultAndThrowException
 import co.firstorderlabs.pulpfiction.backendserver.utils.toInstant
@@ -992,5 +996,31 @@ internal class PulpFictionBackendServiceTest {
             val post = pulpFictionBackendService.getPost(getPostRequest).post
 
             updateImagePostRequest.updateImagePost.newCaption.assertEquals(post.imagePost.caption)
+        }
+
+    @Test
+    fun testReportPost(): Unit =
+        runBlockingEffect<PulpFictionRequestError, Unit> {
+            val loginSession = createUserAndLogin().first
+            val createImagePostRequest = loginSession
+                .generateRandomCreatePostRequest()
+                .withRandomCreateImagePostRequest()
+            val postMetadata = pulpFictionBackendService.createPost(createImagePostRequest).postMetadata
+
+            val reportPostRequest = loginSession
+                .generateUpdatePostRequest(postMetadata.postUpdateIdentifier.postId)
+                .withRandomReportPostRequest()
+            pulpFictionBackendService.updatePost(reportPostRequest)
+
+            val expectedPostId = postMetadata.postUpdateIdentifier.postId.toUUID().bind()
+            val postReports = database.getPostReports(expectedPostId).bind()
+
+            val expectedPostReporterUserId = loginSession.userId.toUUID().bind()
+            postReports.assertTrue { it.size == 1 }
+            postReports[0]
+                .assertEquals(expectedPostId) { it.post.postId }
+                .assertEquals(expectedPostReporterUserId) { it.postReporterUserId }
+                .assertEquals(reportPostRequest.reportPost.reportReason) { it.reportReason }
+                .assertTrue { it.reportedAt.isWithinLast(100) }
         }
 }

@@ -18,6 +18,7 @@ import co.firstorderlabs.pulpfiction.backendserver.databasemodels.LoginSessions
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PhoneNumbers
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostInteractionAggregates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostLikes
+import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostReports
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.PostUpdates
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.Posts
 import co.firstorderlabs.pulpfiction.backendserver.databasemodels.UserPostData
@@ -97,6 +98,7 @@ abstract class S3AndPostgresContainers {
         ImagePostData,
         PostLikes,
         UserPostData,
+        PostReports,
         PostUpdates,
         Followers,
         LoginSessions,
